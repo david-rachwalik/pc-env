@@ -22,42 +22,42 @@
     #     ansible-playbook "system_setup.yml"
     # fi
 setup () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     ansible-playbook system_setup.yml $*
 }
 clean () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-/ansible_playbooks"
     ansible-playbook system_clean.yml $*
 }
 shutdown () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     ansible-playbook system_clean.yml -e 'shutdown=true' $*
 }
 
 repoc () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     # play_run=$([ -n "$1" ] && echo "app_create.yml --tags 'repo' $*" || echo "app_create.yml --tags 'repo'")
     # ansible-playbook $play_run
     ansible-playbook app_create.yml --tags 'repo' $*
 }
 repod () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     ansible-playbook app_delete.yml --tags 'repo' $*
 }
 azc () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     ansible-playbook app_create.yml --tags 'azure' $*
 }
 azd () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     ansible-playbook app_delete.yml --tags 'azure' $*
 }
 appc () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     ansible-playbook app_create.yml $*
 }
 appd () {
-    cd "$HOME/pc-setup/ansible_playbooks"
+    cd "$HOME/pc-env/ansible_playbooks"
     ansible-playbook app_delete.yml $*
 }
 
@@ -68,13 +68,13 @@ test_args () {
     echo $1
 }
 
-# alias update='( cd "$HOME/pc-setup/ansible_playbooks" && ansible-playbook system_setup.yml )'
-# alias shutdown='( cd "$HOME/pc-setup/ansible_playbooks" && ansible-playbook system_clean.yml -e "shutdown=true" )'
-# alias clean='( cd "$HOME/pc-setup/ansible_playbooks" && ansible-playbook system_clean.yml )'
-# alias win_up='( cd "$HOME/pc-setup/ansible_playbooks" && ansible-playbook system_setup.yml --tags "windows" )'
-# alias wsl_up='( cd "$HOME/pc-setup/ansible_playbooks" && ansible-playbook system_setup.yml --tags "linux" )'
-# alias win_clean='( cd "$HOME/pc-setup/ansible_playbooks" && ansible-playbook system_clean.yml --tags "windows" )'
-# alias wsl_clean='( cd "$HOME/pc-setup/ansible_playbooks" && ansible-playbook system_clean.yml --tags "linux" )'
+# alias update='( cd "$HOME/pc-env/ansible_playbooks" && ansible-playbook system_setup.yml )'
+# alias shutdown='( cd "$HOME/pc-/ansible_playbooks" && ansible-playbook system_clean.yml -e "shutdown=true" )'
+# alias clean='( cd "$HOME/pc-env/ansible_playbooks" && ansible-playbook system_clean.yml )'
+# alias win_up='( cd "$HOME/pc-env/ansible_playbooks" && ansible-playbook system_setup.yml --tags "windows" )'
+# alias wsl_up='( cd "$HOME/pc-env/ansible_playbooks" && ansible-playbook system_setup.yml --tags "linux" )'
+# alias win_clean='( cd "$HOME/pc-env/ansible_playbooks" && ansible-playbook system_clean.yml --tags "windows" )'
+# alias wsl_clean='( cd "$HOME/pc-env/ansible_playbooks" && ansible-playbook system_clean.yml --tags "linux" )'
 
 # ansible-playbook system_setup.yml --tags "alias"
 # setup --tags alias

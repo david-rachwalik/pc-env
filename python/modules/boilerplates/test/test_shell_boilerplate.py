@@ -79,14 +79,14 @@ def test_current_path():
 
 def test_path_basename():
     """Verify the output of 'path_basename' function"""
-    mock_path = "E:\\Repos\\pc-setup\\powershell\\provision_python.ps1"
+    mock_path = "F:\\Repos\\pc-env\\powershell\\provision_python.ps1"
     output = sh.path_basename(mock_path)
     assert output == "provision_python.ps1"
 
 
 def test_path_filename():
     """Verify the output of 'path_filename' function"""
-    mock_path = "E:\\Repos\\pc-setup\\powershell\\provision_python.ps1"
+    mock_path = "F:\\Repos\\pc-env\\powershell\\provision_python.ps1"
     output = sh.path_filename(mock_path)
     assert output == "provision_python"
 
@@ -108,6 +108,6 @@ def test_to_json():
 
 # def test_is_json_parse():
 #     """Verify the output of 'is_json_parse' function"""
-#     mock_path = "E:\\Repos\\pc-setup\\powershell\\provision_python.ps1"
+#     mock_path = "F:\\Repos\\pc-env\\powershell\\provision_python.ps1"
 #     output = sh.is_json_parse(mock_path)
 #     assert output == "provision_python"

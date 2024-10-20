@@ -1,4 +1,4 @@
-# PC Setup
+# PC Environment Setup
 
 These are the steps I would take to provision a new machine (PC or laptop) for Windows 10/11.
 
@@ -17,7 +17,7 @@ Run Windows PowerShell (as _Administrator_).
 2. Run script to provision Chocolatey and Python
 
    ```powershell
-   iwr https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/win_init.ps1 -UseBasicParsing | iex
+   iwr https://raw.githubusercontent.com/david-rachwalik/pc-env/master/win_init.ps1 -UseBasicParsing | iex
    ```
 
 ---
@@ -40,7 +40,7 @@ Run Windows PowerShell (as _Administrator_).
    choco feature enable -n=allowGlobalConfirmation
    ```
 
-2. Search for [Chocolatey packages](https://chocolatey.org/packages) (apps/programs) - _[examples](https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/ansible_playbooks/group_vars/windows/choco.yml)_
+2. Search for [Chocolatey packages](https://chocolatey.org/packages) (apps/programs) - _[examples](https://raw.githubusercontent.com/david-rachwalik/pc-env/master/ansible_playbooks/group_vars/windows/choco.yml)_
 
 3. Install what you like using: `choco install <package>`
 
@@ -67,7 +67,7 @@ Run Windows PowerShell (as _Administrator_).
    <sub><sup>Run script to install Chocolatey, Ubuntu, and RemoteRM</sup></sub>
 
    ```powershell
-   iwr https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/win_init.ps1 -UseBasicParsing | iex
+   iwr https://raw.githubusercontent.com/david-rachwalik/pc-env/master/win_init.ps1 -UseBasicParsing | iex
    ```
 
 2. Run script to install Ansible on Linux and call provisioning playbooks
@@ -75,7 +75,7 @@ Run Windows PowerShell (as _Administrator_).
    <sub><sup>Script installs might fail behind VPN</sup></sub>
 
    ```bash
-   curl -s https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/wsl_init.sh | sudo -H bash
+   curl -s https://raw.githubusercontent.com/david-rachwalik/pc-env/master/wsl_init.sh | sudo -H bash
    ```
 
 ## Development & PC Health (Old)
@@ -86,16 +86,16 @@ Review aliases/functions to common actions
 view ~/.bash_aliases
 ```
 
-Open File Explorer in Linux (_only . path accepted_)
+Open File Explorer in current location (_only "." path is valid_)
 
 ```bash
 explorer.exe .
 ```
 
-Open VSCode in Linux with [Core CLI](https://code.visualstudio.com/docs/editor/command-line#_core-cli-options)
+Open VS Code in current location with [Core CLI](https://code.visualstudio.com/docs/editor/command-line#_core-cli-options)
 
 ```bash
-code ~/pc-setup
+code .
 ```
 
 Review latest logs (_rotated daily_)

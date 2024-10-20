@@ -13,7 +13,7 @@ az_app_source: "{{app_repo_item.source | default('')}}"
 az_app_yml_path: azure-pipelines.yml
 
 # --- Azure Resource Manager ---
-az_rm_root_path: ~/pc-setup/ansible_playbooks/roles/azure/resource_manager/deploy/templates
+az_rm_root_path: ~/pc-env/ansible_playbooks/roles/azure/resource_manager/deploy/templates
 az_rm_template_path: "{{az_rm_root_path}}/{{app_repo_item.az_resource_manager}}/azuredeploy.json"
 az_rm_parameters_path: "{{az_rm_root_path}}/{{app_repo_item.az_resource_manager}}/azuredeploy.parameters.json"
 az_rm_parameters_file: "{{lookup('template', az_rm_parameters_path)}}"

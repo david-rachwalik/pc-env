@@ -1,8 +1,8 @@
 ---
 # -------- Configuration (personal) --------
 
-git_bare_repo: git@github.com:david-rachwalik/pc-setup.git
-git_work_repo: ~/pc-setup
+git_bare_repo: git@github.com:david-rachwalik/pc-env.git
+git_work_repo: ~/pc-env
 git_config: ~/.gitconfig
 
 az_subscriptions: [Pay-As-You-Go]

@@ -752,7 +752,7 @@ def deployment_group_strategy(sp_name: str, project: str, environment: str, loca
         sh.fail_process()
 
     # Azure Resource Manager steps
-    rm_root_path: str = '~/pc-setup/ansible_playbooks/roles/azure/resource_manager/deploy/templates'
+    rm_root_path: str = '~/pc-env/ansible_playbooks/roles/azure/resource_manager/deploy/templates'
     template_path: str = sh.join_path(rm_root_path, arm, 'azuredeploy.json')
     parameters_path: str = sh.join_path(rm_root_path, arm, 'azuredeploy.parameters.json')
     parameters_file: str = sh.read_file(parameters_path)
@@ -830,7 +830,7 @@ def app_create():
     #                      ARGS.strat, ARGS.environment, ARGS.framework, ARGS.secret_key, ARGS.secret_value)
     application_strategy(ARGS.dotnet_dir, ARGS.solution, ARGS.project,
                          ARGS.strat, ARGS.environment, ARGS.framework)
-    gitignore_path = '/home/david/pc-setup/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore'
+    gitignore_path = '~/pc-env/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore'
     # Determine scenario (if repo is inside solution or project directory)
     use_solution_dir = bool(ARGS.solution and isinstance(ARGS.solution, str))
     app_name = ARGS.solution if use_solution_dir else ARGS.project
@@ -867,10 +867,10 @@ def pipeline():
 
 # ------------------------ Main program ------------------------
 
-ARGS: argparse.Namespace = argparse.Namespace()  # for external modules
+ARGS = argparse.Namespace()  # for external modules
 BASENAME = 'app'
 # log_file = f'/var/log/{BASENAME}.log'
-LOG: log.Logger = log.get_logger(BASENAME)  # Initialize the logger
+LOG = log.get_logger(BASENAME)  # Initialize the logger
 ACCOUNT = az.Account()
 
 if __name__ == '__main__':

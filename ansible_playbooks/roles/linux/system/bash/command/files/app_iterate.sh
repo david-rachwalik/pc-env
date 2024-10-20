@@ -6,7 +6,7 @@
 
 
 # --- Script to quickly iterate upon 'app' command for development ---
-cd ~/pc-setup/ansible_playbooks
+cd ~/pc-env/ansible_playbooks
 ansible-playbook system_setup.yml --tags "py" --skip-tags "windows"
 
 # --- Test Azure login (service principal) ---

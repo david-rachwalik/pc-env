@@ -21,7 +21,7 @@
         },
         "templateBasePath": {
             "type": "string",
-            "defaultValue": "https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/ansible_playbooks/roles/azure/resource_manager/deploy/templates",
+            "defaultValue": "https://raw.githubusercontent.com/david-rachwalik/pc-env/master/ansible_playbooks/roles/azure/resource_manager/deploy/templates",
             "metadata": {
                 "description": "Specifies the base URI path to ARM templates."
             }

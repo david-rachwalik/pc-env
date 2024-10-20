@@ -34,7 +34,7 @@ application_authentication_choices: [Individual, SingleOrg, MultiOrg]
 application_repositories:
 # --- Primary Repositories ---
 
-- name: pc-setup
+- name: pc-env
   source: github
 
 - name: DMR

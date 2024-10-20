@@ -33,7 +33,7 @@ $settings = New-ScheduledTaskSettingsSet -Hidden
 # --- Provision System ---
 
 $taskName = "CRON PC Setup"
-$action = New-ScheduledTaskAction -Execute "pwsh" -Argument "-NonInteractive -File E:\Repos\pc-setup\powershell\pc_setup.ps1"
+$action = New-ScheduledTaskAction -Execute "pwsh" -Argument "-NonInteractive -File F:\Repos\pc-env\powershell\pc_setup.ps1"
 $trigger = New-ScheduledTaskTrigger -Daily -At "03:00am"
 # $taskExists = Get-ScheduledTask | Where-Object { $_.TaskName -like $taskName }
 $taskExists = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue

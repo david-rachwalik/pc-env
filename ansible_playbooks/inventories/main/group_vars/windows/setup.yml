@@ -50,7 +50,7 @@ scheduled_tasks:
   description: Ansible playbook to back up app & game files
   actions:
   - path: C:\Windows\System32\bash.exe
-    arguments: -c "script -q -c 'cd ~/pc-setup/ansible_playbooks && ansible-playbook system_clean.yml --tags backup' -a ~/logs/ansible_win_backup.log"
+    arguments: -c "script -q -c 'cd ~/pc-env/ansible_playbooks && ansible-playbook system_clean.yml --tags backup' -a ~/logs/ansible_win_backup.log"
   triggers:
   - type: daily
     start_boundary: "2020-01-01T04:00:00-06:00"

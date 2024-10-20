@@ -22,7 +22,7 @@
 #   loop: "{{vscode_extensions}}"
 
 
-# Taken from /home/rhodair/pc-setup/ansible_playbooks/roles/windows/backup/apps/vscode/tasks/main.yml
+# Taken from ~/pc-env/ansible_playbooks/roles/windows/backup/apps/vscode/tasks/main.yml
 # https://docs.ansible.com/ansible/latest/modules/win_file_module.html
 # - name: Ensure backup directory exists
 #   win_file:

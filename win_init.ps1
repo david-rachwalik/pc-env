@@ -38,7 +38,7 @@ if ($execution_policy -ne $expected_policy)
 # -------- STAGE 2: Provision Chocolatey --------
 
 Write-Host "Calling 'provision_chocolatey.ps1' from remote..."
-$provision_chocolatey_url = "https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/powershell/provision_chocolatey.ps1"
+$provision_chocolatey_url = "https://raw.githubusercontent.com/david-rachwalik/pc-env/master/powershell/provision_chocolatey.ps1"
 # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/invoke-webrequest
 $provision_chocolatey_script = Invoke-WebRequest $provision_chocolatey_url
 Invoke-Expression $provision_chocolatey_script.Content
@@ -48,7 +48,7 @@ Write-Host "Completed 'provision_chocolatey.ps1' process"
 # -------- STAGE 3: Provision Python --------
 
 Write-Host "Calling 'provision_python.ps1' from remote..."
-$provision_python_url = "https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/powershell/provision_python.ps1"
+$provision_python_url = "https://raw.githubusercontent.com/david-rachwalik/pc-env/master/powershell/provision_python.ps1"
 $provision_python_script = Invoke-WebRequest $provision_python_url
 Invoke-Expression $provision_python_script.Content
 Write-Host "Completed 'provision_python.ps1' process"
@@ -95,7 +95,7 @@ pc_setup --debug
 # # -------- STAGE 5: Establishing Scheduled Tasks --------
 
 # Write-Host "Calling 'scheduled_tasks.ps1' from remote..."
-# $scheduled_tasks_url = "https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/powershell/scheduled_tasks.ps1"
+# $scheduled_tasks_url = "https://raw.githubusercontent.com/david-rachwalik/pc-env/master/powershell/scheduled_tasks.ps1"
 # $scheduled_tasks_script = Invoke-WebRequest $scheduled_tasks_url
 # Invoke-Expression $scheduled_tasks_script.Content
 # Write-Host "Completed 'scheduled_tasks.ps1' process"
@@ -121,7 +121,7 @@ Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-L
 # Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform
 # wsl --set-default-version 2
 
-# Install RemoteRM (leftover commands in D:\Repos\pc-setup\ansible_playbooks\roles\powershell\files\provision_pc.ps1)
+# Install RemoteRM (leftover commands from ./ansible_playbooks/roles/powershell/files/provision_pc.ps1)
 $url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
 $file = "${env:temp}\ConfigureRemotingForAnsible.ps1"
 (New-Object -TypeName System.Net.WebClient).DownloadFile($url, $file)

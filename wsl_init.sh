@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # tested for Linux Ubuntu versions: [18.04, 20.04]
-distro=$(lsb_release --id --short) # Ubuntu
+distro=$(lsb_release --id --short)       # Ubuntu
 release=$(lsb_release --release --short) # [18.04, 20.04]
 
 if test "${distro}" != "Ubuntu"; then
@@ -56,4 +56,4 @@ curl -sSL $dotnet_install_path | bash /dev/stdin -c $version
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Run remaining commands as user
-su -c "curl -s https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/wsl_su_init.sh | bash" ${run_user}
+su -c "curl -s https://raw.githubusercontent.com/david-rachwalik/pc-env/master/wsl_su_init.sh | bash" ${run_user}

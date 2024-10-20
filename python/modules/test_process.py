@@ -98,4 +98,4 @@ if __name__ == '__main__':
     end_time = time.time() - start_time
     print(f"Timer: {end_time}")
 
-# sudo python3 /home/david/pc-setup/ansible_playbooks/roles/python/user_modules/files/test_process.py
+# sudo python3 ~/pc-env/ansible_playbooks/roles/python/user_modules/files/test_process.py

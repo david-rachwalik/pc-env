@@ -29,13 +29,14 @@
 # deploy:           Deploy an application to Azure (webapp, api, nuget package)
 # status:           View running state of deployed application
 
-import logging_boilerplate as log
-import shell_boilerplate as sh
+from typing import Any, Dict, List, Optional, Tuple
+
 import azure_boilerplate as az
 import azure_devops_boilerplate as az_devops
 import dotnet_boilerplate as net
 import git_boilerplate as git
-from typing import List, Tuple, Dict, Any, Optional
+import logging_boilerplate as log
+import shell_boilerplate as sh
 
 # ------------------------ Global Azure Commands ------------------------
 
@@ -658,7 +659,7 @@ def deployment_group_strategy(tenant: str, sp_name: str, project: str, environme
         sh.process_fail()
 
     # Azure Resource Manager steps
-    rm_root_path: str = "~/pc-setup/ansible_playbooks/roles/azure/resource_manager/deploy/templates"
+    rm_root_path: str = "~/pc-env/ansible_playbooks/roles/azure/resource_manager/deploy/templates"
     template_path: str = sh.path_join(rm_root_path, arm, "azuredeploy.json")
     parameters_path: str = sh.path_join(rm_root_path, arm, "azuredeploy.parameters.json")
     parameters_file: str = sh.file_read(parameters_path)
@@ -715,7 +716,7 @@ def secret():
 def app_create():
     login()
     application_strategy(args.tenant, args.dotnet_dir, args.solution, args.project, args.strat, args.environment, args.framework, args.secret_key, args.secret_value)
-    gitignore_path = "/home/david/pc-setup/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore"
+    gitignore_path = "~/pc-env/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore"
     # Determine scenario (if repo is inside solution or project directory)
     use_solution_dir = bool(args.solution and isinstance(args.solution, str))
     app_name = args.solution if use_solution_dir else args.project
@@ -749,6 +750,7 @@ def pipeline():
 basename: str = "app"
 # args = log.LogArgs() # for external modules
 import argparse
+
 args: argparse.Namespace = argparse.Namespace() # for external modules
 # log_file = "/var/log/{0}.log".format(basename)
 _log: log._logger_type = log.get_logger(basename)
@@ -864,5 +866,7 @@ if __name__ == "__main__":
 
     # :: Usage Example ::
     # setup --tags "py" --skip-tags "windows"
+    # app --debug login
+    # app --debug --secret-key="AutoTestKey" --secret-value="007" secret
     # app --debug login
     # app --debug --secret-key="AutoTestKey" --secret-value="007" secret

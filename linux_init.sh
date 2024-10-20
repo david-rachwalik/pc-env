@@ -29,7 +29,7 @@ fi
 
 echo "Calling 'provision_apt.sh' from remote..."
 # Define the URL of the script
-provision_apt_url="https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/setup-linux/provision_apt.sh"
+provision_apt_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux/provision_apt.sh"
 # Download and execute the script content directly
 curl -s "$provision_apt_url" | bash
 echo "Completed 'provision_apt.sh' process"
@@ -50,7 +50,7 @@ echo "Setting up Python..."
 
 echo "Calling 'provision_python.sh' from remote..."
 # Define the URL of the script
-provision_python_url="https://raw.githubusercontent.com/david-rachwalik/pc-setup/master/setup-linux/provision_python.sh"
+provision_python_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux/provision_python.sh"
 # Download and execute the script content directly
 curl -s "$provision_python_url" | bash
 echo "Completed 'provision_python.sh' process"

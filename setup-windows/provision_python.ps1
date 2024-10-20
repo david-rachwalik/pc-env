@@ -271,7 +271,7 @@ else
 {
     # Use remote repository when called indirectly (another script)
     $script_is_remote = 1
-    $repo_dir = "https://raw.githubusercontent.com/david-rachwalik/pc-setup/master"
+    $repo_dir = "https://raw.githubusercontent.com/david-rachwalik/pc-env/master"
 }
 
 $repo_py_dir = Join-RepoPath $repo_dir "python" $script_is_remote

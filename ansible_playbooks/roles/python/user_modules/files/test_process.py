@@ -5,12 +5,12 @@
 # VersionDate: 26 Jan 2020
 # Description: Common business logic for testing multiprocessing
 
-# sudo python3 /home/david/pc-setup/ansible_playbooks/roles/python/user_modules/files/test_process.py
+# sudo python3 ~/pc-env/ansible_playbooks/roles/python/user_modules/files/test_process.py
 
 import multiprocessing
-import time
-import queue # imported for using queue.Empty exception
+import queue  # imported for using queue.Empty exception
 import random
+import time
 
 # ------------------------ Classes ------------------------
 

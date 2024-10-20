@@ -9,14 +9,14 @@
 # . $PSScriptRoot\ConsoleMode.ps1
 # . $PSScriptRoot\Utils.ps1
 
-# Import-Module E:\Repos\pc-setup\powershell\boilerplate.psm1
+# Import-Module F:\Repos\pc-env\powershell\boilerplate.psm1
 
 
 # --- PowerShell Gallery: publish to / install from  ---
 # Register-PSRepository -Name 'myRepositoryName' -SourceLocation 'C:\MyExampleFolder'
-# Register-PSRepository -Name 'pc-setup' -SourceLocation 'E:\Repos\pc-setup\powershell' -InstallationPolicy Trusted
+# Register-PSRepository -Name 'pc-env' -SourceLocation 'E:\Repos\pc-env\powershell' -InstallationPolicy Trusted
 # Install-Module 'Some-Module' -Repository 'myRepositoryName'
-# Install-Module 'boilerplate' -Repository 'pc-setup'
+# Install-Module 'boilerplate' -Repository 'pc-env'
 
 
 # https://stackoverflow.com/questions/4647756/is-there-a-way-to-specify-a-font-color-when-using-write-output

@@ -1,5 +1,5 @@
 # Run command example:
-# D:\Repos_Exp\pc-setup\PowerShell\provision_pc.ps1
+# F:\Repos\pc-env\PowerShell\provision_pc.ps1
 
 # -------- Install WinRM for Ansible connection --------
 # https://docs.ansible.com/ansible/latest/user_guide/windows_setup.html#winrm-setup

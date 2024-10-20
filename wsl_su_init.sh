@@ -1,7 +1,7 @@
 #!/bin/sh
 wsl_ssh=${HOME}/.ssh
-win_project=/mnt/d/Repos/pc-setup
-wsl_project=${HOME}/pc-setup
+win_project=/mnt/f/Repos/pc-env
+wsl_project=${HOME}/pc-env
 win_vault=${win_project}/ansible_playbooks/group_vars/windows/main_vault.yml
 wsl_vault=${wsl_project}/ansible_playbooks/group_vars/windows/main_vault.yml
 
@@ -20,13 +20,13 @@ if ! test -d ${wsl_ssh}; then
     ssh-add ${wsl_ssh}/id_rsa
     # Add the contents of your local public key to authorized_keys
     if ! test -f ${wsl_ssh}/authorized_keys; then
-        cat ${wsl_ssh}/id_rsa.pub > ${wsl_ssh}/authorized_keys
+        cat ${wsl_ssh}/id_rsa.pub >${wsl_ssh}/authorized_keys
     fi
     # Add GitHub to known_hosts if it doesn't exist
     if ! test -f ${wsl_ssh}/known_hosts; then
         touch ${wsl_ssh}/known_hosts
     fi
-    ssh-keygen -F github.com || ssh-keyscan -H github.com >> ${wsl_ssh}/known_hosts
+    ssh-keygen -F github.com || ssh-keyscan -H github.com >>${wsl_ssh}/known_hosts
     # Above must be run once, copy public SSH key to GitHub Settings, and run again
     echo "Copy this SSH key to your GitHub Settings:"
     cat ${wsl_ssh}/id_rsa.pub
@@ -51,7 +51,7 @@ if ! test -d ${wsl_project}; then
     git config --global core.editor "code --wait"
     # View Git settings
     git config --list --show-origin
-    git clone git@github.com:david-rachwalik/pc-setup.git ${wsl_project}
+    git clone git@github.com:david-rachwalik/pc-env.git ${wsl_project}
 fi
 
 if test -d ${wsl_project}; then
