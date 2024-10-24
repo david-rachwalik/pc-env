@@ -1,0 +1,78 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/universal
+{
+  "name": "Universal",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/universal:2-linux",
+
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  // "features": {},
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
+
+  // Use 'postCreateCommand' to run commands after the container is created.
+  // "postCreateCommand": "uname -a",
+
+  // Configure tool-specific properties.
+  // "customizations": {},
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+      },
+      // Add the IDs of extensions to install when container is created
+      "extensions": [
+        "ms-vscode-remote.remote-containers",
+        // [Shell]
+        "ms-vscode.powershell", // runtime
+        "foxundermoon.shell-format",
+        // [Python]
+        "ms-python.python", // runtime
+        "ms-python.autopep8", // formatter
+        "ms-python.pylint",
+        "ms-python.vscode-pylance",
+        "ms-python.isort",
+        "njpwerner.autodocstring",
+        // [JavaScript|TypeScript]
+        "dbaeumer.vscode-eslint", // linter
+        "esbenp.prettier-vscode", // formatter
+        "christian-kohler.path-intellisense", // autocompletes filenames
+        "steoates.autoimport", // TS/TSX
+        "mike-co.import-sorter",
+        // [CSS]
+        "kamikillerto.vscode-colorize",
+        "small-tech.comment-out-css",
+        "pucelle.vscode-css-navigation",
+        "csstools.postcss",
+        "bradlc.vscode-tailwindcss",
+        // [Other Languages]
+        "ms-dotnettools.csharp",
+        "redhat.vscode-yaml",
+        "mikestead.dotenv",
+        "christian-kohler.npm-intellisense",
+        "42Crunch.vscode-openapi",
+        "theumletteam.umlet",
+        "bowlerhatllc.vscode-as3mxml",
+        "Angular.ng-template",
+        "Vue.volar",
+        "hashicorp.terraform",
+        // [Other]
+        "vscode-icons-team.vscode-icons",
+        "lihui.vs-color-picker",
+        "natqe.reload",
+        "donjayamanne.githistory",
+        "wayou.vscode-todo-highlight",
+        "DavidAnson.vscode-markdownlint",
+        "bierner.markdown-preview-github-styles",
+        "formulahendry.auto-close-tag", // HTML/XML
+        "formulahendry.auto-rename-tag", // HTML/XML
+        "mongodb.mongodb-vscode"
+        // "ms-azuretools.vscode-docker",
+      ]
+    }
+  }
+
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
+}
