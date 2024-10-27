@@ -5,18 +5,21 @@
 
 $pip_packages = @(
     # 'pip'
+
     # --- Entertainment ---
-    'yt-dlp' # YouTube video downloader
-    'bpy' # Blender (https://pypi.org/project/bpy)
+    # 'yt-dlp' # YouTube video downloader
+    # * only need Chocolatey install for casual use; pip version is for writing custom Python scripts
+    # 'bpy' # Blender (https://pypi.org/project/bpy)
+    # * can use Blender's built-in environment (otherwise, know this is only compatible with certain Python versions)
 
     # --- Development ---
-    'pytest'
     'autopep8'
-    'pytz'
     'colorlog'
-    'pylint-quotes'
+    'pytest'
+    'pytz'
     # https://pypi.org/project/python-dotenv
     'python-dotenv'
+    'pylint-quotes'
     'dirsync' # https://github.com/tkhyn/dirsync
     'pyinstaller' # https://pyinstaller.org/en/stable
     'requests' # https://requests.readthedocs.io
@@ -26,7 +29,7 @@ $pip_packages = @(
     # https://learn.microsoft.com/en-us/azure/developer/python/configure-local-development-environment
     # https://learn.microsoft.com/en-us/azure/developer/python/sdk/azure-sdk-overview#connect-to-and-use-azure-resources-with-client-libraries
     'azure-identity'
-    'azure.mgmt.subscription'
+    # 'azure.mgmt.subscription'
     'azure-mgmt-resource'
     # https://pypi.org/project/azure-keyvault-secrets
     'azure-keyvault-secrets'
@@ -73,9 +76,17 @@ $python_user_commands = @(
     'provision_azure'
 )
 
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
+
+# --- Verify Running as Administrator ---
+# Check if the script is running with elevated privileges
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+    Write-Host "This script must be run as Administrator." -ForegroundColor Red
+    exit 1
+}
 
 
 # https://learn.microsoft.com/en-us/powershell/scripting/learn/ps101/09-functions
@@ -122,7 +133,7 @@ function Test-FileHashes
 
     [bool]$result = 0
 
-    if (!(Test-Path -Path $DestinationPath -PathType Leaf))
+    if (-not (Test-Path -Path $DestinationPath -PathType Leaf))
     {
         return $result
     }
@@ -203,6 +214,64 @@ function Copy-SourceFile
     }
 }
 
+function Copy-SourceFiles
+{
+    param (
+        [Parameter(Mandatory)]
+        [string]$SourcePath,
+        [Parameter(Mandatory)]
+        [string]$DestinationPath,
+        [Parameter(Mandatory)]
+        [string[]]$FileNames,
+        [bool]$IsRemote = $false,
+        [bool]$Executable = $false
+    )
+    Write-Host "Copy-SourceFiles => ${FileNames}" -ForegroundColor DarkCyan
+
+    $files_passed = @()     # List of files where no changes are needed
+    $files_updated = @()    # List of updated files
+
+    foreach ($FileName in $FileNames)
+    {
+        $filename = "${FileName}.py" # Append .py extension to the file name
+        $src_path = Join-Path -Path $SourcePath -ChildPath $filename
+        $dest_path = Join-Path -Path $DestinationPath -ChildPath $filename
+        # if (!$Executable)
+        # {
+        #     Write-Host "dest_path: ${dest_path}" -ForegroundColor Cyan
+        # }
+
+        # Compare hashes to see if file needs to be copied
+        $match = Test-FileHashes $src_path $dest_path $IsRemote
+        if ($match)
+        {
+            $files_passed += $filename
+            Write-Host "skipped: ${dest_path}" -ForegroundColor Cyan
+        }
+        else
+        {
+            $files_updated += $filename
+            Write-Host "updated: ${dest_path}" -ForegroundColor Cyan
+            Copy-SourceFile $SourcePath $DestinationPath $filename $IsRemote
+            
+            if ($Executable)
+            {
+                # Get the Python install directory from the executable path
+                $python_exe_path = python -c "import sys; print(sys.executable)"
+                $python_install_dir = Split-Path -Path $python_exe_path -Parent
+                Write-Host "Python install location: $python_install_dir"
+                # --- Make the command executable from CLI ---
+                $dest_bat_content = "py %AppData%\Python\bin\${filename} %*"
+                $dest_bat = "${python_install_dir}\Scripts\${module}.bat"
+                Set-Content -Path $dest_bat -Value $dest_bat_content -Encoding Ascii
+                Write-Host "created: ${dest_bat}" -ForegroundColor Cyan
+            }
+        }
+    }
+
+    return $files_updated
+}
+
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
@@ -275,33 +344,25 @@ else
 }
 
 $repo_py_dir = Join-RepoPath $repo_dir "python" $script_is_remote
+Write-Host "source directory: $repo_py_dir"
 $repo_py_module_dir = Join-RepoPath $repo_py_dir "modules" $script_is_remote
 $repo_py_boilerplate_dir = Join-RepoPath $repo_py_module_dir "boilerplates" $script_is_remote
 $repo_py_command_dir = Join-RepoPath $repo_py_dir "commands" $script_is_remote
-
-Write-Host "source directory: $repo_py_dir"
 
 
 # --- Determine Python (destination) site locations ---
 
 $user_py_dir = python -m site --user-base
-# Write-Host "user_py_dir: $user_py_dir"
-
-$user_py_module_dir = python -m site --user-site
-# Write-Host "user_py_module_dir: $user_py_module_dir"
-# $user_py_boilerplate_dir = Join-Path -Path $user_py_module_dir -ChildPath "boilerplates"
-
-$user_py_command_dir = Join-Path -Path $user_py_dir -ChildPath "bin"
-# Write-Host "user_py_command_dir: $user_py_command_dir"
-
 Write-Host "destination directory: $user_py_dir"
+$user_py_module_dir = python -m site --user-site
+$user_py_command_dir = Join-Path -Path $user_py_dir -ChildPath "bin"
 
 
 # --- Ensure Python (destination) site directories exist ---
 # NO LONGER NECESSARY THANKS TO 'ROBOCOPY'
 # https://stackoverflow.com/questions/16906170/create-directory-if-it-does-not-exist
 # https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/test-path
-# if (!(Test-Path -PathType Container -Path $user_py_module_dir))
+# if (-not (Test-Path -PathType Container -Path $user_py_module_dir))
 # {
 #     Write-Host "Python user-site directory not found, preparing to create.."
 #     # https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-item
@@ -313,7 +374,7 @@ Write-Host "destination directory: $user_py_dir"
 # #     Write-Host "Found the Python user-site directory"
 # # }
 
-# if (!(Test-Path -PathType Container -Path $user_py_boilerplate_dir))
+# if (-not (Test-Path -PathType Container -Path $user_py_boilerplate_dir))
 # {
 #     Write-Host "Python user-site boilerplate directory not found, preparing to create.."
 #     # https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-item
@@ -321,7 +382,7 @@ Write-Host "destination directory: $user_py_dir"
 #     Write-Host "Python user-site boilerplate directory was successfully created!"
 # }
 
-# if (!(Test-Path -PathType Container -Path $user_py_command_dir))
+# if (-not (Test-Path -PathType Container -Path $user_py_command_dir))
 # {
 #     Write-Host "Python command directory not found, preparing to create.."
 #     # https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-item
@@ -330,93 +391,109 @@ Write-Host "destination directory: $user_py_dir"
 # }
 
 
+# # --- Deploy Python user modules & commands (old) ---
+
+# [System.Collections.ArrayList]$PythonFilesPassed = @()
+# [System.Collections.ArrayList]$PythonFilesUpdated = @()
+
+# # Provision the latest Python modules
+# foreach ($module in $python_user_modules)
+# {
+#     $filename = "${module}.py"
+#     $src_path = Join-RepoPath $repo_py_module_dir $filename $script_is_remote
+#     $dest_path = Join-Path -Path $user_py_module_dir -ChildPath $filename
+#     $match = Test-FileHashes $src_path $dest_path $script_is_remote
+#     if ($match)
+#     {
+#         $PythonFilesPassed.Add($filename) | Out-Null
+#     }
+#     else
+#     {
+#         $PythonFilesUpdated.Add($filename) | Out-Null
+#         # robocopy $repo_py_module_dir $user_py_module_dir $filename /mt /z
+#         Copy-SourceFile $repo_py_module_dir $user_py_module_dir $filename $script_is_remote
+#     }
+# }
+
+# # Provision the latest Python modules (boilerplate)
+# foreach ($module in $python_user_boilerplate_modules)
+# {
+#     $filename = "${module}.py"
+#     $src_path = Join-RepoPath $repo_py_boilerplate_dir $filename $script_is_remote
+#     $dest_path = Join-Path -Path $user_py_module_dir -ChildPath $filename
+#     $match = Test-FileHashes $src_path $dest_path $script_is_remote
+#     if ($match)
+#     {
+#         $PythonFilesPassed.Add($filename) | Out-Null
+#     }
+#     else
+#     {
+#         $PythonFilesUpdated.Add($filename) | Out-Null
+#         # robocopy $repo_py_boilerplate_dir $user_py_module_dir $filename /mt /z
+#         Copy-SourceFile $repo_py_boilerplate_dir $user_py_module_dir $filename $script_is_remote
+#     }
+# }
+
+
 # --- Deploy Python user modules & commands ---
 
-[System.Collections.ArrayList]$PythonFilesPassed = @()
-[System.Collections.ArrayList]$PythonFilesUpdated = @()
-
+# $PythonFilesPassed = @()
+$PythonFilesUpdated = @()
 # Provision the latest Python modules
-foreach ($module in $python_user_modules)
-{
-    $filename = "${module}.py"
-    $src_path = Join-RepoPath $repo_py_module_dir $filename $script_is_remote
-    $dest_path = Join-Path -Path $user_py_module_dir -ChildPath $filename
-    $match = Test-FileHashes $src_path $dest_path $script_is_remote
-    if ($match)
-    {
-        $PythonFilesPassed.Add($filename) | Out-Null
-    }
-    else
-    {
-        $PythonFilesUpdated.Add($filename) | Out-Null
-        # robocopy $repo_py_module_dir $user_py_module_dir $filename /mt /z
-        Copy-SourceFile $repo_py_module_dir $user_py_module_dir $filename $script_is_remote
-    }
-}
-
+$PythonFilesUpdated += Copy-SourceFiles $repo_py_module_dir $user_py_module_dir $python_user_modules $script_is_remote
 # Provision the latest Python modules (boilerplate)
-foreach ($module in $python_user_boilerplate_modules)
-{
-    $filename = "${module}.py"
-    $src_path = Join-RepoPath $repo_py_boilerplate_dir $filename $script_is_remote
-    $dest_path = Join-Path -Path $user_py_module_dir -ChildPath $filename
-    $match = Test-FileHashes $src_path $dest_path $script_is_remote
-    if ($match)
-    {
-        $PythonFilesPassed.Add($filename) | Out-Null
-    }
-    else
-    {
-        $PythonFilesUpdated.Add($filename) | Out-Null
-        # robocopy $repo_py_boilerplate_dir $user_py_module_dir $filename /mt /z
-        Copy-SourceFile $repo_py_boilerplate_dir $user_py_module_dir $filename $script_is_remote
-    }
-}
+$PythonFilesUpdated += Copy-SourceFiles $repo_py_boilerplate_dir $user_py_module_dir $python_user_boilerplate_modules $script_is_remote
+
 
 # # Run `py --version` command and capture the output
 # $pythonVersionOutput = py --version
 # # Extract the version number (major and minor) from the output
 # $pythonVersion = $pythonVersionOutput -replace 'Python (\d+\.\d+).*', '$1'
-# Write-Output "Python version: $pythonVersion"
+# Write-Host "Python version: $pythonVersion"
 # $pythonVersionWithoutDot = $pythonVersion -replace '\.'
 
-# Get the Python install directory from the executable path
-$pythonExecutablePath = python -c "import sys; print(sys.executable)"
-$pythonInstallLocation = Split-Path -Path $pythonExecutablePath -Parent
-Write-Output "Python install location: $pythonInstallLocation"
+
+# # Get the Python install directory from the executable path
+# $pythonExecutablePath = python -c "import sys; print(sys.executable)"
+# $pythonInstallLocation = Split-Path -Path $pythonExecutablePath -Parent
+# Write-Host "Python install location: $pythonInstallLocation"
+
+# # Provision the latest Python commands (old)
+# foreach ($module in $python_user_commands)
+# {
+#     $filename = "${module}.py"
+#     $src_path = Join-RepoPath $repo_py_command_dir $filename $script_is_remote
+#     $dest_path = Join-Path -Path $user_py_command_dir -ChildPath $filename
+#     $match = Test-FileHashes $src_path $dest_path $script_is_remote
+#     if ($match)
+#     {
+#         $PythonFilesPassed.Add($filename) | Out-Null
+#     }
+#     else
+#     {
+#         $PythonFilesUpdated.Add($filename) | Out-Null
+#         # robocopy $repo_py_command_dir $user_py_command_dir $filename /mt /z
+#         Copy-SourceFile $repo_py_command_dir $user_py_command_dir $filename $script_is_remote
+        
+#         # --- Make the command executable from CLI ---
+#         $dest_bat_content = "py %AppData%\Python\bin\${filename} %*"
+#         # $dest_bat = "C:\Python311\Scripts\${module}.bat"
+#         # $dest_bat = "C:\Python${pythonVersionWithoutDot}\Scripts\${module}.bat"
+#         $dest_bat = "${pythonInstallLocation}\Scripts\${module}.bat"
+#         Set-Content -Path $dest_bat -Value $dest_bat_content -Encoding Ascii
+
+#         # --- Make a distributeable application (for external users) ---
+#         # https://pyinstaller.org/en/stable/usage.html
+#         # https://realpython.com/pyinstaller-python
+#         # $dest_build_path = Join-Path -Path $user_py_command_dir -ChildPath 'build'
+#         # $dest_dist_path = Join-Path -Path $user_py_command_dir -ChildPath 'dist'
+#         # pyinstaller --onefile --specpath=$dest_build_path --workpath=$dest_build_path --distpath='C:\Python311\Scripts' $dest_path
+#     }
+# }
 
 # Provision the latest Python commands
-foreach ($module in $python_user_commands)
-{
-    $filename = "${module}.py"
-    $src_path = Join-RepoPath $repo_py_command_dir $filename $script_is_remote
-    $dest_path = Join-Path -Path $user_py_command_dir -ChildPath $filename
-    $match = Test-FileHashes $src_path $dest_path $script_is_remote
-    if ($match)
-    {
-        $PythonFilesPassed.Add($filename) | Out-Null
-    }
-    else
-    {
-        $PythonFilesUpdated.Add($filename) | Out-Null
-        # robocopy $repo_py_command_dir $user_py_command_dir $filename /mt /z
-        Copy-SourceFile $repo_py_command_dir $user_py_command_dir $filename $script_is_remote
-        
-        # --- Make the command executable from CLI ---
-        $dest_bat_content = "py %AppData%\Python\bin\${filename} %*"
-        # $dest_bat = "C:\Python311\Scripts\${module}.bat"
-        # $dest_bat = "C:\Python${pythonVersionWithoutDot}\Scripts\${module}.bat"
-        $dest_bat = "${pythonInstallLocation}\Scripts\${module}.bat"
-        Set-Content -Path $dest_bat -Value $dest_bat_content -Encoding Ascii
+$PythonFilesUpdated += Copy-SourceFiles $repo_py_command_dir $user_py_command_dir $python_user_commands $script_is_remote $true
 
-        # --- Make a distributeable application (for external users) ---
-        # https://pyinstaller.org/en/stable/usage.html
-        # https://realpython.com/pyinstaller-python
-        # $dest_build_path = Join-Path -Path $user_py_command_dir -ChildPath 'build'
-        # $dest_dist_path = Join-Path -Path $user_py_command_dir -ChildPath 'dist'
-        # pyinstaller --onefile --specpath=$dest_build_path --workpath=$dest_build_path --distpath='C:\Python311\Scripts' $dest_path
-    }
-}
 
 # Write-Host "Python files that passed the hash check: $PythonFilesPassed"
 Write-Host "Python files updated: $PythonFilesUpdated"

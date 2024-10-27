@@ -2,8 +2,13 @@
 
 # https://chocolatey.org/packages/*
 $choco_packages = @(
+    # --- Browsers ---
+    'googlechrome'
+    # 'firefox'
+    # 'opera-gx'
+
     # --- Productivity ---
-    'GoogleChrome'
+    'discord'
     'speccy'
     'procexp'
     'tcpview'
@@ -21,40 +26,39 @@ $choco_packages = @(
     'docker-desktop'
     'docker-compose'
 
-    # --- Media ---
-    'geforce-experience'
+    # --- Media Players ---
+    'k-litecodecpackfull'
+    'imageglass'
     'adobereader'
     'AdobeAIR'
     # 'adobeshockwaveplayer'
     'comicrack'
     'spotify'
-    # 'gimp'
-    'blender'
-    # 'unity'
 
-    # --- Video Editing ---
-    'k-litecodecpackfull'
+    # --- Media Editors ---
     'handbrake'
     'lossless-cut'
     'MakeMKV'
     'mkvtoolnix' # https://mkvtoolnix.download/doc/mkvmerge.html
+    'blender'
+    # 'gimp'
+    # 'unity'
     # 'jubler'
-    
-    # --- Streaming ---
-    'obs-studio'
-    # 'chatterino'
-    'chatterino7'
 
     # --- Videogames ---
-    'directx'
+    'geforce-experience'
+    # 'directx'
     'steam'
-    'discord'
     'reshade'
     # Example of using params
     # 'reshade --params "/Desktop /NoStartMenu"'
+
+    # --- Streaming ---
+    'obs-studio'
+    'chatterino7'
 )
 
-# Commands, packages, and applications for Docker containers
+# Extra packages for Docker containers
 $choco_packages_container = @(
     # --- Development ---
     'git'                   # Source Control
@@ -74,8 +78,8 @@ $choco_packages_container = @(
     'handbrake'
 )
 
-# Additional packages only for desktop systems
-$choco_packages_extra = @(
+# Extra packages for desktop systems
+$choco_packages_virtualmachine = @(
     # --- Productivity ---
     'vmware-player' # free version of VMWare virtualization software
     'vmware-tools' # utilities to enhance virtual machine performance
@@ -86,13 +90,20 @@ $choco_packages_extra = @(
 # ------------------------------------------------------------------------------------------------
 
 
+# --- Verify Running as Administrator ---
+# Check if the script is running with elevated privileges
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+    Write-Host "This script must be run as Administrator." -ForegroundColor Red
+    exit 1
+}
+
+
 # --- Verify Chocolatey installation ---
-# $testchoco = Get-Command -Name choco.exe -ErrorAction SilentlyContinue
 $choco_version = choco -v
-if (-not($choco_version))
+if (-not ($choco_version))
 {
     Write-Host "Chocolatey is missing, installing..." -ForegroundColor Yellow
-    # Set-ExecutionPolicy Bypass -Scope Process -Force; ie ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
     # Set-ExecutionPolicy Bypass -Scope Process -Force; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex
     Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest https://chocolatey.org/install.ps1 -UseBasicParsing | Invoke-Expression
     # choco feature list (https://docs.chocolatey.org/en-us/choco/commands/feature)
@@ -111,7 +122,7 @@ else
 # --- Enable Chocolatey to output as PowerShell objects ---
 # TODO: verify whether still necessary
 # $powershell_module_chocolatey = Get-InstalledModule -Name chocolatey
-# if (-not($powershell_module_chocolatey))
+# if (-not ($powershell_module_chocolatey))
 # {
 #     Write-Host "PowerShellGet is missing 'chocolatey' Module, preparing to install..." -ForegroundColor Yellow
 #     # https://learn.microsoft.com/en-us/powershell/module/powershellget/install-module
@@ -124,6 +135,7 @@ else
 # --- Verify Chocolatey packages ---
 # https://docs.chocolatey.org/en-us/choco/commands/list
 $choco_packages_installed = choco search --local-only --id-only # requires admin
+$choco_packages_installed = choco list --id-only # requires admin
 # $choco_packages_type = $choco_packages_installed.GetType()
 # $choco_packages_length = $choco_packages_installed.Length
 # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/get-member
@@ -162,6 +174,9 @@ if ($choco_packages_installed)
         {
             # Install missing Chocolatey package
             choco install $package -y
+            # Ensure environment variables are up-to-date after installing packages
+            # refreshenv # specific to Windows and comes with Chocolatey (works for Command Prompt, cmd.exe)
+            Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1" # PowerShell version of refreshenv
         }
         # else
         # {
