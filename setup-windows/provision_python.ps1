@@ -226,33 +226,30 @@ function Copy-SourceFiles
         [bool]$IsRemote = $false,
         [bool]$Executable = $false
     )
-    Write-Host "Copy-SourceFiles => ${FileNames}" -ForegroundColor DarkCyan
+    # Write-Host "Copy-SourceFiles => ${FileNames}" -ForegroundColor DarkCyan
+    Write-Host "Copy-SourceFiles => [$(($FileNames -join ', '))]" -ForegroundColor DarkCyan
 
     $files_passed = @()     # List of files where no changes are needed
     $files_updated = @()    # List of updated files
 
     foreach ($FileName in $FileNames)
     {
-        $filename = "${FileName}.py" # Append .py extension to the file name
-        $src_path = Join-Path -Path $SourcePath -ChildPath $filename
-        $dest_path = Join-Path -Path $DestinationPath -ChildPath $filename
-        # if (!$Executable)
-        # {
-        #     Write-Host "dest_path: ${dest_path}" -ForegroundColor Cyan
-        # }
+        $filename_py = "${FileName}.py" # Append .py extension to the file name
+        $src_path = Join-Path -Path $SourcePath -ChildPath $filename_py
+        $dest_path = Join-Path -Path $DestinationPath -ChildPath $filename_py
 
         # Compare hashes to see if file needs to be copied
         $match = Test-FileHashes $src_path $dest_path $IsRemote
         if ($match)
         {
-            $files_passed += $filename
-            Write-Host "skipped: ${dest_path}" -ForegroundColor Cyan
+            $files_passed += $filename_py
+            Write-Host "good: ${dest_path}" -ForegroundColor Cyan
         }
         else
         {
-            $files_updated += $filename
+            $files_updated += $filename_py
             Write-Host "updated: ${dest_path}" -ForegroundColor Cyan
-            Copy-SourceFile $SourcePath $DestinationPath $filename $IsRemote
+            Copy-SourceFile $SourcePath $DestinationPath $filename_py $IsRemote
             
             if ($Executable)
             {
@@ -261,8 +258,8 @@ function Copy-SourceFiles
                 $python_install_dir = Split-Path -Path $python_exe_path -Parent
                 Write-Host "Python install location: $python_install_dir"
                 # --- Make the command executable from CLI ---
-                $dest_bat_content = "py %AppData%\Python\bin\${filename} %*"
-                $dest_bat = "${python_install_dir}\Scripts\${module}.bat"
+                $dest_bat_content = "py %AppData%\Python\bin\${filename_py} %*"
+                $dest_bat = "${python_install_dir}\Scripts\${FileName}.bat"
                 Set-Content -Path $dest_bat -Value $dest_bat_content -Encoding Ascii
                 Write-Host "created: ${dest_bat}" -ForegroundColor Cyan
             }
