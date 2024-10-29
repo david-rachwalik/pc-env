@@ -18,9 +18,17 @@ class AppBackup:
     options: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
 
 
+active_apps = [
+    'handbrake',
+    'obs',
+    'voicemeeter',
+    'vscode',
+]
+
+
 app_root_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
 
-app_backups: List[AppBackup] = [
+app_backups_full: List[AppBackup] = [
     AppBackup(
         id='handbrake',
         root=app_root_dir,
@@ -60,3 +68,6 @@ app_backups: List[AppBackup] = [
         },
     ),
 ]
+
+# Filter backup details to only the active apps
+app_backups: List[AppBackup] = [app for app in app_backups_full if app.id in active_apps]

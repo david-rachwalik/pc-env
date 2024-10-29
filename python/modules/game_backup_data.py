@@ -26,10 +26,29 @@ class GameBackup:
     # setting_opts: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
 
 
-game_root_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
-game_e_root_dir = sh.join_path('E:\\', 'GameFiles')
+active_games = [
+    # 'diablo_iii',
+    # 'elder_scrolls_online',
+    # 'elite_dangerous',
+    'final_fantasy_xiv',
+    'hotline_miami',
+    'killing_floor_2',
+    'rocket_league',
+    # 'skyrim_se',
+    'skyrim_vr',
+    'stardew_valley',
+    # 'wow_retail',
+    # 'wow_classic',
+    # 'wow_weakauras',
+    # 'wow_project_ascension',
+    'yiffalicious',
+]
 
-game_backups: List[GameBackup] = [
+
+game_root_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
+game_d_root_dir = sh.join_path('D:\\', 'GameFiles')
+
+game_backups_full: List[GameBackup] = [
     # GameBackup(
     #     id='blade_and_soul',
     #     root='/mnt/c/Users/david/Documents/My Games',
@@ -209,7 +228,7 @@ game_backups: List[GameBackup] = [
     GameBackup(
         id='wow_retail',
         # root='/mnt/e/GameFiles',
-        root=game_e_root_dir,
+        root=game_d_root_dir,
         name=sh.join_path('World of Warcraft', '_retail_'),
         # addon='Interface/AddOns',
         # addon_opts=['--exclude=DataStore*/', '--exclude=TradeSkillMaster_AppHelper/'],
@@ -233,7 +252,7 @@ game_backups: List[GameBackup] = [
     GameBackup(
         id='wow_classic',
         # root='/mnt/e/GameFiles',
-        root=game_e_root_dir,
+        root=game_d_root_dir,
         name=sh.join_path('World of Warcraft', '_classic_'),
         # addon='Interface/AddOns',
         # addon_opts=['--exclude=DataStore*/', '--exclude=TradeSkillMaster_AppHelper/'],
@@ -287,3 +306,6 @@ game_backups: List[GameBackup] = [
     # --- Covered by Steam ---
     # *most other games
 ]
+
+# Filter backup details to only the active games
+game_backups: List[GameBackup] = [game for game in game_backups_full if game.id in active_games]
