@@ -48,7 +48,8 @@ def run_ccleaner():
         '-ArgumentList',
         '/AUTO'
     ]
-    LOG.debug(f'command: {command}')
+    command_str = ' '.join(command) # Join the list into a single string
+    LOG.debug(f'command: {command_str}')
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, ARGS.debug)
 
@@ -57,9 +58,9 @@ def run_ccleaner():
 
 def main():
     """Method that handles command logic"""
-    allowed_ids = ARGS.id_filter if ARGS.id_filter else ALL_IDS
-    backup_root = sh.join_path('D:\\', 'OneDrive', 'Backups')
-    tasks = what_to_run()
+    tasks = what_to_run() # sections to run
+    # can also use "--id-filter" param to only target certain apps
+    run_ids = ARGS.id_filter if ARGS.id_filter else ALL_IDS
 
     # -------- Backup the system platform --------
 
@@ -67,12 +68,12 @@ def main():
     if 'apps' in tasks:
         # LOG.debug(f'app_ids: {app_ids}')
         for APP in app_backups:
-            if APP.id not in allowed_ids:
+            if APP.id not in run_ids:
                 continue
             LOG.info(f'--- Backing up app: {APP.name} ---')
 
             SRC = sh.join_path(APP.root, APP.name)
-            DEST = sh.join_path(backup_root, 'Apps', APP.name)
+            DEST = sh.join_path(ARGS.backup_root, 'Apps', APP.name)
             LOG.info(f'SRC path: {SRC}')
             LOG.info(f'DEST path: {DEST}')
             if ARGS.test_run:
@@ -80,21 +81,22 @@ def main():
             else:
                 RESULT = sh.sync_directory(SRC, DEST, options=APP.options)
                 DIR_REMOVED = sh.remove_empty_directories(DEST)
-                LOG.debug(f'empty directories removed: {DIR_REMOVED}')
+                if DIR_REMOVED:
+                    LOG.debug(f'empty directories removed: {DIR_REMOVED}')
             # LOG.debug(f'sync_directory RESULT: {RESULT}')
 
     # --- Backup important game files (screenshots, settings, addons) ---
     if 'games' in tasks:
         # LOG.debug(f'game_ids: {game_ids}')
         for GAME in game_backups:
-            if GAME.id not in allowed_ids:
+            if GAME.id not in run_ids:
                 continue  # skip id's not provided to 'filter_id' (or in the backup data)
             if not GAME.options:
                 continue  # skip games listed without backup options
             LOG.info(f'--- Backing up game: {GAME.name} ---')
 
             SRC = sh.join_path(GAME.root, GAME.name)
-            DEST = sh.join_path(backup_root, 'Games', GAME.name)
+            DEST = sh.join_path(ARGS.backup_root, 'Games', GAME.name)
             LOG.info(f'SRC path: {SRC}')
             LOG.info(f'DEST path: {DEST}')
             if ARGS.test_run:
@@ -102,7 +104,8 @@ def main():
             else:
                 RESULT = sh.sync_directory(SRC, DEST, options=GAME.options)
                 DIR_REMOVED = sh.remove_empty_directories(DEST)
-                LOG.debug(f'empty directories removed: {DIR_REMOVED}')
+                if DIR_REMOVED:
+                    LOG.debug(f'empty directories removed: {DIR_REMOVED}')
             # LOG.debug(f'sync_directory RESULT: {RESULT}')
 
             # Clear source screenshot directory
@@ -118,8 +121,8 @@ def main():
 
 # Initialize the logger
 BASENAME = 'pc_clean'
-LOG: log.Logger = log.get_logger(BASENAME)
-ARGS: argparse.Namespace = argparse.Namespace()  # for external modules
+LOG = log.get_logger(BASENAME)
+ARGS = argparse.Namespace()  # for external modules
 
 if __name__ == '__main__':
     def parse_arguments():
@@ -127,11 +130,12 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument('--debug', action='store_true')
         parser.add_argument('--log-path', default='')
-        parser.add_argument('--id-filter', action='append', choices=ALL_IDS)  # most reliable list approach
+        parser.add_argument('--backup-root', default='D:\\OneDrive\\Backups')
         parser.add_argument('--test-run', action='store_true')
         parser.add_argument('--only-apps', action='store_true')
         parser.add_argument('--only-games', action='store_true')
         parser.add_argument('--only-clean', action='store_true')
+        parser.add_argument('--id-filter', action='append', choices=ALL_IDS)  # most reliable list approach
         return parser.parse_args()
     ARGS = parse_arguments()
 
@@ -148,6 +152,7 @@ if __name__ == '__main__':
     LOG.debug('------------------------------------------------')
     LOG.debug('--- end point reached :3 ---')
     sh.exit_process()
+
 
     # --- Usage Example ---
     # pc_clean --filter_id=elite_dangerous --filter_id=terraria
