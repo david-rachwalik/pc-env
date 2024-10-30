@@ -114,7 +114,7 @@ def main():
                 sh.delete_directory(ss_path)
 
     # --- Clean the system platform / health check ---
-    if 'clean' in tasks and not ARGS.test_run:
+    if 'clean' in tasks and not ARGS.test_run and not ARGS.id_filter:
         LOG.info('--- Cleaning system platform ---')
         run_ccleaner()
 
@@ -155,5 +155,6 @@ if __name__ == '__main__':
 
 
     # --- Usage Example ---
-    # pc_clean --filter_id=elite_dangerous --filter_id=terraria
+    # pc_clean --debug
     # pc_clean --only-apps
+    # pc_clean --id-filter=elite_dangerous --id-filter=terraria

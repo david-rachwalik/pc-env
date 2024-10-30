@@ -123,5 +123,6 @@ if __name__ == '__main__':
 
 
     # --- Usage Example ---
-    # pc_restore --filter_id=elite_dangerous --filter_id=terraria
+    # pc_restore --debug
     # pc_restore --only-apps
+    # pc_restore --id-filter=elite_dangerous --id-filter=terraria
