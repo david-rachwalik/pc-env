@@ -29,19 +29,22 @@ $choco_packages = @(
     # --- Media Players ---
     'k-litecodecpackfull'
     'imageglass'
-    'adobereader'
-    'AdobeAIR'
-    # 'adobeshockwaveplayer'
     'comicrack'
     'spotify'
+    # 'mediainfo'
+    # 'icaros'
+    # 'adobereader'
+    # 'AdobeAIR'
+    # 'adobeshockwaveplayer'
 
     # --- Media Editors ---
     'handbrake'
     'lossless-cut'
     'MakeMKV'
     'mkvtoolnix' # https://mkvtoolnix.download/doc/mkvmerge.html
-    'blender'
-    # 'gimp'
+    'gimp'
+    'kdenlive'
+    # 'blender'
     # 'unity'
     # 'jubler'
 
