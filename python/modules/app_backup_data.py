@@ -21,12 +21,16 @@ class AppBackup:
 active_apps = [
     'handbrake',
     'obs',
+    'qbittorrent',
+    'qbittorrent_data',
     'voicemeeter',
     'vscode',
+    'yt_dlp',
 ]
 
 
 app_root_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
+app_local_root_dir = sh.environment_get('LocalAppData')  # %UserProfile%/AppData/Local
 
 app_backups_full: List[AppBackup] = [
     AppBackup(
@@ -50,6 +54,22 @@ app_backups_full: List[AppBackup] = [
         },
     ),
     AppBackup(
+        id='qbittorrent',
+        root=app_root_dir,
+        name='qBittorrent',
+        options={
+            'only': ['qBittorrent.ini', 'qBittorrent-data.ini'],
+        },
+    ),
+    AppBackup(
+        id='qbittorrent_data',
+        root=app_local_root_dir,
+        name='qBittorrent',
+        options={
+            'only': ['BT_backup/*'],
+        },
+    ),
+    AppBackup(
         id='voicemeeter',
         root=sh.join_path(sh.environment_get('Home'), 'Documents'),
         name='Voicemeeter',
@@ -65,6 +85,14 @@ app_backups_full: List[AppBackup] = [
         options={
             # 'only': ['settings.json', 'snippets/*'],
             'only': ['settings.json'],
+        },
+    ),
+    AppBackup(
+        id='yt_dlp',
+        root=app_root_dir,
+        name='yt-dlp',
+        options={
+            'only': ['config'],
         },
     ),
 ]

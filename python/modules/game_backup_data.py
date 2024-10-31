@@ -40,12 +40,13 @@ active_games = [
     # 'wow_retail',
     # 'wow_classic',
     # 'wow_weakauras',
-    # 'wow_project_ascension',
+    'wow_project_ascension',
     'yiffalicious',
 ]
 
 
 game_root_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
+game_c_root_dir = sh.join_path('C:\\', 'Program Files')
 game_d_root_dir = sh.join_path('D:\\', 'GameFiles')
 
 game_backups_full: List[GameBackup] = [
@@ -284,6 +285,24 @@ game_backups_full: List[GameBackup] = [
             'only': [
                 'config.json',  # settings
             ],
+        },
+    ),
+    GameBackup(
+        id='wow_project_ascension',
+        root=game_c_root_dir,
+        name=sh.join_path('Ascension Launcher', 'resources', 'client'),
+        screenshot='Screenshots',
+        options={
+            'only': [
+                'Screenshots/*',
+                'WTF/*',  # settings (save states)
+                'Interface/AddOns/*',  # addons
+            ],
+            'exclude':[
+                r'.*\.bak$',  # ignore setting files with '.bak' extension
+                r'.*\.old$',  # ignore setting files with '.old' extension
+                r'.*Blizzard_.*',  # ignore the 'Blizzard_*' addon directory
+            ]
         },
     ),
     GameBackup(
