@@ -48,7 +48,7 @@ def main():
         for APP in app_backups:
             if APP.id not in run_ids:
                 continue
-            LOG.info(f'--- Backing up app: {APP.name} ---')
+            LOG.info(f'--- Restoring app: {APP.name} ---')
 
             # SRC & DEST flipped from 'pc_clean'
             SRC = sh.join_path(ARGS.backup_root, 'Apps', APP.name)
@@ -69,7 +69,7 @@ def main():
                 continue  # skip id's not provided to 'filter_id' (or in the backup data)
             if not GAME.options:
                 continue  # skip games listed without backup options
-            LOG.info(f'--- Backing up game: {GAME.name} ---')
+            LOG.info(f'--- Restoring game: {GAME.name} ---')
 
             # Ignore screenshots during restore
             ignore_options = ['Screenshots/*', 'screenshots/*']
@@ -99,7 +99,8 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument('--debug', action='store_true')
         parser.add_argument('--log-path', default='')
-        parser.add_argument('--backup-root', default='D:\\OneDrive\\Backups')
+        # parser.add_argument('--backup-root', default='D:\\OneDrive\\Backups')
+        parser.add_argument('--backup-root', default='/mnt/d/OneDrive/Backups')
         parser.add_argument('--test-run', action='store_true')
         parser.add_argument('--only-apps', action='store_true')
         parser.add_argument('--only-games', action='store_true')

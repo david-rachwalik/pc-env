@@ -39,7 +39,8 @@ def run_ccleaner():
     """Method that runs CCleaner silently, using the current set of saved options in Custom Clean to clean the PC.  Does not run the Registry Cleaner."""
     # https://www.ccleaner.com/docs/ccleaner/advanced-usage/command-line-parameters
     # https://gist.github.com/theinventor/7b9f2e1f96420291db28592727ede8d3
-    app_dir = sh.environment_get('ProgramFiles')  # C:\Program Files
+    # app_dir = sh.environment_get('ProgramFiles')  # C:\Program Files
+    app_dir = "/mnt/c/Program Files"
     ccleaner_exe = sh.join_path(app_dir, 'CCleaner', 'CCleaner64.exe')
     command = [
         'Start-Process',
@@ -130,7 +131,8 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument('--debug', action='store_true')
         parser.add_argument('--log-path', default='')
-        parser.add_argument('--backup-root', default='D:\\OneDrive\\Backups')
+        # parser.add_argument('--backup-root', default='D:\\OneDrive\\Backups')
+        parser.add_argument('--backup-root', default='/mnt/d/OneDrive/Backups')
         parser.add_argument('--test-run', action='store_true')
         parser.add_argument('--only-apps', action='store_true')
         parser.add_argument('--only-games', action='store_true')

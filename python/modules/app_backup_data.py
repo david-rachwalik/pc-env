@@ -29,13 +29,17 @@ active_apps = [
 ]
 
 
-app_root_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
-app_local_root_dir = sh.environment_get('LocalAppData')  # %UserProfile%/AppData/Local
+# user_roaming_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
+# user_local_dir = sh.environment_get('LocalAppData')  # %UserProfile%/AppData/Local
+
+user_roaming_dir = "/mnt/c/Users/david/AppData/Roaming"  # %AppData%
+user_local_dir = "/mnt/c/Users/david/AppData/Local"  # %LocalAppData%
+user_docs_dir = "/mnt/c/Users/david/Documents"
 
 app_backups_full: List[AppBackup] = [
     AppBackup(
         id='handbrake',
-        root=app_root_dir,
+        root=user_roaming_dir,
         name='HandBrake',
         # setting_opts=['--include=presets.json', '--include=settings.json', '--exclude=*'],
         options={
@@ -44,7 +48,7 @@ app_backups_full: List[AppBackup] = [
     ),
     AppBackup(
         id='obs',
-        root=app_root_dir,
+        root=user_roaming_dir,
         name='obs-studio',
         # Test Command: rsync -a --dry-run --verbose --exclude=*.bak --include=global.ini --include=basic/ --include=basic/**/ --include=basic/**/* --exclude=* /mnt/c/Users/david/AppData/Roaming/obs-studio/ /mnt/d/OneDrive/Backups/Apps/obs-studio
         # setting_opts=['--exclude=*.bak', '--include=global.ini', '--include=basic/',
@@ -55,7 +59,7 @@ app_backups_full: List[AppBackup] = [
     ),
     AppBackup(
         id='qbittorrent',
-        root=app_root_dir,
+        root=user_roaming_dir,
         name='qBittorrent',
         options={
             'only': ['qBittorrent.ini', 'qBittorrent-data.ini'],
@@ -63,7 +67,7 @@ app_backups_full: List[AppBackup] = [
     ),
     AppBackup(
         id='qbittorrent_data',
-        root=app_local_root_dir,
+        root=user_local_dir,
         name='qBittorrent',
         options={
             'only': ['BT_backup/*'],
@@ -71,7 +75,8 @@ app_backups_full: List[AppBackup] = [
     ),
     AppBackup(
         id='voicemeeter',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents'),
+        root=user_docs_dir,
         name='Voicemeeter',
         options={
             'only': ['VoicemeeterProfile.xml'],
@@ -79,7 +84,7 @@ app_backups_full: List[AppBackup] = [
     ),
     AppBackup(
         id='vscode',
-        root=app_root_dir,
+        root=user_roaming_dir,
         name=sh.join_path('Code', 'User'),
         # setting_opts=['--include=settings.json', '--include=snippets/', '--exclude=*'],
         options={
@@ -89,7 +94,7 @@ app_backups_full: List[AppBackup] = [
     ),
     AppBackup(
         id='yt_dlp',
-        root=app_root_dir,
+        root=user_roaming_dir,
         name='yt-dlp',
         options={
             'only': ['config'],

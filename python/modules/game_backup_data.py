@@ -45,9 +45,16 @@ active_games = [
 ]
 
 
-game_root_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
-game_c_root_dir = sh.join_path('C:\\', 'Program Files')
-game_d_root_dir = sh.join_path('D:\\', 'GameFiles')
+# game_c_dir = sh.join_path('C:\\', 'Program Files')
+# game_d_dir = sh.join_path('D:\\', 'GameFiles')
+# user_roaming_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
+
+game_c_dir = "/mnt/c/Program Files"
+game_d_dir = "/mnt/d/GameFiles"
+user_roaming_dir = "/mnt/c/Users/david/AppData/Roaming"  # %AppData%
+user_local_dir = "/mnt/c/Users/david/AppData/Local"  # %LocalAppData%
+user_docs_dir = "/mnt/c/Users/david/Documents"
+user_games_dir = "/mnt/c/Users/david/Documents/My Games"
 
 game_backups_full: List[GameBackup] = [
     # GameBackup(
@@ -59,7 +66,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='diablo_iii',
         # root='/mnt/c/Users/david/Documents',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents'),  # similar to UserProfile
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents'),  # similar to UserProfile
+        root=user_docs_dir,
         name='Diablo III',
         screenshot='Screenshots',
         # screenshot_opts=['--backup', "--backup-dir=backup_{{ lookup('pipe','date +%Y-%m-%d') }}"],
@@ -75,7 +83,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='elder_scrolls_online',
         # root='/mnt/c/Users/david/Documents',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents'),
+        root=user_docs_dir,
         name=sh.join_path('Elder Scrolls Online', 'live'),
         # addon='AddOns',
         screenshot='Screenshots',
@@ -94,7 +103,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='elite_dangerous',
         # root='/mnt/c/Users/david/AppData/Local',
-        root=sh.environment_get('LocalAppData'),
+        # root=sh.environment_get('LocalAppData'),
+        root=user_local_dir,
         name=sh.join_path('Frontier Developments', 'Elite Dangerous'),
         screenshot='Screenshots',
         # setting=sh.join_path('Options', 'Bindings'),
@@ -121,7 +131,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='final_fantasy_xiv',
         # root='/mnt/c/Users/david/Documents/My Games',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        root=user_games_dir,
         name='FINAL FANTASY XIV - A Realm Reborn',
         screenshot='screenshots',
         # setting=' ',
@@ -149,7 +160,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='hotline_miami',
         # root='/mnt/c/Users/david/Documents/My Games',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        root=user_games_dir,
         name='HotlineMiami',
         # setting=' ',
         # setting_opts=['--include=*.cfg', '--exclude=*'],
@@ -163,7 +175,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='killing_floor_2',
         # root='/mnt/c/Users/david/Documents/My Games',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        root=user_games_dir,
         name='KillingFloor2',
         # setting='KFGame/Config',
         options={
@@ -175,7 +188,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='rocket_league',
         # root='/mnt/c/Users/david/Documents/My Games',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        root=user_games_dir,
         name='Rocket League',
         # setting='TAGame/Config',
         options={
@@ -191,7 +205,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='skyrim_se',
         # root='/mnt/c/Users/david/Documents/My Games',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        root=user_games_dir,
         name='Skyrim Special Edition',
         # setting=' ',
         # setting_opts=['--include=Saves/', '--include=Saves/*', '--exclude=*/', '--include=*.ini', '--exclude=*'],
@@ -205,7 +220,8 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='skyrim_vr',
         # root='/mnt/c/Users/david/Documents/My Games',
-        root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
+        root=user_games_dir,
         name='Skyrim VR',
         # setting=' ',
         # setting_opts=['--include=Saves/', '--include=Saves/*', '--exclude=*/', '--include=*.ini', '--exclude=*'],
@@ -219,7 +235,7 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='stardew_valley',
         # root='/mnt/c/Users/david/AppData/Roaming',
-        root=game_root_dir,
+        root=user_roaming_dir,
         name='StardewValley',
         # setting=' ',
         options={
@@ -229,7 +245,7 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='wow_retail',
         # root='/mnt/e/GameFiles',
-        root=game_d_root_dir,
+        root=game_d_dir,
         name=sh.join_path('World of Warcraft', '_retail_'),
         # addon='Interface/AddOns',
         # addon_opts=['--exclude=DataStore*/', '--exclude=TradeSkillMaster_AppHelper/'],
@@ -253,7 +269,7 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='wow_classic',
         # root='/mnt/e/GameFiles',
-        root=game_d_root_dir,
+        root=game_d_dir,
         name=sh.join_path('World of Warcraft', '_classic_'),
         # addon='Interface/AddOns',
         # addon_opts=['--exclude=DataStore*/', '--exclude=TradeSkillMaster_AppHelper/'],
@@ -277,7 +293,7 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='wow_weakauras',
         # root='/mnt/c/Users/david/AppData/Roaming',
-        root=game_root_dir,
+        root=user_roaming_dir,
         name='weakauras-companion',
         # setting=' ',
         # setting_opts=['--include=config.json', '--exclude=*'],
@@ -289,7 +305,7 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id='wow_project_ascension',
-        root=game_c_root_dir,
+        root=game_c_dir,
         name=sh.join_path('Ascension Launcher', 'resources', 'client'),
         screenshot='Screenshots',
         options={
@@ -308,7 +324,7 @@ game_backups_full: List[GameBackup] = [
     GameBackup(
         id='yiffalicious',
         # root='/mnt/c/Users/david/AppData/Roaming',
-        root=game_root_dir,
+        root=user_roaming_dir,
         name='yiffalicious',
         screenshot='screenshots',
         # setting='interactions/favorites',
