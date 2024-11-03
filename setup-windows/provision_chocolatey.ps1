@@ -20,7 +20,7 @@ $choco_packages = @(
 
     # --- Development ---
     # 'powershell-core'       # TODO: make this 1st in init along with a source/refresh of shell
-    # 'git'                   # Source Control
+    'git'                   # Source Control
     'github-desktop'
     'vscode'                # IDE: Visual Studio Code
     'docker-desktop'
@@ -39,9 +39,11 @@ $choco_packages = @(
 
     # --- Media Editors ---
     'handbrake'
+    'subtitleedit'
+    'mkvtoolnix' # https://mkvtoolnix.download/doc/mkvmerge.html
+    'audacity'
     'lossless-cut'
     'MakeMKV'
-    'mkvtoolnix' # https://mkvtoolnix.download/doc/mkvmerge.html
     'gimp'
     'kdenlive'
     # 'blender'
