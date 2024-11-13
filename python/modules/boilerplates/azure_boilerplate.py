@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Common logic for Azure interactions (with Python SDK)"""
 
+# https://aka.ms/azsdk/python/all
 # https://learn.microsoft.com/en-us/azure/developer/python/configure-local-development-environment
 # https://learn.microsoft.com/en-us/azure/developer/python/sdk/azure-sdk-overview
 # https://learn.microsoft.com/en-us/azure/developer/python/sdk/examples/azure-sdk-example-resource-group
