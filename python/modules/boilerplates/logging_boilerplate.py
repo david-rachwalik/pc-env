@@ -18,14 +18,14 @@ import argparse
 import datetime
 import logging
 import sys
-from typing import List, Optional, Type
+from typing import List, Optional, TypeAlias
 
 import colorlog
 import pytz
 
 # ------------------------ Classes ------------------------
 
-Logger: Type[logging.Logger] = logging.Logger
+Logger: TypeAlias = logging.Logger
 _timezone: str = 'US/Central'
 _time_format: str = '%Y-%m-%d %H:%M:%S'
 _message_format: str = '%(message)s'
