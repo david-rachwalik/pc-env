@@ -1,0 +1,154 @@
+{
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "files.associations": {
+    "hosts": "ini",
+    "*.ejs": "html",
+    "*.css": "postcss",
+    "*.json": "jsonc"
+  },
+
+  // --- Activity Bar (icons for File Explorer, Search, Source Control, Extensions, etc.) ---
+  "workbench.editor.labelFormat": "short",
+  "workbench.iconTheme": "vscode-icons",
+  "workbench.startupEditor": "none",
+  "workbench.editorAssociations": {
+    "*.ipynb": "jupyter-notebook"
+  },
+
+  // -------- Code Editor --------
+  "window.density.editorTabHeight": "compact",
+  "editor.accessibilitySupport": "off",
+  "editor.minimap.enabled": true,
+  "editor.fontFamily": "Consolas, 'Courier New', monospace",
+  "editor.fontLigatures": false,
+  "editor.linkedEditing": true,
+  "editor.wordWrapColumn": 160,
+
+  // --- Formatting ---
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+
+  // --- Formatting (Web) ---
+  "[javascript, typescript, javascriptreact, typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false
+  },
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  },
+  "eslint.debug": true,
+  "eslint.format.enable": true,
+  "prettier.printWidth": 160,
+  "prettier.tabWidth": 2,
+
+  // --- Formatting (Shell) ---
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format",
+    "editor.tabSize": 4
+  },
+  "[powershell]": {
+    "editor.defaultFormatter": "ms-vscode.powershell"
+  },
+  // https://til.intrepidintegration.com/vscode/powershell-settings
+  "powershell.codeFormatting.autoCorrectAliases": true,
+  "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+  "powershell.codeFormatting.useCorrectCasing": true,
+  "powershell.codeFormatting.newLineAfterOpenBrace": false,
+  "powershell.codeFormatting.whitespaceBeforeOpenParen": true,
+  "powershell.codeFormatting.ignoreOneLineBlock": true,
+  "powershell.codeFormatting.newLineAfterCloseBrace": true,
+  "powershell.codeFormatting.alignPropertyValuePairs": true,
+  "powershell.codeFormatting.whitespaceAfterSeparator": true,
+  "powershell.codeFormatting.openBraceOnSameLine": false,
+
+  // --- Formatting (Python) ---
+  "[python]": {
+    // "editor.defaultFormatter": "ms-python.python" // deprecated
+    // "editor.defaultFormatter": "ms-python.autopep8" // compliant but not very opinionated
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  // "autopep8.args": ["--line-length", "160"],
+  "black-formatter.args": ["--line-length", "160"],
+  // https://github.com/microsoft/vscode-python/wiki/Migration-to-Python-Tools-Extensions
+  "pylint.args": [
+    "--max-line-length",
+    "160",
+    // https://stackoverflow.com/questions/36490128/force-string-format-in-pylint
+    "--load-plugins=pylint_quotes", // https://github.com/edaniszewski/pylint-quotes
+    "--disable=C0103", // invalid-name (doesn't conform to snake_case naming style)
+    "--disable=C0301", // line-too-long
+    "--disable=W1203" // logging-fstring-interpolation (https://pylint.pycqa.org/en/latest/user_guide/messages/warning/logging-fstring-interpolation.html)
+  ],
+
+  // --- Formatting (Other) ---
+  "[dockerfile]": {
+    "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+  },
+  "markdownlint.config": {
+    "MD007": {
+      "indent": 2
+    },
+    "MD030": {
+      "ul_single": 1,
+      "ul_multi": 1
+    }
+  },
+  "[yaml]": {
+    "editor.formatOnSave": false
+  },
+
+  // -------- Terminal (CLI) --------
+  "terminal.explorerKind": "external",
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.automationProfile.windows": {
+    "path": "C:/Program Files/PowerShell/7/pwsh.exe"
+  },
+  "terminal.integrated.fontFamily": "'CaskaydiaCove NF'",
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "powershell.integratedConsole.showOnStartup": false,
+
+  // -------- Code Repository (Git) --------
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "git.openRepositoryInParentFolders": "always",
+  "merge-conflict.codeLens.enabled": false,
+  "diffEditor.ignoreTrimWhitespace": false,
+  "git.enabled": true,
+
+  // -------- Code Language (Web) --------
+  "javascript.referencesCodeLens.enabled": true,
+  "javascript.referencesCodeLens.showOnAllFunctions": true,
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.implementationsCodeLens.enabled": true,
+  "typescript.referencesCodeLens.enabled": true,
+  "typescript.referencesCodeLens.showOnAllFunctions": true,
+
+  // -------- Code Language (Python) --------
+  "python.defaultInterpreterPath": "/usr/local/bin/python",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.typeCheckingMode": "basic",
+
+  // --- Code Testing ---
+  // https://code.visualstudio.com/docs/python/testing
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["python"], // repo subdirectory
+
+  // -------- Other / Miscellaneous --------
+  "dotnetAcquisitionExtension.enableTelemetry": false,
+  "redhat.telemetry.enabled": false,
+  "emmet.includeLanguages": {
+    "ejs": "html"
+  },
+  "notebook.cellToolbarLocation": {
+    "default": "right",
+    "jupyter-notebook": "left"
+  },
+  "powershell.promptToUpdatePowerShell": false,
+  "vsicons.dontShowNewVersionMessage": true
+}

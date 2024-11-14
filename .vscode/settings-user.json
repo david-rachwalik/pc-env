@@ -1,0 +1,8 @@
+// C:\Users\david\AppData\Roaming\Code\User\settings.json
+{
+  // -------- User-Only Scope --------
+  "workbench.enableExperiments": false,
+  "terminal.external.windowsExec": "%LocalAppData%\\Microsoft\\WindowsApps\\wt.exe",
+  "security.workspace.trust.untrustedFiles": "open",
+  "dev.containers.defaultExtensionsIfInstalledLocally": ["GitHub.vscode-pull-request-github"]
+}
