@@ -3,9 +3,9 @@
 # https://chocolatey.org/packages/*
 $choco_packages = @(
     # --- Browsers ---
-    'googlechrome'
-    # 'firefox'
+    'firefox'
     # 'opera-gx'
+    # 'googlechrome'
 
     # --- Productivity ---
     'discord'
@@ -43,6 +43,8 @@ $choco_packages = @(
     'mkvtoolnix' # https://mkvtoolnix.download/doc/mkvmerge.html
     'audacity'
     'lossless-cut'
+    'ffmpeg'
+    'yt-dlp' # depends on ffmpeg
     'MakeMKV'
     'gimp'
     'kdenlive'
