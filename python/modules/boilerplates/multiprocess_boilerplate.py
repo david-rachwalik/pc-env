@@ -297,6 +297,7 @@ if __name__ == "__main__":
     print(f"results: {results}")
     end_print(start_time)
 
-    # --- Usage Example ---
-    # sudo python /root/.local/lib/python2.7/site-packages/multiprocess_boilerplate.py
-    # ps -eaf | grep -i python
+
+# :: Usage Example ::
+# sudo python /root/.local/lib/python2.7/site-packages/multiprocess_boilerplate.py
+# ps -eaf | grep -i python

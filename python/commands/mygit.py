@@ -54,17 +54,16 @@ class Repository(object):
     def create(self):
         """Method that initializes a Git repository"""
         # LOG.debug("Init")
-        display_path = self.path if (
-            self.is_bare) else f"{self.path}/.git"
+        display_path = self.path if (self.is_bare) else f"{self.path}/.git"
         if not self.force:
             response = input(
-                f"Repository not found ({display_path}), initialize?  (y or yes): ")
+                f"Repository not found ({display_path}), initialize?  (y or yes): "
+            )
             if response.lower() not in ["y", "yes"]:
                 LOG.info("Exiting without creating repository")
                 sh.fail_process()
         else:
-            LOG.info(
-                f"Repository not found ({display_path}), initializing...")
+            LOG.info(f"Repository not found ({display_path}), initializing...")
 
         # Initialize the repository
         (self.exists, changed) = bp_git.repo_create(self.path, self.is_bare)
@@ -87,28 +86,30 @@ class GitController(object):
         # ------------------------ Bare Repo (remote repository) ------------------------
 
         # Ensure bare repo exists
-        if (ARGS.action in ["status", "reset"]):
-            LOG.debug(
-                f"skip bare repository check for '{ARGS.action}' action")
+        if ARGS.action in ["status", "reset"]:
+            LOG.debug(f"skip bare repository check for '{ARGS.action}' action")
         else:
             # fail when not 'push' action and repo is missing
-            no_create = (ARGS.action != "push")
+            no_create = ARGS.action != "push"
             self.bare_repository = Repository(
-                ARGS.remote_path, no_create=no_create, force=True)
+                ARGS.remote_path, no_create=no_create, force=True
+            )
             LOG.debug(f"bare_repository exists: {self.bare_repository.exists}")
 
         # ------------------------ Work Repo (local repository) ------------------------
 
         # Ensure work repo exists
         # fail when not 'push' action and repo is missing
-        no_create = (ARGS.action != "push")
+        no_create = ARGS.action != "push"
         self.work_repository = Repository(
-            ARGS.local_path, ARGS.remote_path, no_create=no_create, force=True)
+            ARGS.local_path, ARGS.remote_path, no_create=no_create, force=True
+        )
         LOG.debug(f"work_repository exists: {self.work_repository.exists}")
 
         # Set work repo's remote path to bare repo
         remote_result = bp_git.work_remote(
-            ARGS.local_path, ARGS.remote_path, ARGS.remote_alias)
+            ARGS.local_path, ARGS.remote_path, ARGS.remote_alias
+        )
         if not remote_result:
             LOG.error("Error occurred updating remote path")
             sh.fail_process()
@@ -151,22 +152,26 @@ class GitController(object):
         LOG.debug(f"work-tree is clean: {work_tree_is_clean}")
         # Gather cache of branch names (fewer queries to refs)
         local_branches = bp_git.branch_list(ARGS.local_path)
-        remote_branches = bp_git.branch_list(
-            ARGS.local_path, ARGS.remote_alias)
+        remote_branches = bp_git.branch_list(ARGS.local_path, ARGS.remote_alias)
         # Check for branches in 'refs/heads' and 'refs/remotes'
         master_local_branch_exists = bp_git.branch_exists(
-            ARGS.local_path, master_branch, branches=local_branches)
+            ARGS.local_path, master_branch, branches=local_branches
+        )
         master_remote_branch_exists = bp_git.branch_exists(
-            ARGS.local_path, master_branch, ARGS.remote_alias, branches=remote_branches)
+            ARGS.local_path, master_branch, ARGS.remote_alias, branches=remote_branches
+        )
         LOG.debug(f"master_local_branch_exists: {master_local_branch_exists}")
         LOG.debug(f"master_remote_branch_exists: {master_remote_branch_exists}")
         stash_local_branch_exists = bp_git.branch_exists(
-            ARGS.local_path, stash_branch, branches=local_branches)
+            ARGS.local_path, stash_branch, branches=local_branches
+        )
         LOG.debug(f"stash_local_branch_exists: {stash_local_branch_exists}")
         version_local_branch_exists = bp_git.branch_exists(
-            ARGS.local_path, ARGS.branch, branches=local_branches)
+            ARGS.local_path, ARGS.branch, branches=local_branches
+        )
         version_remote_branch_exists = bp_git.branch_exists(
-            ARGS.local_path, ARGS.branch, ARGS.remote_alias, branches=remote_branches)
+            ARGS.local_path, ARGS.branch, ARGS.remote_alias, branches=remote_branches
+        )
         LOG.debug(f"version_local_branch_exists: {version_local_branch_exists}")
         LOG.debug(f"version_remote_branch_exists: {version_remote_branch_exists}")
 
@@ -184,11 +189,13 @@ class GitController(object):
         if ARGS.action == "pull":
             if not master_remote_branch_exists:
                 LOG.error(
-                    f"Unable to perform '{ARGS.action}' action; '{ARGS.remote_alias}/{master_branch}' branch not found")
+                    f"Unable to perform '{ARGS.action}' action; '{ARGS.remote_alias}/{master_branch}' branch not found"
+                )
                 sh.fail_process()
             if not version_remote_branch_exists:
                 LOG.error(
-                    f"Unable to perform '{ARGS.action}' action; '{ARGS.remote_alias}/{master_branch}' branch not found")
+                    f"Unable to perform '{ARGS.action}' action; '{ARGS.remote_alias}/{master_branch}' branch not found"
+                )
                 sh.fail_process()
 
         # ------------------------ 'master' branch ------------------------
@@ -199,26 +206,33 @@ class GitController(object):
         if ARGS.action in ["push", "pull"] and not master_local_branch_exists:
             if master_remote_branch_exists:
                 # Switch to bare repo 'master' branch before any commits
-                bp_git.branch_switch(
-                    ARGS.local_path, master_branch, ARGS.remote_alias)
+                bp_git.branch_switch(ARGS.local_path, master_branch, ARGS.remote_alias)
                 LOG.debug(f"checked out '{ARGS.remote_alias}/{master_branch}' branch")
                 master_local_branch_exists = bp_git.branch_create(
-                    ARGS.local_path, master_branch)
+                    ARGS.local_path, master_branch
+                )
                 LOG.debug(
-                    f"created local '{master_branch}' branch from remote '{ARGS.remote_alias}/{master_branch}' branch")
+                    f"created local '{master_branch}' branch from remote '{ARGS.remote_alias}/{master_branch}' branch"
+                )
             else:
                 # Push initial 'master' branch to remote when not already there
                 LOG.warning(
-                    f"'{master_branch}' branch is missing, creating initial commit...")
+                    f"'{master_branch}' branch is missing, creating initial commit..."
+                )
                 (commit_succeeded, commit_changed) = bp_git.work_commit(
-                    ARGS.local_path, initial=True)
+                    ARGS.local_path, initial=True
+                )
                 LOG.info(
-                    f"Intial commit for '{master_branch}' branch successfully created!")
+                    f"Intial commit for '{master_branch}' branch successfully created!"
+                )
                 # 'master' branch automatically active after initial commit; explicit checkout unnecessary
 
                 (push_succeeded, push_changed) = bp_git.work_push(
-                    ARGS.local_path, master_branch, ARGS.remote_alias)
-                LOG.debug(f"initial push to '{ARGS.remote_alias}/{master_branch}' has succeeded: {push_succeeded}")
+                    ARGS.local_path, master_branch, ARGS.remote_alias
+                )
+                LOG.debug(
+                    f"initial push to '{ARGS.remote_alias}/{master_branch}' has succeeded: {push_succeeded}"
+                )
                 # No need to refresh metadata again; push will update references
 
         # ------------------------ 'my-stash' branch ------------------------
@@ -226,9 +240,12 @@ class GitController(object):
         LOG.debug("---------------- Stash Branch Steps ----------------")
 
         # When work-tree is dirty, commit the changes to 'my-stash' branch
-        if ARGS.action == "push" and version_remote_branch_exists and not work_tree_is_clean:
-            LOG.debug(
-                "preparing to stash work-tree changes...")
+        if (
+            ARGS.action == "push"
+            and version_remote_branch_exists
+            and not work_tree_is_clean
+        ):
+            LOG.debug("preparing to stash work-tree changes...")
 
             # Create 'my-stash' branch from local 'master' branch
             bp_git.branch_switch(ARGS.local_path, master_branch)
@@ -236,17 +253,22 @@ class GitController(object):
 
             # Check if stash branch already exists, delete if so
             if stash_local_branch_exists:
-                LOG.debug(f"previous '{work_tree_is_clean}' branch was detected, removing...")
+                LOG.debug(
+                    f"previous '{work_tree_is_clean}' branch was detected, removing..."
+                )
                 bp_git.branch_delete(ARGS.local_path, stash_branch)
                 LOG.debug(f"'{work_tree_is_clean}' branch was deleted")
 
             # Create and checkout 'my-stash' branch to stage and commit those dirty files
             stash_local_branch_exists = bp_git.branch_create(
-                ARGS.local_path, stash_branch)
+                ARGS.local_path, stash_branch
+            )
             bp_git.branch_switch(ARGS.local_path, stash_branch)
             LOG.debug(f"created and checked out '{stash_branch}' branch")
             (commit_succeeded, commit_changed) = bp_git.work_commit(ARGS.local_path)
-            LOG.debug(f"commit for '{stash_branch}' branch succeeded: {commit_succeeded}")
+            LOG.debug(
+                f"commit for '{stash_branch}' branch succeeded: {commit_succeeded}"
+            )
 
             # Verify work-tree status (should always be clean after commit)
             work_tree_is_clean = bp_git.work_status(ARGS.local_path)
@@ -264,27 +286,32 @@ class GitController(object):
                 if version_remote_branch_exists:
                     # Create local 'version' branch from bare repo
                     bp_git.branch_switch(
-                        ARGS.local_path, ARGS.branch, ARGS.remote_alias)
-                    LOG.debug(
-                        f"checked out '{ARGS.remote_alias}/{ARGS.branch}' branch")
+                        ARGS.local_path, ARGS.branch, ARGS.remote_alias
+                    )
+                    LOG.debug(f"checked out '{ARGS.remote_alias}/{ARGS.branch}' branch")
                     version_local_branch_exists = bp_git.branch_create(
-                        ARGS.local_path, ARGS.branch)
+                        ARGS.local_path, ARGS.branch
+                    )
                     LOG.debug(
-                        f"created local '{ARGS.branch}' branch from remote '{ARGS.remote_alias}/{ARGS.branch}' branch")
+                        f"created local '{ARGS.branch}' branch from remote '{ARGS.remote_alias}/{ARGS.branch}' branch"
+                    )
                 else:
                     # Create local 'version' branch from 'master' branch
                     bp_git.branch_switch(ARGS.local_path, master_branch)
-                    LOG.debug(
-                        f"checked out '{master_branch}' branch")
+                    LOG.debug(f"checked out '{master_branch}' branch")
                     version_local_branch_exists = bp_git.branch_create(
-                        ARGS.local_path, ARGS.branch)
-                    LOG.debug(f"created local '{ARGS.branch}' branch from '{master_branch}' branch")
+                        ARGS.local_path, ARGS.branch
+                    )
+                    LOG.debug(
+                        f"created local '{ARGS.branch}' branch from '{master_branch}' branch"
+                    )
                 version_branch_just_created = True
 
                 # Verify successfully created 'version' branch
                 if not version_local_branch_exists:
                     LOG.error(
-                        f"local '{ARGS.branch}' branch still appears to be missing; failed to create")
+                        f"local '{ARGS.branch}' branch still appears to be missing; failed to create"
+                    )
                     sh.fail_process()
 
                 # Checkout local 'version' branch
@@ -295,8 +322,11 @@ class GitController(object):
                 # When work-tree is dirty, commit changes to 'version' branch
                 if not work_tree_is_clean and not version_remote_branch_exists:
                     (commit_succeeded, commit_changed) = bp_git.work_commit(
-                        ARGS.local_path)
-                    LOG.debug(f"commit for '{ARGS.branch}' branch succeeded: {commit_succeeded}")
+                        ARGS.local_path
+                    )
+                    LOG.debug(
+                        f"commit for '{ARGS.branch}' branch succeeded: {commit_succeeded}"
+                    )
                     # Verify work-tree status (should always be clean after commit)
                     work_tree_is_clean = bp_git.work_status(ARGS.local_path)
                     LOG.debug(f"work_tree_is_clean: {work_tree_is_clean}")
@@ -306,18 +336,23 @@ class GitController(object):
                 if version_remote_branch_exists and not version_branch_just_created:
                     # Merge 'version' branch from bare repo into work repo
                     LOG.debug(
-                        f"merge '{ARGS.remote_alias}/{ARGS.branch}' branch into local '{ARGS.remote_alias}' branch")
+                        f"merge '{ARGS.remote_alias}/{ARGS.branch}' branch into local '{ARGS.remote_alias}' branch"
+                    )
                     (succeeded, changed) = bp_git.work_merge(
-                        ARGS.local_path, ARGS.branch, ARGS.remote_alias)
-                    LOG.debug(f"'{ARGS.remote_alias}/{ARGS.branch}' branch merge succeeded: {succeeded}")
+                        ARGS.local_path, ARGS.branch, ARGS.remote_alias
+                    )
+                    LOG.debug(
+                        f"'{ARGS.remote_alias}/{ARGS.branch}' branch merge succeeded: {succeeded}"
+                    )
 
             # Rebase local 'my-stash' branch onto local 'version' branch
             if ARGS.action == "push" and stash_local_branch_exists:
                 bp_git.branch_switch(ARGS.local_path, stash_branch)
                 LOG.debug(f"checked out '{stash_branch}' branch")
-                LOG.debug(f"rebasing '{stash_branch}' branch onto local '{ARGS.branch}' branch...")
-                (succeeded, changed) = bp_git.work_rebase(
-                    ARGS.local_path, ARGS.branch)
+                LOG.debug(
+                    f"rebasing '{stash_branch}' branch onto local '{ARGS.branch}' branch..."
+                )
+                (succeeded, changed) = bp_git.work_rebase(ARGS.local_path, ARGS.branch)
                 LOG.debug(f"'{stash_branch}' branch rebase succeeded: {succeeded}")
                 # Checkout local 'version' branch
                 bp_git.branch_switch(ARGS.local_path, ARGS.branch)
@@ -350,8 +385,11 @@ class GitController(object):
             # Push 'version' branch to bare repo
             LOG.debug(f"pushing '{ARGS.branch}' branch to {ARGS.remote_alias}")
             (push_succeeded, push_changed) = bp_git.work_push(
-                ARGS.local_path, ARGS.branch, ARGS.remote_alias)
-            LOG.debug(f"'{ARGS.remote_alias}/{ARGS.branch}' branch push has succeeded: {push_succeeded}")
+                ARGS.local_path, ARGS.branch, ARGS.remote_alias
+            )
+            LOG.debug(
+                f"'{ARGS.remote_alias}/{ARGS.branch}' branch push has succeeded: {push_succeeded}"
+            )
             # No need to refresh metadata again; the push will update references
 
 
@@ -367,11 +405,13 @@ ARGS: argparse.Namespace = argparse.Namespace()  # for external modules
 LOG: log.Logger = log.get_logger(BASENAME)
 
 if __name__ == "__main__":
+
     def parse_arguments():
         """Method that parses arguments provided"""
         parser = argparse.ArgumentParser()
-        parser.add_argument("action", choices=[
-                            "push", "pull", "reset", "status", "delete"])
+        parser.add_argument(
+            "action", choices=["push", "pull", "reset", "status", "delete"]
+        )
         parser.add_argument("--debug", action="store_true")
         parser.add_argument("--force", "-f", action="store_true")
         parser.add_argument("--branch", "-b", default=master_branch)
@@ -380,20 +420,22 @@ if __name__ == "__main__":
         parser.add_argument("--local-path", default=sh.current_path())
         parser.add_argument("--gitignore-path", default="")
         return parser.parse_args()
+
     ARGS = parse_arguments()
 
     #  Configure the main logger
     LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
-        ARGS.debug, ARGS.log_path)
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
 
     LOG.debug(f"ARGS: {ARGS}")
     LOG.debug("------------------------------------------------")
 
     # Configure the logger
-    log_level = 20                  # logging.INFO
+    log_level = 20  # logging.INFO
     if ARGS.debug:
-        log_level = 10   # logging.DEBUG
+        log_level = 10  # logging.DEBUG
     LOG.setLevel(log_level)
 
     # Configure the shell_boilerplate logger
@@ -413,6 +455,7 @@ if __name__ == "__main__":
     LOG.debug("--- end point reached :3 ---")
     sh.exit_process()
 
-    # :: Usage Example ::
-    # mygit push --branch="Zoolander"
-    # mygit push --debug --force --branch="Zoolander" --gitignore-path="~/.gitignore"
+
+# :: Usage Example ::
+# mygit push --branch="Zoolander"
+# mygit push --debug --force --branch="Zoolander" --gitignore-path="~/.gitignore"

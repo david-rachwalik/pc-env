@@ -318,5 +318,6 @@ if __name__ == "__main__":
     boilerplate = XmlManager()
     boilerplate.Exit()
 
-    # --- Usage Example ---
-    # sudo python /root/.local/lib/python2.7/site-packages/xml_boilerplate.py
+
+# :: Usage Example ::
+# sudo python /root/.local/lib/python2.7/site-packages/xml_boilerplate.py

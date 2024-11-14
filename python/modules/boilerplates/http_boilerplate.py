@@ -37,7 +37,9 @@ DEFAULT_TIMEOUT = 100  # seconds before exception is raised if server has not re
 Response = req.Response
 
 
-def create(url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None) -> req.Response:
+def create(
+    url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None
+) -> req.Response:
     """Method that creates - performs an HTTP 'POST' request"""
     response = req.post(url, data=data, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
@@ -51,7 +53,9 @@ def get(url: str, auth: Optional[AUTH_TYPE] = None) -> req.Response:
     return response
 
 
-def update(url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None) -> req.Response:
+def update(
+    url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None
+) -> req.Response:
     """Method that updates - performs an HTTP 'PUT' request"""
     response = req.put(url, data=data, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
@@ -68,45 +72,48 @@ def delete(url: str, auth: Optional[AUTH_TYPE] = None) -> req.Response:
 # ------------------------ Main Program ------------------------
 
 ARGS: argparse.Namespace = argparse.Namespace()  # for external modules
-BASENAME = 'http_boilerplate'
+BASENAME = "http_boilerplate"
 LOG: log.Logger = log.get_logger(BASENAME)  # Initialize the logger
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Returns argparse.Namespace; to pass into function, use **vars(self.ARGS)
     def parse_arguments():
         """Method that parses arguments provided"""
         parser = argparse.ArgumentParser()
-        parser.add_argument('--debug', action='store_true')
-        parser.add_argument('--log-path', default='')
+        parser.add_argument("--debug", action="store_true")
+        parser.add_argument("--log-path", default="")
         return parser.parse_args()
+
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger
-        _sh_log = log.get_logger('shell_boilerplate')
+        _sh_log = log.get_logger("shell_boilerplate")
         log.set_handlers(_sh_log, LOG_HANDLERS)
         sh.ARGS.debug = ARGS.debug
 
-    LOG.debug(f'ARGS: {ARGS}')
-    LOG.debug('------------------------------------------------')
+    LOG.debug(f"ARGS: {ARGS}")
+    LOG.debug("------------------------------------------------")
 
-    RES = get('https://api.github.com/events')
-    LOG.debug(f'RESPONSE: {RES}')
-    LOG.debug(f'RESPONSE elapsed: {RES.elapsed}')
+    RES = get("https://api.github.com/events")
+    LOG.debug(f"RESPONSE: {RES}")
+    LOG.debug(f"RESPONSE elapsed: {RES.elapsed}")
     # LOG.debug(f'RESPONSE encoding: {RES.encoding}')
     # LOG.debug(f'RESPONSE cookies: {RES.cookies}')
     # LOG.debug(f'RESPONSE history: {RES.history}')
     # LOG.debug(f'RESPONSE headers: {RES.headers}')
     # LOG.debug(f'RESPONSE content: {RES.content}')
 
-    LOG.debug(f'RESPONSE status code: {RES.status_code}')
+    LOG.debug(f"RESPONSE status code: {RES.status_code}")
     RESPONSE_SUCCEEDED = bool(RES.status_code == req.codes.ok)
-    LOG.debug(f'RESPONSE status code OK: {RESPONSE_SUCCEEDED}')
+    LOG.debug(f"RESPONSE status code OK: {RESPONSE_SUCCEEDED}")
 
     # If we get to this point, assume all went well
-    LOG.debug('--------------------------------------------------------')
-    LOG.debug('--- end point reached :3 ---')
+    LOG.debug("--------------------------------------------------------")
+    LOG.debug("--- end point reached :3 ---")
     sh.exit_process()

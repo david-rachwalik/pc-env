@@ -13,24 +13,24 @@ from typing import Tuple
 def do_job(tasks_to_accomplish, tasks_that_are_done):
     while True:
         try:
-            '''
-                try to get task from the queue. get_nowait() function will 
-                raise queue.Empty exception if the queue is empty. 
-                queue(False) function would do the same task also.
-            '''
+            """
+            try to get task from the queue. get_nowait() function will
+            raise queue.Empty exception if the queue is empty.
+            queue(False) function would do the same task also.
+            """
             task = tasks_to_accomplish.get_nowait()
         except queue.Empty:
 
             break
         else:
-            '''
-                if no exception has been raised, add the task completion 
-                message to task_that_are_done queue
-            '''
+            """
+            if no exception has been raised, add the task completion
+            message to task_that_are_done queue
+            """
             print(task)
             proc_name = multiprocessing.current_process().name
-            tasks_that_are_done.put(task + ' is done by ' + proc_name)
-            time.sleep(.5)
+            tasks_that_are_done.put(task + " is done by " + proc_name)
+            time.sleep(0.5)
     return True
 
 
@@ -46,7 +46,9 @@ def main():
 
     # creating processes
     for w in range(number_of_processes):
-        p = multiprocessing.Process(target=do_job, args=(tasks_to_accomplish, tasks_that_are_done))
+        p = multiprocessing.Process(
+            target=do_job, args=(tasks_to_accomplish, tasks_that_are_done)
+        )
         processes.append(p)
         p.start()
 
@@ -86,7 +88,7 @@ def main_async():
     print(f"results: {results}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # start_time = time.time()
     # main()
     # end_time = time.time() - start_time

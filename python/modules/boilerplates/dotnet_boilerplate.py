@@ -25,7 +25,13 @@ def solution_new(solution_dir: str, solution: str) -> bool:
     """Method that creates a new solution"""
     # https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-new
     template: str = "sln"
-    command: List[str] = ["dotnet", "new", template, f"--output={solution_dir}", f"--name={solution}"]
+    command: List[str] = [
+        "dotnet",
+        "new",
+        template,
+        f"--output={solution_dir}",
+        f"--name={solution}",
+    ]
     # command.append("--dry-run")
     sh.print_command(command)
     process = sh.run_subprocess(command)
@@ -44,6 +50,7 @@ def solution_project_add(solution_file: str, project_file: str) -> bool:
 
 
 # --- Project Commands ---
+
 
 # 'dotnet new' automatically calls build and restore
 # https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-new
@@ -86,7 +93,7 @@ def project_package_list(project_dir: str) -> List[str]:
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
     # Parse project package list
-    if (process.returncode == 0 and process.stdout):
+    if process.returncode == 0 and process.stdout:
         stdout_lines = process.stdout.splitlines()
         for line in stdout_lines:
             line_edit = line.lstrip()
@@ -111,6 +118,7 @@ def project_package_add(project_dir: str, package: str) -> bool:
 # --- User-Secrets Commands ---
 # https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets
 
+
 def secrets_init(dotnet_dir: str, application: str, project: str) -> bool:
     """Method that initializes user secrets in a project"""
     app_dir: str = sh.join_path(dotnet_dir, application)
@@ -133,12 +141,20 @@ def secrets_list(dotnet_dir: str, application: str, project: str) -> bool:
     return process.returncode == 0
 
 
-def secrets_set(dotnet_dir: str, application: str, project: str, secret_key: str, secret_value: str) -> bool:
+def secrets_set(
+    dotnet_dir: str, application: str, project: str, secret_key: str, secret_value: str
+) -> bool:
     """Method that creates a user secret in a project"""
     app_dir: str = sh.join_path(dotnet_dir, application)
     project_path: str = sh.join_path(app_dir, project)
-    command: List[str] = ["dotnet", "user-secrets", "set", secret_key,
-                          secret_value, f"--project={project_path}"]
+    command: List[str] = [
+        "dotnet",
+        "user-secrets",
+        "set",
+        secret_key,
+        secret_value,
+        f"--project={project_path}",
+    ]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -147,12 +163,17 @@ def secrets_set(dotnet_dir: str, application: str, project: str, secret_key: str
 
 # --- Scaffold Commands ---
 
+
 # https://docs.microsoft.com/en-us/aspnet/core/fundamentals/tools/dotnet-aspnet-codegenerator
 def project_identity_scaffold(project_dir: str) -> bool:
     """Method that scaffolds an identity in a project"""
-    command: List[str] = ["dotnet", "aspnet-codegenerator", "identity", "--useDefaultUI",
-                          f"--project={project_dir}"
-                          ]
+    command: List[str] = [
+        "dotnet",
+        "aspnet-codegenerator",
+        "identity",
+        "--useDefaultUI",
+        f"--project={project_dir}",
+    ]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -173,10 +194,13 @@ if __name__ == "__main__":
         parser.add_argument("--debug", action="store_true")
         parser.add_argument("--log-path", default="")
         return parser.parse_args()
+
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger
@@ -187,5 +211,6 @@ if __name__ == "__main__":
     LOG.debug(f"ARGS: {ARGS}")
     LOG.debug("------------------------------------------------")
 
-    # --- Usage Example ---
-    # python ~/.local/lib/python3.6/site-packages/dotnet_boilerplate.py --debug
+
+# :: Usage Example ::
+# python ~/.local/lib/python3.6/site-packages/dotnet_boilerplate.py --debug

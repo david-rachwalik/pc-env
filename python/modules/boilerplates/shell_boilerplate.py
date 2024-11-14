@@ -16,11 +16,13 @@
 # await_results, is_done, format_output
 
 import argparse
+
 # import distutils.dir_util
 # import distutils.file_util
 import json
 import os
 import shutil
+
 # import signal
 import subprocess
 import sys
@@ -47,7 +49,7 @@ class DictObj(dict):
 
     def __getattr__(self, name):
         if name not in self:
-            raise AttributeError(f'No such attribute: {name}')
+            raise AttributeError(f"No such attribute: {name}")
         return self[name]
 
     def __setattr__(self, name, value):
@@ -57,29 +59,30 @@ class DictObj(dict):
         if name in self:
             del self[name]
         else:
-            raise AttributeError(f'No such attribute: {name}')
+            raise AttributeError(f"No such attribute: {name}")
 
 
 # ------------------------ Global Shell Commands ------------------------
 
 # --- Helper Commands ---
 
+
 def system_platform() -> str:
     """Method that fetches the system platform type"""
     # https://docs.python.org/3.11/library/sys.html#sys.platform
-    if sys.platform.startswith('linux'):
-        return 'linux'
-    elif sys.platform.startswith('win'):
-        return 'windows'
-    return ''
+    if sys.platform.startswith("linux"):
+        return "linux"
+    elif sys.platform.startswith("win"):
+        return "windows"
+    return ""
     # alternatively, could use os.name (posix=linux, nt=windows)
 
 
-def environment_get(key: str, default: str = '') -> str:
+def environment_get(key: str, default: str = "") -> str:
     """Method that fetches an environment variable"""
-#     # https://docs.python.org/3/library/os.html#os.environ
-#     return os.getenv(key, default)
-    return os.environ.get(key, default) or ''
+    #     # https://docs.python.org/3/library/os.html#os.environ
+    #     return os.getenv(key, default)
+    return os.environ.get(key, default) or ""
 
 
 def environment_set(key: str, value: str):
@@ -106,11 +109,12 @@ def random_password(length: int = 16) -> str:
     # Randomly shuffle all the characters
     password_list: List[str] = list(password)
     random.SystemRandom().shuffle(password_list)
-    password = ''.join(password_list)
+    password = "".join(password_list)
     return password
 
 
 # --- Utility Commands ---
+
 
 # Changes directory during 'with' block and then switches back
 @contextmanager
@@ -138,20 +142,21 @@ def list_differences(first, second):
 
 
 # Provide beginning text of command option to 'secure' and remaining will be hidden
-def print_command(command: List[str], secure: str = '') -> str:
+def print_command(command: List[str], secure: str = "") -> str:
     """Method that prints the main command text and hiding sensitive text"""
     _command: List[str] = command.copy()
     if secure:
         # Print password-safe version of command
-        for (i, line) in enumerate(_command):
+        for i, line in enumerate(_command):
             if line.startswith(secure):
-                _command[i] = f'{secure}*'
-    display_command: str = ' '.join(map(str, _command))  # using list comprehension
+                _command[i] = f"{secure}*"
+    display_command: str = " ".join(map(str, _command))  # using list comprehension
     LOG.debug(display_command)
     return display_command
 
 
 # --- Process (List State) Commands ---
+
 
 def exit_process():
     """Method that exits the process"""
@@ -175,6 +180,7 @@ def process_parent_id() -> int:
 
 # --- Path Commands ---
 
+
 def current_path() -> str:
     """Method that returns the current directory path"""
     return os.getcwd()
@@ -195,13 +201,13 @@ def join_path(path: str, *paths) -> str:
 
 
 # Pass either 'f' (file) or 'd' (directory) to file_type
-def path_exists(path: str, file_type: str = '') -> bool:
+def path_exists(path: str, file_type: str = "") -> bool:
     """Method that validates whether the path exists"""
     path = expand_path(path)
     # Use more specific type of check if provided
-    if file_type == 'd':
+    if file_type == "d":
         return os.path.isdir(path)
-    elif file_type == 'f':
+    elif file_type == "f":
         return os.path.isfile(path)
     else:
         return os.path.exists(path)
@@ -230,9 +236,10 @@ def path_filename(name: str) -> str:
 
 # --- Directory Commands ---
 
+
 def list_directory(path: str) -> List[str]:
     """Method that lists a directory's contents"""
-    if not path_exists(path, 'd'):
+    if not path_exists(path, "d"):
         return []
     paths: List[str] = os.listdir(path)
     paths.sort()
@@ -241,7 +248,7 @@ def list_directory(path: str) -> List[str]:
 
 def create_directory(path: str, mode=0o777) -> bool:
     """Method that creates a directory"""
-    if path_exists(path, 'd'):
+    if path_exists(path, "d"):
         return False
     # directories_created: List[str] = distutils.dir_util.mkpath(path, mode)
     # No longer using 'mode' here - prefer to change permissions (os.chmod) when needed
@@ -253,14 +260,14 @@ def create_directory(path: str, mode=0o777) -> bool:
 
 def delete_directory(path: str):
     """Method that deletes a directory"""
-    if not path_exists(path, 'd'):
+    if not path_exists(path, "d"):
         return False
     try:
         # distutils.dir_util.remove_tree(path)
         shutil.rmtree(path)
         return True
     except Exception as e:
-        LOG.error(f'Exception: {e}')
+        LOG.error(f"Exception: {e}")
         return False
 
 
@@ -270,82 +277,92 @@ def copy_directory(src: str, dest: str) -> bool:
         shutil.copytree(src, dest)
         return True
     except shutil.Error as e:
-        LOG.error(f'shutil.Error: {e}')
+        LOG.error(f"shutil.Error: {e}")
         return False
 
 
 # Uses rsync, a better alternative to 'shutil.copytree' with ignore
-def rsync_directory(src: str, dest: str, recursive: bool = True, purge: bool = True, cut: bool = False,
-                    include: Tuple = (), exclude: Tuple = (), debug: bool = False
-                    ) -> Tuple[List[str], List[str]]:
+def rsync_directory(
+    src: str,
+    dest: str,
+    recursive: bool = True,
+    purge: bool = True,
+    cut: bool = False,
+    include: Tuple = (),
+    exclude: Tuple = (),
+    debug: bool = False,
+) -> Tuple[List[str], List[str]]:
     """Method that syncs a directory's contents"""
-    LOG.debug('Init')
+    LOG.debug("Init")
     changed_files: List[str] = []
     changes_dirs: List[str] = []
     # Create sequence of command options
     command_options = []
     # --itemize-changes returns files with any change (e.g. permission attributes)
     # --list-only returns eligible files, not what actually changed
-    command_options.append('--itemize-changes')
-    command_options.append('--compress')
-    command_options.append('--prune-empty-dirs')
-    command_options.append('--human-readable')
-    command_options.append('--out-format=%i %n')  # omit %L for symlink paths
+    command_options.append("--itemize-changes")
+    command_options.append("--compress")
+    command_options.append("--prune-empty-dirs")
+    command_options.append("--human-readable")
+    command_options.append("--out-format=%i %n")  # omit %L for symlink paths
     # No operations performed, returns file paths the actions would effect
     if debug:
-        command_options.append('--dry-run')
+        command_options.append("--dry-run")
     # Copy files recursively, not only first level
     if recursive:
-        command_options.append('--archive')  # rlptgoD (not -H -A -X)
+        command_options.append("--archive")  # rlptgoD (not -H -A -X)
     else:
-        command_options.append('--links')
-        command_options.append('--perms')
-        command_options.append('--times')
-        command_options.append('--group')
-        command_options.append('--owner')
-        command_options.append('--devices')
-        command_options.append('--specials')
+        command_options.append("--links")
+        command_options.append("--perms")
+        command_options.append("--times")
+        command_options.append("--group")
+        command_options.append("--owner")
+        command_options.append("--devices")
+        command_options.append("--specials")
     # Purge destination files not in source
     if purge:
-        command_options.append('--delete')
+        command_options.append("--delete")
     # Delete source files after successful transfer
     if cut:
-        command_options.append('--remove-source-files')
+        command_options.append("--remove-source-files")
     # Add whitelist/blacklist filters
     for i in include:
         if i:
-            command_options.append(f'--include={i}')
+            command_options.append(f"--include={i}")
     for i in exclude:
         if i:
-            command_options.append(f'--exclude={i}')
+            command_options.append(f"--exclude={i}")
     # Build and run the command
-    command = ['rsync']
+    command = ["rsync"]
     command.extend(command_options)
     command.extend([src, dest])
-    LOG.debug(f'command used: {command}')
+    LOG.debug(f"command used: {command}")
     process = run_subprocess(command)
     # log_subprocess(LOG, process)
 
     results: List[str] = str.splitlines(str(process.stdout))
-    LOG.debug(f'results: {results}')
+    LOG.debug(f"results: {results}")
 
     for r in results:
-        result = r.split(' ', 1)
+        result = r.split(" ", 1)
         itemized_output = result[0]
         file_name = result[1]
-        if itemized_output[1] == 'f':
+        if itemized_output[1] == "f":
             changed_files.append(join_path(dest, file_name))
-        elif itemized_output[1] == 'd':
+        elif itemized_output[1] == "d":
             changes_dirs.append(join_path(dest, file_name))
 
-    LOG.debug(f'changed_files: {changed_files}')
+    LOG.debug(f"changed_files: {changed_files}")
     return (changed_files, changes_dirs)
 
 
-def sync_directory(sourcedir: str, targetdir: str, action: str = 'sync',
-                   options: Optional[Dict[str, Any]] = None,
-                   ignore: Optional[List[str]] = None,
-                   ) -> bool:
+def sync_directory(
+    sourcedir: str,
+    targetdir: str,
+    action: str = "sync",
+    options: Optional[Dict[str, Any]] = None,
+    ignore: Optional[List[str]] = None,
+) -> bool:
     """Method that copies a directory
 
     Args:
@@ -357,7 +374,7 @@ def sync_directory(sourcedir: str, targetdir: str, action: str = 'sync',
     Returns:
         bool: Whether directories are in sync
     """
-    action_choices: List[str] = ['diff', 'sync', 'update']
+    action_choices: List[str] = ["diff", "sync", "update"]
     if action not in action_choices:
         return False
 
@@ -367,33 +384,33 @@ def sync_directory(sourcedir: str, targetdir: str, action: str = 'sync',
     # https://github.com/tkhyn/dirsync/#additional-options
     # https://github.com/tkhyn/dirsync/#custom-logger
     default_options: Dict[str, Any] = {
-        'logger': LOG,  # custom logger to send output somewhere other than stdout
-        'verbose': True,
-        'create': True,  # create target directory if it does not exist
-        'ctime': True,  # takes into account the creation time or last metadata change
-        'content': True,  # synchronize only different files (e.g. hash check)
+        "logger": LOG,  # custom logger to send output somewhere other than stdout
+        "verbose": True,
+        "create": True,  # create target directory if it does not exist
+        "ctime": True,  # takes into account the creation time or last metadata change
+        "content": True,  # synchronize only different files (e.g. hash check)
         # use raw string notation for regex (https://docs.python.org/3/howto/regex.html)
-        'ignore': [
-            r'.*\.bak$',  # ignore files with '.bak' extension
+        "ignore": [
+            r".*\.bak$",  # ignore files with '.bak' extension
             *ignore,
         ],  # regex patterns to ignore (https://regexr.com)
     }
     if options:
-        LOG.debug(f'options provided: {options}')
+        LOG.debug(f"options provided: {options}")
         full_options: Dict[str, Any] = {
             **default_options,
             **options,
         }
     else:
         full_options: Dict[str, Any] = default_options
-    LOG.debug(f'options used: {full_options}')
+    LOG.debug(f"options used: {full_options}")
 
     try:
         # https://github.com/tkhyn/dirsync
         dirsync.sync(sourcedir, targetdir, action, **full_options)
         return True
     except Exception as e:
-        LOG.error(f'Exception: {e}')
+        LOG.error(f"Exception: {e}")
         return False
 
 
@@ -402,7 +419,7 @@ def remove_empty_directories(root) -> List[str]:
     """Method that recursively removes empty subdirectories"""
     removed_dirs: List[str] = []
 
-    for (current_dir, subdirs, files) in os.walk(root, topdown=False):
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
         if files:
             continue  # skip directory with files
         # LOG.debug(f'current_dir: {current_dir}')
@@ -424,46 +441,47 @@ def remove_empty_directories(root) -> List[str]:
 
 # --- File Commands ---
 
+
 # Touch file and optionally fill with content
 def write_file(path: str, content: Optional[Any] = None, append: bool = False):
     """Method that creates a file"""
-    strategy = 'a' if (append) else 'w'  # write mode
+    strategy = "a" if (append) else "w"  # write mode
     # open() only accepts absolute paths, not relative
     path = expand_path(path)
     # Ensure containing directory exists
-    if not path_exists(path, 'd'):
+    if not path_exists(path, "d"):
         create_directory(path_dir(path))
     # http://python-notes.curiousefficiency.org/en/latest/python3/text_file_processing.html
-    with open(path, strategy, encoding='latin-1') as f:
+    with open(path, strategy, encoding="latin-1") as f:
         # Accept content as string or sequence of strings
         if isinstance(content, list):
             f.writelines(content)
         elif content is None:
-            f.write('')
+            f.write("")
         else:
             f.write(str(content))
 
 
 def read_file(path: str, oneline: bool = False) -> str:
     """Method that reads a file's content"""
-    data: str = ''
+    data: str = ""
     path = expand_path(path)
-    if not (path or path_exists(path, 'f')):
+    if not (path or path_exists(path, "f")):
         return data
     try:
         # http://python-notes.curiousefficiency.org/en/latest/python3/text_file_processing.html
-        with open(path, 'r', encoding='latin-1') as f:
+        with open(path, "r", encoding="latin-1") as f:
             data = f.readline().rstrip() if (oneline) else f.read().strip()
     except IOError as e:
         # File does not exist or some other IOError
-        LOG.error(f'Exception: {e}')
+        LOG.error(f"Exception: {e}")
     return data
 
 
 def delete_file(path: str):
     """Method that deletes a file"""
     path = expand_path(path)
-    if path_exists(path, 'f'):
+    if path_exists(path, "f"):
         os.unlink(path)
 
 
@@ -471,13 +489,13 @@ def rename_file(src: str, dest: str):
     """Method that renames a file"""
     src = expand_path(src)
     dest = expand_path(dest)
-    if path_exists(src, 'f'):
+    if path_exists(src, "f"):
         os.rename(src, dest)
 
 
 def copy_file(src: str, dest: str) -> bool:
     """Method that copies a file"""
-    if not path_exists(src, 'f'):
+    if not path_exists(src, "f"):
         return False
     # Ensure containing directory exists
     dest_dir = path_dir(dest)  # grab directory path from file path
@@ -486,16 +504,16 @@ def copy_file(src: str, dest: str) -> bool:
         shutil.copy2(src, dest)
         return True
     except Exception as e:
-        LOG.error(f'Exception: {e}')
+        LOG.error(f"Exception: {e}")
         return False
 
 
 def hash_file(path: str) -> str:
     """Method that verifies a file hash"""
-    if not path_exists(path, 'f'):
-        return ''
+    if not path_exists(path, "f"):
+        return ""
     # Using SHA-2 hash check (more secure than MD5|SHA-1)
-    command: List[str] = ['sha256sum', path]
+    command: List[str] = ["sha256sum", path]
     process = run_subprocess(command)
     # log_subprocess(LOG, process, debug=ARGS.debug)
     results: List[str] = str(process.stdout).split()
@@ -518,15 +536,16 @@ def match_file(path1: str, path2: str) -> bool:
         return False
 
 
-def backup_file(path: str, ext='bak', time_format='%Y%m%d-%H%M%S') -> str:
+def backup_file(path: str, ext="bak", time_format="%Y%m%d-%H%M%S") -> str:
     """Method that creates a file backup"""
     current_time = time.strftime(time_format)
-    backup_path = f'{path}.{current_time}.{ext}'
+    backup_path = f"{path}.{current_time}.{ext}"
     rename_file(path, backup_path)
     return backup_path
 
 
 # --- JSON Commands ---
+
 
 # https://realpython.com/python-json
 def _decode_dict(dct) -> DictObj:
@@ -535,7 +554,9 @@ def _decode_dict(dct) -> DictObj:
 
 
 # Deserialize JSON string to Python dictionary: https://docs.python.org/3/library/json.html
-def from_json(jsonstr: str, object_hook: Optional[Callable] = None) -> Dict[str, Any] | None:
+def from_json(
+    jsonstr: str, object_hook: Optional[Callable] = None
+) -> Dict[str, Any] | None:
     """Method that deserializes JSON string to Python dictionary"""
     results = None
     if not (jsonstr and isinstance(jsonstr, str)):
@@ -546,7 +567,7 @@ def from_json(jsonstr: str, object_hook: Optional[Callable] = None) -> Dict[str,
         # results = json.loads(json_str, object_hook=_decode_dict)
         results = json.loads(jsonstr, object_hook=object_hook)
     except ValueError as e:
-        LOG.error(f'ValueError: {e}')
+        LOG.error(f"ValueError: {e}")
     # LOG.debug(f"results: {results}")
     return results
 
@@ -554,13 +575,13 @@ def from_json(jsonstr: str, object_hook: Optional[Callable] = None) -> Dict[str,
 # Serialize Python dictionary into JSON string
 def to_json(data: Any, indent: Optional[int] = None) -> str:
     """Method that serializes Python dictionary into JSON string"""
-    results = ''
+    results = ""
     try:
         results = json.dumps(data, indent=indent)  # convert to json
         # https://www.bruceeckel.com/2018/09/16/json-encoding-python-dataclasses
         # can pass a json.JSONEncoder to json.dumps 'cls' param for custom objects
     except ValueError as e:
-        LOG.error(f'ValueError: {e}')
+        LOG.error(f"ValueError: {e}")
     # LOG.debug(f'results: {results}')
     return results
 
@@ -569,7 +590,7 @@ def to_json(data: Any, indent: Optional[int] = None) -> str:
 def save_json(path: str, data: Any, indent: Optional[int] = 2) -> bool:
     """Method that saves JSON to a file"""
     # Handle previous service principal if found
-    if path_exists(path, 'f'):
+    if path_exists(path, "f"):
         backup_path = backup_file(path)
     # https://stackoverflow.com/questions/39491420/python-jsonexpecting-property-name-enclosed-in-double-quotes
     # Valid JSON syntax uses quotation marks; single quotes are only valid in string
@@ -578,7 +599,7 @@ def save_json(path: str, data: Any, indent: Optional[int] = 2) -> bool:
     file_ready = to_json(data, indent)
     # LOG.debug(f'file_ready: {file_ready}')
     write_file(path, file_ready)
-    return path_exists(path, 'f')
+    return path_exists(path, "f")
 
 
 def is_json_parse(obj) -> bool:
@@ -596,6 +617,7 @@ def is_json_str(json_str: str) -> bool:
 
 # --- Process Commands ---
 
+
 # Creates asyncronous process and immediately awaits the tuple results
 # NOTE: Only accepting 'command' as list; argument options can have spaces
 def run_subprocess(
@@ -612,11 +634,14 @@ def run_subprocess(
 
     # Detect shell to run command in based on system platform
     platform = system_platform()
-    if platform == 'windows':
+    if platform == "windows":
         # run_command = ['powershell', '-Command'] + command  # legacy Windows PowerShell, built on Windows-only .NET
-        run_command = ['pwsh', '-Command'] + command  # PowerShell [Core], built on cross-platform .NET Core
-    elif platform == 'linux':
-        run_command = ['bash', '-c'] + command  # use Bash for *nix
+        run_command = [
+            "pwsh",
+            "-Command",
+        ] + command  # PowerShell [Core], built on cross-platform .NET Core
+    elif platform == "linux":
+        run_command = ["bash", "-c"] + command  # use Bash for *nix
     # LOG.debug(f'run_command: {run_command}')
 
     # Execute the command in a subprocess
@@ -639,18 +664,20 @@ def run_subprocess(
 
 
 # Log the subprocess output provided
-def log_subprocess(logger: log.Logger, process: subprocess.CompletedProcess, debug: bool = False):
+def log_subprocess(
+    logger: log.Logger, process: subprocess.CompletedProcess, debug: bool = False
+):
     """Method that logs a command in a subprocess"""
     if isinstance(process.stdout, str) and len(process.stdout) > 0:
-        log_stdout = f'stdout: {process.stdout}' if debug else process.stdout
+        log_stdout = f"stdout: {process.stdout}" if debug else process.stdout
         logger.info(log_stdout)
     if isinstance(process.stderr, str) and len(process.stderr) > 0:
-        log_stderr = f'stderr: {process.stderr}' if debug else process.stderr
+        log_stderr = f"stderr: {process.stderr}" if debug else process.stderr
         # Level at least INFO (above DEBUG) so exceptions are shown
         # https://docs.python.org/3/library/logging.html#levels
         logger.error(log_stderr)
     if isinstance(process.returncode, int) and debug:
-        log_rc = f'rc: {process.returncode}' if debug else process.returncode
+        log_rc = f"rc: {process.returncode}" if debug else process.returncode
         logger.debug(log_rc)
 
     # debug=False           debug=True
@@ -684,12 +711,19 @@ def log_subprocess(logger: log.Logger, process: subprocess.CompletedProcess, deb
 
 # ------------------------ SubProcess Class ------------------------
 
+
 # Only accepts 'command' parameter as a list/sequence of strings
 # - Cannot string split because any argument options with values use spaces
 class SubProcess(object):
     """Class of subprocess methods"""
 
-    def __init__(self, command: List[str], chdir: str = '', env: Optional[Dict[str, str]] = None, shell: bool = False):
+    def __init__(
+        self,
+        command: List[str],
+        chdir: str = "",
+        env: Optional[Dict[str, str]] = None,
+        shell: bool = False,
+    ):
         # Initial values
         self.command: List[str] = command
         self.cwd: str = current_path()
@@ -702,15 +736,15 @@ class SubProcess(object):
 
         # Build arguments and environment variables to support command
         command_args = {
-            'close_fds': True,
-            'universal_newlines': True,
-            'stdout': subprocess.PIPE,
-            'stderr': subprocess.PIPE
+            "close_fds": True,
+            "universal_newlines": True,
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
         }
 
         if env or shell:
             # LOG.debug('evaluating subprocess as shell')
-            command_args['shell'] = True
+            command_args["shell"] = True
 
         if env:
             # LOG.debug('implementing environment variables')
@@ -721,7 +755,7 @@ class SubProcess(object):
             current_env.update(env)  # update for dict, extend for list
             # LOG.debug(f'current_env: {current_env}')
             # command_args['shell'] = True
-            command_args['env'] = current_env
+            command_args["env"] = current_env
             self.env = current_env
 
         # if not hasattr(command_args, "shell") or command_args["shell"] is False:
@@ -753,16 +787,16 @@ class SubProcess(object):
             self.stderr = self.format_output(stderr)
             return (self.stdout, self.stderr, self.rc)
         except Exception as e:
-            LOG.error(f'Exception: {e}')
-            return ('', '', -1)
+            LOG.error(f"Exception: {e}")
+            return ("", "", -1)
 
     def format_output(self, text: str) -> str:
         """Method that formats process output"""
         # Split newlines and strip/trim whitespace
         whitespace_trimmed = str(text).strip()
         if not whitespace_trimmed:
-            return ''
-        if whitespace_trimmed.endswith('\n'):
+            return ""
+        if whitespace_trimmed.endswith("\n"):
             return whitespace_trimmed[-2]
         else:
             return whitespace_trimmed
@@ -771,55 +805,63 @@ class SubProcess(object):
 # ------------------------ Main program ------------------------
 
 # Initialize the logger
-BASENAME = 'shell_boilerplate'
+BASENAME = "shell_boilerplate"
 ARGS: argparse.Namespace = argparse.Namespace()  # for external modules
 LOG: log.Logger = log.get_logger(BASENAME)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Returns argparse.Namespace; to pass into function, use **vars(self.ARGS)
     def parse_arguments():
         """Method that parses arguments provided"""
         parser = argparse.ArgumentParser()
-        parser.add_argument('--debug', action='store_true')
-        parser.add_argument('--log-path', default='')
-        parser.add_argument('--test', choices=['subprocess', 'multiprocess', 'xml'])
+        parser.add_argument("--debug", action="store_true")
+        parser.add_argument("--log-path", default="")
+        parser.add_argument("--test", choices=["subprocess", "multiprocess", "xml"])
         return parser.parse_args()
+
     ARGS = parse_arguments()
 
     #  Configure the main logger
     LOG_HANDLERS = log.default_handlers(ARGS.debug, ARGS.log_path)
     log.set_handlers(LOG, LOG_HANDLERS)
 
-    LOG.debug(f'ARGS: {ARGS}')
-    LOG.debug('------------------------------------------------')
+    LOG.debug(f"ARGS: {ARGS}")
+    LOG.debug("------------------------------------------------")
 
     # -------- XML Test --------
-    if ARGS.test == 'xml':
+    if ARGS.test == "xml":
         # Build command to send
-        xml_config: str = '$HOME/configuration.xml'
-        xml_schema: str = '$HOME/configuration.xsd'
-        validator_command: List[str] = ['/usr/bin/xmllint', '--noout', f'--schema {xml_schema}', xml_config]
-        LOG.debug(f'validation command => {validator_command}')
+        xml_config: str = "$HOME/configuration.xml"
+        xml_schema: str = "$HOME/configuration.xsd"
+        validator_command: List[str] = [
+            "/usr/bin/xmllint",
+            "--noout",
+            f"--schema {xml_schema}",
+            xml_config,
+        ]
+        LOG.debug(f"validation command => {validator_command}")
 
         # Validate configuration against the schema
         PROCESS = run_subprocess(validator_command)
         if PROCESS.returncode != 0:
-            LOG.error(f'XML file ({xml_config}) failed to validate against schema ({xml_schema})')
+            LOG.error(
+                f"XML file ({xml_config}) failed to validate against schema ({xml_schema})"
+            )
             log_subprocess(LOG, PROCESS, debug=ARGS.debug)
         else:
-            LOG.debug(f'{xml_config} was successfully validated')
+            LOG.debug(f"{xml_config} was successfully validated")
 
     # -------- SubProcess Test --------
-    elif ARGS.test == 'subprocess':
-        test_command: List[str] = ['ls', '-la', '/var']
-        LOG.debug(f'test command => {test_command}')
+    elif ARGS.test == "subprocess":
+        test_command: List[str] = ["ls", "-la", "/var"]
+        LOG.debug(f"test command => {test_command}")
         PROCESS = run_subprocess(test_command)
         log_subprocess(LOG, PROCESS, debug=ARGS.debug)
 
         # Test writing to files
-        test_file = '/tmp/ewertz'
-        test_command = ['cat', test_file]
-        inputs: List[str] = ['', '123', '12345', '1']
+        test_file = "/tmp/ewertz"
+        test_command = ["cat", test_file]
+        inputs: List[str] = ["", "123", "12345", "1"]
         for I in inputs:
             write_file(test_file, I)
             PROCESS = run_subprocess(test_command)
@@ -830,12 +872,13 @@ if __name__ == '__main__':
     else:
         # test_command = ['ls', '-la', '/tmp']
         # test_command = ['ls']
-        test_command = ['pwd']
-        LOG.debug(f'test command => {test_command}')
+        test_command = ["pwd"]
+        LOG.debug(f"test command => {test_command}")
         PROCESS = run_subprocess(test_command)
         log_subprocess(LOG, PROCESS, debug=ARGS.debug)
 
-    # --- Usage Example ---
-    # sudo python /root/.local/lib/python2.7/site-packages/shell_boilerplate.py
-    # sudo python /root/.local/lib/python2.7/site-packages/shell_boilerplate.py --debug --test=subprocess
-    # py $Env:AppData\Python\Python311\site-packages\boilerplates\shell_boilerplate.py --debug --test=subprocess
+
+# :: Usage Example ::
+# sudo python /root/.local/lib/python2.7/site-packages/shell_boilerplate.py
+# sudo python /root/.local/lib/python2.7/site-packages/shell_boilerplate.py --debug --test=subprocess
+# py $Env:AppData\Python\Python311\site-packages\boilerplates\shell_boilerplate.py --debug --test=subprocess

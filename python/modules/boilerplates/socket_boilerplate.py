@@ -36,12 +36,14 @@ def socket_hostport(sock):
 
 # ------------------------ Class Converted Methods ------------------------
 
+
 def socket_open(hostname: str, hostport: int, connect_as="client", timeout=30):
     """Method that opens a socket"""
     connection_whitelist = ["server", "client"]
     if connect_as not in connection_whitelist:
         raise ValueError(
-            f"socket_open() expects 'connect_as' parameter to use approved values: {connection_whitelist}")
+            f"socket_open() expects 'connect_as' parameter to use approved values: {connection_whitelist}"
+        )
     # Generate socket
     sock_family = socket.AF_INET
     sock_type = socket.SOCK_STREAM
@@ -146,11 +148,14 @@ def socket_next_client(sock):
 
 # ------------------------ Classes ------------------------
 
+
 # 'conn' accepts a socket instance, 'server', or 'client'
 class SocketContext(object):
     """Class to track socket context"""
 
-    def __init__(self, conn=None, hostname: str = "", hostport: int = 0, timeout: int = 30):
+    def __init__(
+        self, conn=None, hostname: str = "", hostport: int = 0, timeout: int = 30
+    ):
         # Initial values
         self.family = socket.AF_INET
         self.type = socket.SOCK_STREAM
@@ -162,7 +167,9 @@ class SocketContext(object):
             # Verify values when creating socket connection
             connection_whitelist = ["server", "client"]
             if not conn in connection_whitelist:
-                raise ValueError(f"SocketContext() expects 'conn' parameter as choices: {connection_whitelist}")
+                raise ValueError(
+                    f"SocketContext() expects 'conn' parameter as choices: {connection_whitelist}"
+                )
 
             self.sock = socket.socket(self.family, self.type)
             self.sock.settimeout(timeout)
@@ -203,13 +210,16 @@ class SocketContext(object):
         try:
             # Halt send and receive of connection
             self.sock.shutdown(socket.SHUT_RDWR)
-            LOG.debug(f"(SocketContext:close): Shutdown {self.hostname}:{self.hostport} socket traffic.")
+            LOG.debug(
+                f"(SocketContext:close): Shutdown {self.hostname}:{self.hostport} socket traffic."
+            )
             # Close all future operations on the socket
             self.sock.close()
             LOG.debug("(SocketContext:close): Socket connection closed.")
         except Exception as e:
             LOG.debug(
-                f"(SocketContext:close): An error occurred while attempting to close the connection: {e}")
+                f"(SocketContext:close): An error occurred while attempting to close the connection: {e}"
+            )
 
     def send_data(self, message):
         """Method that sends data from SocketContext"""
@@ -231,10 +241,14 @@ class SocketContext(object):
             else:
                 # A zero length receive indicates socket is closed
                 status = "SOCKET_CLOSED"
-                LOG.warning("(SocketContext:receive_data): empty data response indicates socket was closed")
+                LOG.warning(
+                    "(SocketContext:receive_data): empty data response indicates socket was closed"
+                )
         except socket.timeout:
             status = "TIMED_OUT"
-            LOG.warning("(SocketContext:receive_data): timed out waiting for data from socket")
+            LOG.warning(
+                "(SocketContext:receive_data): timed out waiting for data from socket"
+            )
         except socket.error as e:
             status = "SOCKET_ERROR"
             LOG.error(f"(SocketContext:receive_data): socket error: {e}")
@@ -248,14 +262,19 @@ class SocketContext(object):
         self.hostname = str(hostname)
         self.hostport = int(hostport)
         try:
-            LOG.debug(f"(SocketContext:ConnectAsClient): Connecting to host: {self.hostname}:{self.hostport}")
+            LOG.debug(
+                f"(SocketContext:ConnectAsClient): Connecting to host: {self.hostname}:{self.hostport}"
+            )
             # Always provide socket.connect() with a tuple
             self.sock.connect((self.hostname, self.hostport))
             self.connected = True
             LOG.debug(
-                f"(SocketContext:ConnectAsClient): Successfully connected to host: {self.hostname}:{self.hostport}")
+                f"(SocketContext:ConnectAsClient): Successfully connected to host: {self.hostname}:{self.hostport}"
+            )
         except Exception as e:
-            LOG.error(f"(SocketContext:ConnectAsClient): An error occurred while connecting socket: {e}")
+            LOG.error(
+                f"(SocketContext:ConnectAsClient): An error occurred while connecting socket: {e}"
+            )
         return self.connected
 
     def ConnectAsServer(self, hostname, hostport):
@@ -266,15 +285,20 @@ class SocketContext(object):
         self.hostname = str(hostname)
         self.hostport = int(hostport)
         try:
-            LOG.debug(f"(SocketContext:ConnectAsServer): Connecting to host: {self.hostname}:{self.hostport}")
+            LOG.debug(
+                f"(SocketContext:ConnectAsServer): Connecting to host: {self.hostname}:{self.hostport}"
+            )
             # Always provide socket.bind() with a tuple
             self.sock.bind((self.hostname, self.hostport))
             self.sock.listen(5)
             self.connected = True
             LOG.debug(
-                f"(SocketContext:ConnectAsServer): Successfully connected to host: {self.hostname}:{self.hostport}")
+                f"(SocketContext:ConnectAsServer): Successfully connected to host: {self.hostname}:{self.hostport}"
+            )
         except Exception as e:
-            LOG.error(f"(SocketContext:ConnectAsServer): An error occurred while connecting socket: {e}")
+            LOG.error(
+                f"(SocketContext:ConnectAsServer): An error occurred while connecting socket: {e}"
+            )
         return self.connected
 
     def NextClient(self):
@@ -304,6 +328,7 @@ if __name__ == "__main__":
         parser.add_argument("--debug", action="store_true")
         parser.add_argument("--log-path", default="")
         return parser.parse_args()
+
     ARGS = parse_arguments()
 
     #  Configure the main logger
@@ -319,5 +344,6 @@ if __name__ == "__main__":
     SOCK = SocketContext("server", HOSTNAME, HOSTPORT)
     SOCK.close()
 
-    # --- Usage Example ---
-    # sudo python /root/.local/lib/python2.7/site-packages/socket_boilerplate.py
+
+# :: Usage Example ::
+# sudo python /root/.local/lib/python2.7/site-packages/socket_boilerplate.py

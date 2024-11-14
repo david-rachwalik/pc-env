@@ -53,7 +53,9 @@ class DaemonContext(object):
     def open(self):
         LOG.debug("Init")
         if self.is_locked:
-            LOG.warning(f"Cannot open DaemonContext instance '{self.basename}', lockfile already exists")
+            LOG.warning(
+                f"Cannot open DaemonContext instance '{self.basename}', lockfile already exists"
+            )
             return
         if self.is_open:
             LOG.warning(f"DaemonContext instance '{self.basename}' is open already")
@@ -67,7 +69,9 @@ class DaemonContext(object):
         # Initial file descriptor values
         self.open_fds = self.list_open_file_descriptors()
         self.standard_streams = [sys.stdin, sys.stdout, sys.stderr]
-        self.standard_fds = list(int(stream.fileno()) for stream in self.standard_streams)
+        self.standard_fds = list(
+            int(stream.fileno()) for stream in self.standard_streams
+        )
         LOG.debug(f"standard file descriptors: {self.standard_fds}")
         self.log_fds = self.find_log_file_descriptors()
         LOG.debug(f"logging file descriptors: {self.log_fds}")
@@ -78,7 +82,8 @@ class DaemonContext(object):
                 self.standard_streams.pop(log_index)
                 self.standard_fds.pop(log_index)
                 LOG.debug(
-                    f"log using standard file descriptor; adjusted standard_fds: {self.standard_fds}")
+                    f"log using standard file descriptor; adjusted standard_fds: {self.standard_fds}"
+                )
         # -------------------------------------------------------------
 
         # Prevent this process from generating a core dump
@@ -100,8 +105,7 @@ class DaemonContext(object):
         # Redirect standard file decsriptors from /dev/pts/* to /dev/null
         for stream in self.standard_streams:
             self.redirect_stream(stream)
-        LOG.debug(
-            f"standard file descriptors redirected to null: {self.standard_fds}")
+        LOG.debug(f"standard file descriptors redirected to null: {self.standard_fds}")
         # Attach exit event
         atexit.register(self.exit_handler)
         LOG.debug("exit handler registered")
@@ -117,8 +121,7 @@ class DaemonContext(object):
         LOG.debug("Init")
         pid = self.read_pidfile()
         if not pid:
-            LOG.debug(
-                f"pidfile '{self.pidfile}' does not exist. Daemon not running?")
+            LOG.debug(f"pidfile '{self.pidfile}' does not exist. Daemon not running?")
             return  # Not an error in a restart
         LOG.debug(f"found '{self.pidfile}' in pidfile")
         # Try killing the daemon process
@@ -134,7 +137,8 @@ class DaemonContext(object):
                 pass  # [Errno 3] no such process
             else:
                 LOG.warning(
-                    f"error occurred attempting to terminate process ({pid}): {exc}")
+                    f"error occurred attempting to terminate process ({pid}): {exc}"
+                )
                 raise
 
     # Write the latest PID to file
@@ -163,8 +167,7 @@ class DaemonContext(object):
         try:
             resource.getrlimit(core_resource)
         except Exception as exc:
-            LOG.error(
-                f"System does not support RLIMIT_CORE resource limit ({exc})")
+            LOG.error(f"System does not support RLIMIT_CORE resource limit ({exc})")
             raise
         # Set hard and soft limits to zero, i.e. no core dump at all
         core_limit = (0, 0)
@@ -187,9 +190,9 @@ class DaemonContext(object):
         LOG.debug("Init")
         try:
             child_pid = os.fork()
-        except OSError as exc:
+        except OSError as e:
             LOG.debug(f"ERRNO {e.errno}: {e.strerror}")
-            LOG.debug(f"{error_message}: [{exc.errno:d}] {exc.strerror}")
+            LOG.debug(f"{error_message}: [{e.errno:d}] {e.strerror}")
             raise
         # Positive PID is parent process needing to exit; child process waits for parent to complete
         if child_pid > 0:
@@ -198,8 +201,7 @@ class DaemonContext(object):
         elif child_pid == 0:
             # Wait until parent exits and child is inherited by init (PID=1) for ownership of files
             while sh.process_parent_id() != 1:
-                LOG.debug(
-                    f"waiting until parent ({sh.process_parent_id()}) exits")
+                LOG.debug(f"waiting until parent ({sh.process_parent_id()}) exits")
                 time.sleep(0.1)
 
     def reset_signal_handlers(self):
@@ -211,11 +213,11 @@ class DaemonContext(object):
             signal.SIGTERM: self.terminate,
             signal.SIGTSTP: signal.SIG_IGN,
             signal.SIGTTIN: signal.SIG_IGN,
-            signal.SIGTTOU: signal.SIG_IGN
+            signal.SIGTTOU: signal.SIG_IGN,
         }
         LOG.debug(f"signal_handler_map: {signal_handler_map}")
         # Update each signal handler (callback method)
-        for (signal_number, handler) in signal_handler_map.items():
+        for signal_number, handler in signal_handler_map.items():
             signal.signal(signal_number, handler)
         LOG.debug("all signal handlers are updated")
 
@@ -257,8 +259,7 @@ class DaemonContext(object):
                 # [Errno 2] No such file or directory
                 fd_path = ""
             else:
-                LOG.debug(
-                    f"Failed to get file descriptor ({fd}) path: {exc}")
+                LOG.debug(f"Failed to get file descriptor ({fd}) path: {exc}")
                 raise
         return fd_path
 
@@ -293,8 +294,7 @@ class DaemonContext(object):
             if exc.errno == errno.EBADF:
                 pass  # [Errno 9] Bad file descriptor
             else:
-                LOG.debug(
-                    f"error closing file descriptor ({fd}): {exc}")
+                LOG.debug(f"error closing file descriptor ({fd}): {exc}")
                 raise
 
     # Close all open file streams; primarily needs to close /dev/tty
@@ -307,8 +307,7 @@ class DaemonContext(object):
         # Close each file descriptor
         for fd in reversed(fds_to_close):
             fd_path = self.get_file_descriptor_path(fd)
-            LOG.debug(
-                f"closing file descriptor ({fd}) for path '{fd_path}'")
+            LOG.debug(f"closing file descriptor ({fd}) for path '{fd_path}'")
             self.close_file_descriptor(fd)
         LOG.debug("all file descriptors are closed")
 
@@ -325,7 +324,8 @@ class DaemonContext(object):
 
     def run(self):
         LOG.warning(
-            "Override this method when you subclass DaemonContext.  It will be called after the process has been daemonized.")
+            "Override this method when you subclass DaemonContext.  It will be called after the process has been daemonized."
+        )
 
     def terminate(self):
         LOG.warning("Signal handler for end-process")
@@ -348,6 +348,7 @@ if __name__ == "__main__":
         parser.add_argument("action", choices=["restart", "stop", "start"])
         parser.add_argument("--debug", action="store_true")
         return parser.parse_args()
+
     ARGS = parse_arguments()
 
     #  Configure the main logger
@@ -387,12 +388,13 @@ if __name__ == "__main__":
     # Assume all is well if here
     sh.exit_process()
 
-    # --- Usage Example ---
-    # sudo python /root/.local/lib/python2.7/site-packages/daemon_boilerplate.py
-    # sudo python /root/.local/lib/python2.7/site-packages/daemon_boilerplate.py --debug && sudo less +F /var/log/daemon_boilerplate.log
-    # ps -eaf | grep -i python
 
-    # sudo ls -la /var/run/daemon_boilerplate.pid
-    # sudo ls -la /var/lock/daemon_boilerplate
-    # sudo ls -la /var/log/daemon_boilerplate.log
-    # sudo ls -la /tmp/ewertz
+# :: Usage Example ::
+# sudo python /root/.local/lib/python2.7/site-packages/daemon_boilerplate.py
+# sudo python /root/.local/lib/python2.7/site-packages/daemon_boilerplate.py --debug && sudo less +F /var/log/daemon_boilerplate.log
+# ps -eaf | grep -i python
+
+# sudo ls -la /var/run/daemon_boilerplate.pid
+# sudo ls -la /var/lock/daemon_boilerplate
+# sudo ls -la /var/log/daemon_boilerplate.log
+# sudo ls -la /tmp/ewertz

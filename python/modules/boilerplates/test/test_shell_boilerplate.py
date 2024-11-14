@@ -21,7 +21,7 @@ import shell_boilerplate as sh
 
 def test_system_platform():
     """Verify the output of 'system_platform' function"""
-    accepted_values = ['windows', 'linux']
+    accepted_values = ["windows", "linux"]
     output = sh.system_platform()
     assert output in accepted_values
 
@@ -49,12 +49,13 @@ def test_random_password():
 
 # --- Utility Commands ---
 
+
 def test_list_differences():
     """Verify the output of 'list_differences' function"""
-    mock_list_a = ['a', 'b', 'c', 'd', 'e']
-    mock_list_b = ['a', 'b', 'c']
+    mock_list_a = ["a", "b", "c", "d", "e"]
+    mock_list_b = ["a", "b", "c"]
     output = sh.list_differences(mock_list_a, mock_list_b)
-    assert output == ['d', 'e']
+    assert output == ["d", "e"]
     output = sh.list_differences(mock_list_b, mock_list_a)
     assert output == []
 
@@ -93,18 +94,20 @@ def test_path_filename():
 
 # --- JSON Commands ---
 
+
 def test_from_json():
     """Verify the output of 'from_json' function"""
     mock_json = '["foo", {"bar": ["baz", null, 1.0, 2]}]'
     output = sh.from_json(mock_json)
-    assert output == ['foo', {'bar': ['baz', None, 1.0, 2]}]
+    assert output == ["foo", {"bar": ["baz", None, 1.0, 2]}]
 
 
 def test_to_json():
     """Verify the output of 'to_json' function"""
-    mock_json = ['foo', {'bar': ['baz', None, 1.0, 2]}]
+    mock_json = ["foo", {"bar": ["baz", None, 1.0, 2]}]
     output = sh.to_json(mock_json)
     assert output == '["foo", {"bar": ["baz", null, 1.0, 2]}]'
+
 
 # def test_is_json_parse():
 #     """Verify the output of 'is_json_parse' function"""

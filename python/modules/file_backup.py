@@ -11,10 +11,12 @@
 
 import argparse
 import os
-import shutil
-import sys
 
 from shell_boilerplate import ShellManager
+
+# import shutil
+# import sys
+
 
 # ------------------------ Primary classes/functions ------------------------
 
@@ -22,9 +24,9 @@ from shell_boilerplate import ShellManager
 class FileBackup(ShellManager):
     def __init__(self):
         self.args = self.ParseCommandLineArguments()
-        logLevel = 20                       # logging.INFO
+        logLevel = 20  # logging.INFO
         if self.args.debug:
-            logLevel = 10   # logging.DEBUG
+            logLevel = 10  # logging.DEBUG
         # Initialize the inherited class constructor
         ShellManager.__init__(self, logLevel)
         self.log.debug("(FileBackup:__init__) Init")
@@ -38,7 +40,9 @@ class FileBackup(ShellManager):
         if self.args.dest != os.path.join(dest_basepath, self.args.suffix):
             self.log.info(dest_basepath)
             self.log.info(self.args.suffix)
-            self.args.dest = os.path.join(self.ExpandPath(self.args.dest), self.args.suffix)
+            self.args.dest = os.path.join(
+                self.ExpandPath(self.args.dest), self.args.suffix
+            )
         else:
             self.log.info(self.args.dest)
 
@@ -53,7 +57,13 @@ class FileBackup(ShellManager):
         # Ensure backup directory exists; will create if absent
         self.DirectoryCreate(self.args.dest)
         # Perform backup copy of directory files
-        self.DirectoryCopy(self.args.src, self.args.dest, self.args.deep, self.args.cut, self.args.extension)
+        self.DirectoryCopy(
+            self.args.src,
+            self.args.dest,
+            self.args.deep,
+            self.args.cut,
+            self.args.extension,
+        )
 
     def ParseCommandLineArguments(self):
         parser = argparse.ArgumentParser()
@@ -69,7 +79,7 @@ class FileBackup(ShellManager):
 
 # ------------------------ Main Program ------------------------
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     backup = FileBackup()
     backup.Exit()
 
