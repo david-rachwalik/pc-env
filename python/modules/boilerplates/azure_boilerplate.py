@@ -41,12 +41,7 @@ import logging_boilerplate as log
 import shell_boilerplate as sh
 
 # https://docs.python.org/3/library/typing.html#typing.TypeAlias
-Credential: TypeAlias = (
-    azid.DefaultAzureCredential
-    | azid.AzureCliCredential
-    | azid.EnvironmentCredential
-    | azid.ClientSecretCredential
-)
+Credential: TypeAlias = azid.DefaultAzureCredential | azid.AzureCliCredential | azid.EnvironmentCredential | azid.ClientSecretCredential
 
 # ------------------------ Data Classes ------------------------
 
@@ -522,9 +517,7 @@ def ad_group_member_set(group_name: str, member_id: str) -> bool:
 # https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-cli
 
 
-def role_assign_get(
-    assignee_id: str, scope: str = "", role: str = "Contributor"
-) -> bool:
+def role_assign_get(assignee_id: str, scope: str = "", role: str = "Contributor") -> bool:
     """Method that fetches Azure role"""
     # NOTE: do not wrap --role value in '', gets evaluated as part of string
     command: List[str] = [
@@ -545,9 +538,7 @@ def role_assign_get(
     return process.returncode == 0
 
 
-def role_assign_set(
-    assignee_id: str, scope: str = "", role: str = "Contributor"
-) -> bool:
+def role_assign_set(assignee_id: str, scope: str = "", role: str = "Contributor") -> bool:
     """Method that assigns Azure role"""
     # NOTE: do not wrap --role value in '', gets evaluated as part of string
     command: List[str] = [
@@ -570,9 +561,7 @@ def role_assign_set(
 
 
 # Always use service principal name (not id)
-def service_principal_get(
-    sp_name: str, sp_dir: str = "", tenant: str = ""
-) -> ServicePrincipal:
+def service_principal_get(sp_name: str, sp_dir: str = "", tenant: str = "") -> ServicePrincipal:
     """Method that fetches Azure service principal"""
     jsonstr: str = ""
     # Full filepath to service principal data
@@ -617,9 +606,7 @@ def service_principal_set(sp_name: str, obj_id: str) -> ServicePrincipal:
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
     if process.returncode != 0:
         return ServicePrincipal()
-    service_principal: ServicePrincipal = json_to_dataclass(
-        process.stdout, ServicePrincipal
-    )
+    service_principal: ServicePrincipal = json_to_dataclass(process.stdout, ServicePrincipal)
     service_principal.changed = True
     # LOG.debug(f"service_principal: {service_principal}")
     return service_principal
@@ -645,9 +632,7 @@ def service_principal_rbac_set(sp_name: str, reset: bool = False) -> ServicePrin
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
     if process.returncode != 0:
         return ServicePrincipal()
-    service_principal: ServicePrincipal = json_to_dataclass(
-        process.stdout, ServicePrincipal
-    )
+    service_principal: ServicePrincipal = json_to_dataclass(process.stdout, ServicePrincipal)
     service_principal.changed = True
     # sp_action = 'reset' if reset else 'created'
     # LOG.info(f'successfully {sp_action} service principal credentials!')
@@ -675,9 +660,7 @@ def resource_group_get_sdk(account: Account, rg_name: str):
     if not account.auth:
         return ResourceGroup()
     # Obtain the management object for resources
-    resource_client = az_res.ResourceManagementClient(
-        account.auth, account.subscriptionId
-    )
+    resource_client = az_res.ResourceManagementClient(account.auth, account.subscriptionId)
     # Provision the resource group
     resource_group = resource_client.resource_groups.get(rg_name)
     LOG.debug(f"resource group: {resource_group}")
@@ -690,13 +673,9 @@ def resource_group_set_sdk(account: Account, rg_name: str, location: str):
     if not account.auth:
         return ResourceGroup()
     # Obtain the management object for resources
-    resource_client = az_res.ResourceManagementClient(
-        account.auth, account.subscriptionId
-    )
+    resource_client = az_res.ResourceManagementClient(account.auth, account.subscriptionId)
     # Provision the resource group
-    resource_group = resource_client.resource_groups.create_or_update(
-        rg_name, {"location": location}  # type: ignore
-    )
+    resource_group = resource_client.resource_groups.create_or_update(rg_name, {"location": location})  # type: ignore
     LOG.debug(f"resource group: {resource_group}")
     LOG.debug(f"resource group id: {resource_group.id}")
     return resource_group
@@ -868,9 +847,7 @@ def active_directory_application_get(app_name: str) -> ActiveDirectoryApplicatio
     return ad_app
 
 
-def active_directory_application_set(
-    tenant: str, app_name: str, app_id: str = ""
-) -> ActiveDirectoryApplication:
+def active_directory_application_set(tenant: str, app_name: str, app_id: str = "") -> ActiveDirectoryApplication:
     """Method that sets Azure Active Directory application"""
     az_ad_domain: str = f"https://{tenant}.onmicrosoft.com"
     az_ad_identifier_url: str = f"{az_ad_domain}/{app_name}"
@@ -926,9 +903,7 @@ def deployment_group_valid_sdk(
         return False
 
     # Create client
-    resource_client = az_res.ResourceManagementClient(
-        credential=account.auth, subscription_id=account.subscriptionId
-    )
+    resource_client = az_res.ResourceManagementClient(credential=account.auth, subscription_id=account.subscriptionId)
     LOG.debug(f"client: {resource_client}")
 
     # Validate deployment
@@ -1048,9 +1023,7 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
-        ARGS.debug, ARGS.log_path
-    )
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger
