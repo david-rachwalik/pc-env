@@ -1,0 +1,84 @@
+{
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "files.associations": {
+    "*.ejs": "html",
+    "*.css": "postcss",
+    "*.json": "jsonc"
+  },
+
+  // --- Activity Bar (File Explorer, Search, Source Control, etc.) ---
+  "workbench.editor.labelFormat": "short",
+  "workbench.iconTheme": "vscode-icons",
+  "workbench.startupEditor": "none",
+
+  // -------- Code Editor --------
+  "window.density.editorTabHeight": "compact",
+  "editor.accessibilitySupport": "off",
+  "editor.minimap.enabled": true,
+  "editor.fontFamily": "Consolas, 'Courier New', monospace",
+  "editor.fontLigatures": false,
+  "editor.linkedEditing": true,
+  "editor.wordWrapColumn": 160,
+
+  // --- Formatting ---
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "prettier.printWidth": 160,
+  "prettier.tabWidth": 2,
+
+  // --- Formatting (Web) ---
+  "[javascript, typescript, javascriptreact, typescriptreact]": {
+    "editor.formatOnSave": false
+  },
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  },
+  "eslint.debug": true,
+  "eslint.format.enable": true,
+
+  // --- Formatting (Other) ---
+  "[dockerfile]": {
+    "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+  },
+  "markdownlint.config": {
+    "MD007": { "indent": 2 },
+    "MD030": { "ul_single": 1, "ul_multi": 1 }
+  },
+  "[yaml]": {
+    "editor.formatOnSave": false
+  },
+
+  // -------- Terminal (CLI) --------
+  "terminal.explorerKind": "external",
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "terminal.integrated.defaultProfile.windows": "pwsh",
+  "powershell.integratedConsole.showOnStartup": false,
+
+  // -------- Code Repository (Git) --------
+  "git.enabled": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "git.openRepositoryInParentFolders": "always",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "merge-conflict.codeLens.enabled": false,
+
+  // -------- Code Language (Web) --------
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "javascript.referencesCodeLens.enabled": true,
+  "javascript.referencesCodeLens.showOnAllFunctions": true,
+  "typescript.implementationsCodeLens.enabled": true,
+  "typescript.referencesCodeLens.enabled": true,
+  "typescript.referencesCodeLens.showOnAllFunctions": true,
+
+  // -------- Other / Miscellaneous --------
+  "emmet.includeLanguages": {
+    "ejs": "html"
+  },
+  "vsicons.dontShowNewVersionMessage": true
+}

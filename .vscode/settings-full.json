@@ -8,7 +8,7 @@
     "*.json": "jsonc"
   },
 
-  // --- Activity Bar (icons for File Explorer, Search, Source Control, Extensions, etc.) ---
+  // --- Activity Bar (File Explorer, Search, Source Control, etc.) ---
   "workbench.editor.labelFormat": "short",
   "workbench.iconTheme": "vscode-icons",
   "workbench.startupEditor": "none",
@@ -28,13 +28,15 @@
   // --- Formatting ---
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
+  "prettier.printWidth": 160,
+  "prettier.tabWidth": 2,
 
   // --- Formatting (Web) ---
   "[javascript, typescript, javascriptreact, typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": false
   },
   "[html]": {
@@ -42,8 +44,6 @@
   },
   "eslint.debug": true,
   "eslint.format.enable": true,
-  "prettier.printWidth": 160,
-  "prettier.tabWidth": 2,
 
   // --- Formatting (Shell) ---
   "[shellscript]": {
@@ -89,13 +89,8 @@
     "editor.defaultFormatter": "ms-azuretools.vscode-docker"
   },
   "markdownlint.config": {
-    "MD007": {
-      "indent": 2
-    },
-    "MD030": {
-      "ul_single": 1,
-      "ul_multi": 1
-    }
+    "MD007": { "indent": 2 },
+    "MD030": { "ul_single": 1, "ul_multi": 1 }
   },
   "[yaml]": {
     "editor.formatOnSave": false
@@ -103,27 +98,23 @@
 
   // -------- Terminal (CLI) --------
   "terminal.explorerKind": "external",
-  "terminal.integrated.defaultProfile.windows": "PowerShell",
-  "terminal.integrated.automationProfile.windows": {
-    "path": "C:/Program Files/PowerShell/7/pwsh.exe"
-  },
-  "terminal.integrated.fontFamily": "'CaskaydiaCove NF'",
   "terminal.integrated.defaultProfile.linux": "zsh",
+  "terminal.integrated.defaultProfile.windows": "pwsh",
   "powershell.integratedConsole.showOnStartup": false,
 
   // -------- Code Repository (Git) --------
+  "git.enabled": true,
   "git.autofetch": true,
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
   "git.openRepositoryInParentFolders": "always",
-  "merge-conflict.codeLens.enabled": false,
   "diffEditor.ignoreTrimWhitespace": false,
-  "git.enabled": true,
+  "merge-conflict.codeLens.enabled": false,
 
   // -------- Code Language (Web) --------
+  "javascript.updateImportsOnFileMove.enabled": "always",
   "javascript.referencesCodeLens.enabled": true,
   "javascript.referencesCodeLens.showOnAllFunctions": true,
-  "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.implementationsCodeLens.enabled": true,
   "typescript.referencesCodeLens.enabled": true,
   "typescript.referencesCodeLens.showOnAllFunctions": true,
