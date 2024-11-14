@@ -1,15 +1,13 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/universal
+// README at: https://github.com/devcontainers/templates/tree/main/src/powershell
+// https://code.visualstudio.com/docs/devcontainers/tips-and-tricks
 {
-  "name": "Universal",
+  "name": "Python, PowerShell",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/universal:2-linux",
-
-  "mounts": [
-    "source=${localWorkspaceFolder}/python/modules,target=/home/codespace/.local/lib/python3.12/site-packages,type=bind,consistency=cached",
-    "source=${localWorkspaceFolder}/python/modules/boilerplates,target=/home/codespace/.local/lib/python3.12/site-packages,type=bind,consistency=cached"
-  ],
-  // "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}", // This is usually the default
+  // "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "build": {
+    "dockerfile": "./Dockerfile"
+  },
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
@@ -19,25 +17,28 @@
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "uname -a",
-  "postCreateCommand": "pip install pylint-quotes",
+  // "postCreateCommand": "python -m venv ~/.venv && . ~/.venv/bin/activate && pip install -r /workspaces/pc-env/.devcontainer/pip-requirements.txt",
+  "postCreateCommand": "pip install -r /workspaces/pc-env/.devcontainer/pip-requirements.txt",
+
+  "containerEnv": {
+    // "PYTHONPATH": "~/.venv/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
+    "PYTHONPATH": "~/.local/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
+  },
 
   // Configure tool-specific properties.
-  // "customizations": {},
   "customizations": {
     "vscode": {
-      "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash"
-      },
       // Add the IDs of extensions to install when container is created
       "extensions": [
         "ms-vscode-remote.remote-containers",
+        "ms-azuretools.vscode-docker",
         // [Shell]
         "ms-vscode.powershell", // runtime
         "foxundermoon.shell-format",
         // [Python]
         "ms-python.python", // runtime
-        "ms-python.autopep8", // formatter
         "ms-python.pylint",
+        "ms-python.black-formatter", // formatter
         "ms-python.vscode-pylance",
         "ms-python.isort",
         "njpwerner.autodocstring",
@@ -45,37 +46,36 @@
         "dbaeumer.vscode-eslint", // linter
         "esbenp.prettier-vscode", // formatter
         "christian-kohler.path-intellisense", // autocompletes filenames
-        "steoates.autoimport", // TS/TSX
-        "mike-co.import-sorter",
+        "mike-co.import-sorter", // TS
+        "steoates.autoimport", // TS
         // [CSS]
-        "kamikillerto.vscode-colorize",
         "small-tech.comment-out-css",
+        "kamikillerto.vscode-colorize",
         "pucelle.vscode-css-navigation",
         "csstools.postcss",
         "bradlc.vscode-tailwindcss",
         // [Other Languages]
-        "ms-dotnettools.csharp",
-        "redhat.vscode-yaml",
-        "mikestead.dotenv",
-        "christian-kohler.npm-intellisense",
-        "42Crunch.vscode-openapi",
-        "theumletteam.umlet",
-        "bowlerhatllc.vscode-as3mxml",
-        "Angular.ng-template",
-        "Vue.volar",
-        "hashicorp.terraform",
-        // [Other]
-        "vscode-icons-team.vscode-icons",
-        "lihui.vs-color-picker",
-        "natqe.reload",
-        "donjayamanne.githistory",
-        "wayou.vscode-todo-highlight",
         "DavidAnson.vscode-markdownlint",
-        "bierner.markdown-preview-github-styles",
+        "redhat.vscode-yaml",
+        "ms-dotnettools.csharp",
+        "bowlerhatllc.vscode-as3mxml",
+        "mikestead.dotenv",
         "formulahendry.auto-close-tag", // HTML/XML
         "formulahendry.auto-rename-tag", // HTML/XML
-        "mongodb.mongodb-vscode"
-        // "ms-azuretools.vscode-docker",
+        // "christian-kohler.npm-intellisense",
+        // "theumletteam.umlet",
+        // "42Crunch.vscode-openapi",
+        // "Angular.ng-template",
+        // "Vue.volar",
+        "hashicorp.terraform",
+        // [Other]
+        "natqe.reload",
+        "donjayamanne.githistory",
+        "bierner.markdown-preview-github-styles",
+        "vscode-icons-team.vscode-icons",
+        "wayou.vscode-todo-highlight",
+        "lihui.vs-color-picker"
+        // "mongodb.mongodb-vscode"
       ]
     }
   }
