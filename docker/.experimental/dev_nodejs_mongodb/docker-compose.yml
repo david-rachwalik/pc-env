@@ -1,0 +1,49 @@
+# --- Container for NodeJS, Angular, MongoDB, etc. development ---
+
+services:
+  # NodeJS client development environment
+  nodejs:
+    image: node:20 # or 'node:22' or 'node:lts'
+    container_name: runtime_nodejs
+    volumes:
+      - ../:/workspaces/<PROJECT_NAME> # Adjust path as necessary
+    working_dir: /workspaces/<PROJECT_NAME>
+    ports:
+      - '3000:3000'
+    command: ['sleep', 'infinity'] # Keep the container running
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/<DATABASE_NAME> # Example of env setup
+    depends_on:
+      - express # Ensures MongoDB starts before Node.js
+    restart: unless-stopped
+
+  # NodeJS Web API
+  express:
+    image: node:20
+    container_name: server_express
+    volumes:
+      # - /path/to/your/express/app:/usr/src/app
+      - ../:/workspaces/<PROJECT_NAME> # Adjust path as necessary
+    working_dir: /workspaces/<PROJECT_NAME>
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - '4000:4000'
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  # MongoDB
+  mongo:
+    image: mongo:4.4 # or 'mongo:8.0' or 'mongo:latest'
+    container_name: database_mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db # Persists MongoDB data
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    restart: unless-stopped
+
+volumes:
+  mongo_data: # Persistent storage for MongoDB

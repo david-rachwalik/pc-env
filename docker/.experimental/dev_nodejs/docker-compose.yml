@@ -1,0 +1,15 @@
+# --- Container for NodeJS, Angular, MongoDB, etc. development ---
+
+services:
+  # NodeJS client development environment
+  nodejs:
+    image: node:20 # or 'node:22' or 'node:lts'
+    container_name: runtime_nodejs
+    volumes:
+      - ../:/workspaces/<PROJECT_NAME> # Adjust path as necessary
+    working_dir: /workspaces/<PROJECT_NAME>
+    ports:
+      - '4200:4200'
+    # command: npm start
+    # command: sh -c "ng cache clean && npm start"
+    command: sh -c "ng cache clean && npm install && npm start"
