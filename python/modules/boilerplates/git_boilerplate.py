@@ -45,10 +45,7 @@ def repo_create(path: str, bare: bool = False) -> Tuple[bool, bool]:
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
-    failed: bool = (
-        process.returncode != 0
-        and "Reinitialized existing Git repository" not in process.stdout
-    )
+    failed: bool = process.returncode != 0 and "Reinitialized existing Git repository" not in process.stdout
     changed: bool = not failed and "skipped, since" not in process.stdout
     return (not failed, changed)
 
@@ -65,32 +62,22 @@ def work_remote(path: str, remote_path: str, remote_alias: str = "origin") -> bo
     process = sh.run_subprocess(command, path)
     if not process.stdout:
         # Repository is missing remote path, adding...
-        LOG.warning(
-            f"Remote ({remote_alias}) for local repository is missing, adding..."
-        )
+        LOG.warning(f"Remote ({remote_alias}) for local repository is missing, adding...")
         command = ["git", "remote", "add", remote_alias, remote_path]
 
         sh.print_command(command)
         process = sh.run_subprocess(command, path)
-        failed = (
-            process.returncode != 0
-            and f"remote {remote_alias} already exists" not in process.stderr
-        )
+        failed = process.returncode != 0 and f"remote {remote_alias} already exists" not in process.stderr
         LOG.info("Successfully added remote path for local repository!")
 
     elif process.stdout != remote_path:
         # Repository has outdated remote path, updating...
-        LOG.warning(
-            f"Remote ({remote_alias}) for local repository is outdated, updating..."
-        )
+        LOG.warning(f"Remote ({remote_alias}) for local repository is outdated, updating...")
         command = ["git", "remote", "set-url", remote_alias, remote_path]
 
         sh.print_command(command)
         process = sh.run_subprocess(command, path)
-        failed = (
-            process.returncode != 0
-            and f"remote {remote_alias} already exists" not in process.stderr
-        )
+        failed = process.returncode != 0 and f"remote {remote_alias} already exists" not in process.stderr
         LOG.info("Successfully updated remote path for local repository!")
 
     # don't be tempted to remove the copy-paste job above; they only occur in 2/3 conditionals, not the else condition
@@ -107,9 +94,7 @@ def work_status(path: str) -> bool:
     return is_clean
 
 
-def work_commit(
-    path: str, message: str = "auto-commit", initial: bool = False
-) -> Tuple[bool, bool]:
+def work_commit(path: str, message: str = "auto-commit", initial: bool = False) -> Tuple[bool, bool]:
     """Method that commits the working directory of a repository"""
     if not initial:
         # Stage working directory; copies files into '.git' directory
@@ -124,14 +109,8 @@ def work_commit(
         sh.print_command(command)
         process = sh.run_subprocess(command, path)
         # sh.log_subprocess(LOG, process, debug=ARGS.debug)
-        failed = (
-            process.returncode != 0
-            and "nothing to commit (working directory clean)" not in process.stdout
-        )
-        changed = (
-            not failed
-            and "nothing to commit (working directory clean)" not in process.stdout
-        )
+        failed = process.returncode != 0 and "nothing to commit (working directory clean)" not in process.stdout
+        changed = not failed and "nothing to commit (working directory clean)" not in process.stdout
         return (not failed, changed)  # (succeeded, changed)
     else:
         # Initial commit so 'master' branch exists; helps prevent dangling HEAD refs
@@ -299,9 +278,7 @@ def branch_create(path: str, version: str = "master") -> Tuple[bool, bool]:
 
 
 # TODO: option to call exists and create
-def branch_switch(
-    path: str, version: str = "master", remote_alias: str = ""
-) -> Tuple[bool, bool]:
+def branch_switch(path: str, version: str = "master", remote_alias: str = "") -> Tuple[bool, bool]:
     """Method that creates a branch in the repository"""
     remote_branch: str = f"{remote_alias}/{version}"
     branch_use_name: str = remote_branch if remote_alias else version
@@ -338,11 +315,7 @@ def work_fetch(path: str, remote_alias: str = "origin") -> Tuple[bool, bool]:
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     failed: bool = process.returncode != 0 and "find remote ref" not in process.stdout
-    changed: bool = (
-        not failed
-        and "find remote ref" not in process.stdout
-        and "Everything up-to-date" not in process.stderr
-    )
+    changed: bool = not failed and "find remote ref" not in process.stdout and "Everything up-to-date" not in process.stderr
     return (not failed, changed)
 
 
@@ -362,18 +335,12 @@ def work_merge(
     command: List[str] = ["git", "merge", branch_use_name]
     if not fast_forward:
         command.append("--no-ff")
-    command.extend(
-        ["--strategy=recursive", f"--strategy-option={pull_type}", f"-m '{message}'"]
-    )
+    command.extend(["--strategy=recursive", f"--strategy-option={pull_type}", f"-m '{message}'"])
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
     failed: bool = process.returncode != 0
-    changed: bool = (
-        not failed
-        and "Already uptodate" not in process.stdout
-        and "Already up-to-date" not in process.stdout
-    )
+    changed: bool = not failed and "Already uptodate" not in process.stdout and "Already up-to-date" not in process.stdout
     return (not failed, changed)
 
 
@@ -423,9 +390,7 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
-        ARGS.debug, ARGS.log_path
-    )
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

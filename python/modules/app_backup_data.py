@@ -16,9 +16,7 @@ class AppBackup:
     root: str  # install directory path without app title
     name: str  # directory for the app title (mirrored by backup target)
     # setting_opts: Optional[List[str]] = field(default=None)
-    options: Optional[Dict[str, Any]] = field(
-        default=None
-    )  # provide additional options [only, exclude, include]
+    options: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
 
 
 active_apps = [
@@ -106,6 +104,4 @@ app_backups_full: List[AppBackup] = [
 ]
 
 # Filter backup details to only the active apps
-app_backups: List[AppBackup] = [
-    app for app in app_backups_full if app.id in active_apps
-]
+app_backups: List[AppBackup] = [app for app in app_backups_full if app.id in active_apps]

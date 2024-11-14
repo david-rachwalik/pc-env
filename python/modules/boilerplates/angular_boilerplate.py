@@ -43,9 +43,7 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
-        ARGS.debug, ARGS.log_path
-    )
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

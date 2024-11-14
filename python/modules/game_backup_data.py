@@ -15,9 +15,7 @@ class GameBackup:
     id: str  # arbitrary 'game_id' given for ad hoc commands (filter_id)
     root: str  # install directory path without game title
     name: str  # directory for the game title (mirrored by backup target)
-    options: Optional[Dict[str, Any]] = field(
-        default=None
-    )  # provide additional options [only, exclude, include]
+    options: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
     screenshot: Optional[str] = field(default=None)
     # addon: Optional[str] = field(default=None)
     # # addon_opts: Optional[List[str]] = field(default=None)
@@ -345,6 +343,4 @@ game_backups_full: List[GameBackup] = [
 ]
 
 # Filter backup details to only the active games
-game_backups: List[GameBackup] = [
-    game for game in game_backups_full if game.id in active_games
-]
+game_backups: List[GameBackup] = [game for game in game_backups_full if game.id in active_games]

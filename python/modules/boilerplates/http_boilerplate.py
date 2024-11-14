@@ -37,9 +37,7 @@ DEFAULT_TIMEOUT = 100  # seconds before exception is raised if server has not re
 Response = req.Response
 
 
-def create(
-    url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None
-) -> req.Response:
+def create(url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None) -> req.Response:
     """Method that creates - performs an HTTP 'POST' request"""
     response = req.post(url, data=data, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
@@ -53,9 +51,7 @@ def get(url: str, auth: Optional[AUTH_TYPE] = None) -> req.Response:
     return response
 
 
-def update(
-    url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None
-) -> req.Response:
+def update(url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None) -> req.Response:
     """Method that updates - performs an HTTP 'PUT' request"""
     response = req.put(url, data=data, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
@@ -87,9 +83,7 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
-        ARGS.debug, ARGS.log_path
-    )
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

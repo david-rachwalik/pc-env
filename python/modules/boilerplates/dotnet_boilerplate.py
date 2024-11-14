@@ -141,9 +141,7 @@ def secrets_list(dotnet_dir: str, application: str, project: str) -> bool:
     return process.returncode == 0
 
 
-def secrets_set(
-    dotnet_dir: str, application: str, project: str, secret_key: str, secret_value: str
-) -> bool:
+def secrets_set(dotnet_dir: str, application: str, project: str, secret_key: str, secret_value: str) -> bool:
     """Method that creates a user secret in a project"""
     app_dir: str = sh.join_path(dotnet_dir, application)
     project_path: str = sh.join_path(app_dir, project)
@@ -198,9 +196,7 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
-        ARGS.debug, ARGS.log_path
-    )
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

@@ -53,9 +53,7 @@ class DaemonContext(object):
     def open(self):
         LOG.debug("Init")
         if self.is_locked:
-            LOG.warning(
-                f"Cannot open DaemonContext instance '{self.basename}', lockfile already exists"
-            )
+            LOG.warning(f"Cannot open DaemonContext instance '{self.basename}', lockfile already exists")
             return
         if self.is_open:
             LOG.warning(f"DaemonContext instance '{self.basename}' is open already")
@@ -69,9 +67,7 @@ class DaemonContext(object):
         # Initial file descriptor values
         self.open_fds = self.list_open_file_descriptors()
         self.standard_streams = [sys.stdin, sys.stdout, sys.stderr]
-        self.standard_fds = list(
-            int(stream.fileno()) for stream in self.standard_streams
-        )
+        self.standard_fds = list(int(stream.fileno()) for stream in self.standard_streams)
         LOG.debug(f"standard file descriptors: {self.standard_fds}")
         self.log_fds = self.find_log_file_descriptors()
         LOG.debug(f"logging file descriptors: {self.log_fds}")
@@ -81,9 +77,7 @@ class DaemonContext(object):
                 log_index = self.standard_fds.index(fd)
                 self.standard_streams.pop(log_index)
                 self.standard_fds.pop(log_index)
-                LOG.debug(
-                    f"log using standard file descriptor; adjusted standard_fds: {self.standard_fds}"
-                )
+                LOG.debug(f"log using standard file descriptor; adjusted standard_fds: {self.standard_fds}")
         # -------------------------------------------------------------
 
         # Prevent this process from generating a core dump
@@ -136,9 +130,7 @@ class DaemonContext(object):
                 LOG.debug("daemon has stopped")
                 pass  # [Errno 3] no such process
             else:
-                LOG.warning(
-                    f"error occurred attempting to terminate process ({pid}): {exc}"
-                )
+                LOG.warning(f"error occurred attempting to terminate process ({pid}): {exc}")
                 raise
 
     # Write the latest PID to file
@@ -323,9 +315,7 @@ class DaemonContext(object):
             sh.file_delete(self.pidfile)
 
     def run(self):
-        LOG.warning(
-            "Override this method when you subclass DaemonContext.  It will be called after the process has been daemonized."
-        )
+        LOG.warning("Override this method when you subclass DaemonContext.  It will be called after the process has been daemonized.")
 
     def terminate(self):
         LOG.warning("Signal handler for end-process")

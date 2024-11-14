@@ -554,9 +554,7 @@ def _decode_dict(dct) -> DictObj:
 
 
 # Deserialize JSON string to Python dictionary: https://docs.python.org/3/library/json.html
-def from_json(
-    jsonstr: str, object_hook: Optional[Callable] = None
-) -> Dict[str, Any] | None:
+def from_json(jsonstr: str, object_hook: Optional[Callable] = None) -> Dict[str, Any] | None:
     """Method that deserializes JSON string to Python dictionary"""
     results = None
     if not (jsonstr and isinstance(jsonstr, str)):
@@ -664,9 +662,7 @@ def run_subprocess(
 
 
 # Log the subprocess output provided
-def log_subprocess(
-    logger: log.Logger, process: subprocess.CompletedProcess, debug: bool = False
-):
+def log_subprocess(logger: log.Logger, process: subprocess.CompletedProcess, debug: bool = False):
     """Method that logs a command in a subprocess"""
     if isinstance(process.stdout, str) and len(process.stdout) > 0:
         log_stdout = f"stdout: {process.stdout}" if debug else process.stdout
@@ -844,9 +840,7 @@ if __name__ == "__main__":
         # Validate configuration against the schema
         PROCESS = run_subprocess(validator_command)
         if PROCESS.returncode != 0:
-            LOG.error(
-                f"XML file ({xml_config}) failed to validate against schema ({xml_schema})"
-            )
+            LOG.error(f"XML file ({xml_config}) failed to validate against schema ({xml_schema})")
             log_subprocess(LOG, PROCESS, debug=ARGS.debug)
         else:
             LOG.debug(f"{xml_config} was successfully validated")

@@ -81,13 +81,9 @@ def main():
             LOG.info(f"SRC path: {SRC}")
             LOG.info(f"DEST path: {DEST}")
             if ARGS.test_run:
-                RESULT = sh.sync_directory(
-                    SRC, DEST, "diff", options=GAME.options, ignore=ignore_options
-                )
+                RESULT = sh.sync_directory(SRC, DEST, "diff", options=GAME.options, ignore=ignore_options)
             else:
-                RESULT = sh.sync_directory(
-                    SRC, DEST, options=GAME.options, ignore=ignore_options
-                )
+                RESULT = sh.sync_directory(SRC, DEST, options=GAME.options, ignore=ignore_options)
             # LOG.debug(f'sync_directory RESULT: {RESULT}')
 
             # NEVER clear source screenshot directory for restore
@@ -110,9 +106,7 @@ if __name__ == "__main__":
         parser.add_argument("--test-run", action="store_true")
         parser.add_argument("--only-apps", action="store_true")
         parser.add_argument("--only-games", action="store_true")
-        parser.add_argument(
-            "--id-filter", action="append", choices=ALL_IDS
-        )  # most reliable list approach
+        parser.add_argument("--id-filter", action="append", choices=ALL_IDS)  # most reliable list approach
         return parser.parse_args()
 
     ARGS = parse_arguments()

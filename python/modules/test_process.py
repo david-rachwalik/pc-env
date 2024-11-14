@@ -46,9 +46,7 @@ def main():
 
     # creating processes
     for w in range(number_of_processes):
-        p = multiprocessing.Process(
-            target=do_job, args=(tasks_to_accomplish, tasks_that_are_done)
-        )
+        p = multiprocessing.Process(target=do_job, args=(tasks_to_accomplish, tasks_that_are_done))
         processes.append(p)
         p.start()
 

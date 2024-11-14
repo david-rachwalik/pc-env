@@ -63,9 +63,7 @@ class LogHandlerOptions(object):
 _stream_handler: LogHandlerOptions = LogHandlerOptions()
 
 
-def get_logger(
-    log_name: str = "root", handlers: Optional[List[LogHandlerOptions]] = None
-) -> logging.Logger:
+def get_logger(log_name: str = "root", handlers: Optional[List[LogHandlerOptions]] = None) -> logging.Logger:
     """Method to fetch the logging Logger"""
     # Automatically attach default handlers (stream handler)
     if handlers is None:
@@ -91,9 +89,7 @@ def get_handler(options: LogHandlerOptions):
         handler = colorlog.StreamHandler(sys.stdout)
     # Create formatter to attach to handler
     # log_formatter = logging.Formatter(fmt=options.message_format, datefmt=options.time_format)
-    log_formatter = colorlog.ColoredFormatter(
-        options.message_format, datefmt=options.time_format
-    )
+    log_formatter = colorlog.ColoredFormatter(options.message_format, datefmt=options.time_format)
     log_formatter.converter = _get_timezone_converter(options.timezone)
     # Configure handler with log format and level
     handler.setFormatter(log_formatter)
@@ -109,9 +105,7 @@ def add_handler(logger: logging.Logger, options: LogHandlerOptions):
 
 
 # Apply batch of handlers to logger based on list of LogHandlerOptions
-def set_handlers(
-    logger: logging.Logger, handlers: Optional[List[LogHandlerOptions]] = None
-):
+def set_handlers(logger: logging.Logger, handlers: Optional[List[LogHandlerOptions]] = None):
     """Method to apply one or more logging Handler"""
     if handlers is None:
         handlers = []
@@ -124,9 +118,7 @@ def set_handlers(
 
 
 # Generate handlers with a standard configuration
-def default_handlers(
-    debug: bool = False, log_path: str = ""
-) -> List[LogHandlerOptions]:
+def default_handlers(debug: bool = False, log_path: str = "") -> List[LogHandlerOptions]:
     """Method to generate default logging Handlers"""
     # https://docs.python.org/3/library/logging.html#logrecord-attributes
     # _message_format = "%(asctime)s %(name)s\t[%(levelname)s]\t%(message)s"

@@ -123,9 +123,7 @@ def devops_project_list() -> Tuple[bool, bool]:
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
     failed = process.returncode != 0
-    changed = (
-        not failed and "is not authorized to access this resource" not in process.stderr
-    )
+    changed = not failed and "is not authorized to access this resource" not in process.stderr
     return (not failed, changed)
 
 
@@ -147,9 +145,7 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(
-        ARGS.debug, ARGS.log_path
-    )
+    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

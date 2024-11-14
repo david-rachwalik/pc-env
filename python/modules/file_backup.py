@@ -40,9 +40,7 @@ class FileBackup(ShellManager):
         if self.args.dest != os.path.join(dest_basepath, self.args.suffix):
             self.log.info(dest_basepath)
             self.log.info(self.args.suffix)
-            self.args.dest = os.path.join(
-                self.ExpandPath(self.args.dest), self.args.suffix
-            )
+            self.args.dest = os.path.join(self.ExpandPath(self.args.dest), self.args.suffix)
         else:
             self.log.info(self.args.dest)
 
