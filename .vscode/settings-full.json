@@ -3,18 +3,19 @@
   "explorer.confirmDragAndDrop": false,
   "files.associations": {
     "hosts": "ini",
-    "*.ejs": "html",
+    // "ansible_playbooks/**/*.yml": "ansible",
+    "*.json": "jsonc",
     "*.css": "postcss",
-    "*.json": "jsonc"
+    "*.ejs": "html"
   },
 
   // --- Activity Bar (File Explorer, Search, Source Control, etc.) ---
   "workbench.editor.labelFormat": "short",
   "workbench.iconTheme": "vscode-icons",
   "workbench.startupEditor": "none",
-  "workbench.editorAssociations": {
-    "*.ipynb": "jupyter-notebook"
-  },
+  // "workbench.editorAssociations": {
+  //   "*.ipynb": "jupyter-notebook"
+  // },
 
   // -------- Code Editor --------
   "window.density.editorTabHeight": "compact",
@@ -28,22 +29,28 @@
   // --- Formatting ---
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
+  // :: Prettier Supported Language Targets ::
+  // [javascript, typescript, javascriptreact, typescriptreact]
+  // [html, css, scss, less, vue]
+  // [json, yaml, markdown]
+  // [graphql, handlebars, toml, ruby]
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "prettier.printWidth": 160,
   "prettier.tabWidth": 2,
+  "prettier.ignorePath": ".prettierignore",
 
   // --- Formatting (Web) ---
   "[javascript, typescript, javascriptreact, typescriptreact]": {
     "editor.formatOnSave": false
   },
-  "[html]": {
-    "editor.defaultFormatter": "vscode.html-language-features"
-  },
   "eslint.debug": true,
   "eslint.format.enable": true,
+  // "[html]": {
+  //   "editor.defaultFormatter": "vscode.html-language-features"
+  // },
 
   // --- Formatting (Shell) ---
   "[shellscript]": {
@@ -93,7 +100,17 @@
     "MD030": { "ul_single": 1, "ul_multi": 1 }
   },
   "[yaml]": {
-    "editor.formatOnSave": false
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "yaml.format.printWidth": 160,
+  "yaml.format.singleQuote": true,
+  "yaml.format.bracketSpacing": true,
+  "yaml.format.proseWrap": "preserve",
+  "[ignore]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  },
+  "[properties]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
   },
 
   // -------- Terminal (CLI) --------
@@ -123,6 +140,8 @@
   "python.defaultInterpreterPath": "/usr/local/bin/python",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.typeCheckingMode": "basic",
+  // "ansible.python.interpreterPath": "/usr/local/bin/python",
+  // "ansible.ansible.useFullyQualifiedCollectionNames": true,
 
   // --- Code Testing ---
   // https://code.visualstudio.com/docs/python/testing
@@ -131,15 +150,15 @@
   "python.testing.pytestArgs": ["python"], // repo subdirectory
 
   // -------- Other / Miscellaneous --------
-  "dotnetAcquisitionExtension.enableTelemetry": false,
+  "powershell.promptToUpdatePowerShell": false,
+  // "notebook.cellToolbarLocation": {
+  //   "default": "right",
+  //   "jupyter-notebook": "left"
+  // },
   "redhat.telemetry.enabled": false,
+  "dotnetAcquisitionExtension.enableTelemetry": false,
   "emmet.includeLanguages": {
     "ejs": "html"
   },
-  "notebook.cellToolbarLocation": {
-    "default": "right",
-    "jupyter-notebook": "left"
-  },
-  "powershell.promptToUpdatePowerShell": false,
   "vsicons.dontShowNewVersionMessage": true
 }

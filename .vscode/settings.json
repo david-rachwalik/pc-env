@@ -3,6 +3,7 @@
   "explorer.confirmDragAndDrop": false,
   "files.associations": {
     "hosts": "ini",
+    // "ansible_playbooks/**/*.yml": "ansible",
     "*.json": "jsonc"
   },
 
@@ -23,12 +24,18 @@
   // --- Formatting ---
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
+  // :: Prettier Supported Language Targets ::
+  // [javascript, typescript, javascriptreact, typescriptreact]
+  // [html, css, scss, less, vue]
+  // [json, yaml, markdown]
+  // [graphql, handlebars, toml, ruby]
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "prettier.printWidth": 160,
   "prettier.tabWidth": 2,
+  "prettier.ignorePath": ".prettierignore",
 
   // --- Formatting (Shell) ---
   "[shellscript]": {
@@ -78,7 +85,17 @@
     "MD030": { "ul_single": 1, "ul_multi": 1 }
   },
   "[yaml]": {
-    "editor.formatOnSave": false
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "yaml.format.printWidth": 160,
+  "yaml.format.singleQuote": true,
+  "yaml.format.bracketSpacing": true,
+  "yaml.format.proseWrap": "preserve",
+  "[ignore]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  },
+  "[properties]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
   },
 
   // -------- Terminal (CLI) --------
@@ -100,6 +117,8 @@
   "python.defaultInterpreterPath": "/usr/local/bin/python",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.typeCheckingMode": "basic",
+  // "ansible.python.interpreterPath": "/usr/local/bin/python",
+  // "ansible.ansible.useFullyQualifiedCollectionNames": true,
 
   // --- Code Testing ---
   // https://code.visualstudio.com/docs/python/testing
@@ -108,8 +127,8 @@
   "python.testing.pytestArgs": ["python"], // repo subdirectory
 
   // -------- Other / Miscellaneous --------
-  "dotnetAcquisitionExtension.enableTelemetry": false,
-  "redhat.telemetry.enabled": false,
   "powershell.promptToUpdatePowerShell": false,
+  "redhat.telemetry.enabled": false,
+  "dotnetAcquisitionExtension.enableTelemetry": false,
   "vsicons.dontShowNewVersionMessage": true
 }
