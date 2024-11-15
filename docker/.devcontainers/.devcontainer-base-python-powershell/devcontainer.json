@@ -30,6 +30,7 @@
       "extensions": [
         "ms-vscode-remote.remote-containers",
         "ms-azuretools.vscode-docker",
+        "esbenp.prettier-vscode", // formatter
         // [Shell]
         "ms-vscode.powershell", // runtime
         "foxundermoon.shell-format",
@@ -42,7 +43,6 @@
         "njpwerner.autodocstring",
         // [JavaScript|TypeScript]
         "dbaeumer.vscode-eslint", // linter
-        "esbenp.prettier-vscode", // formatter
         "christian-kohler.path-intellisense", // autocompletes filenames
         "mike-co.import-sorter", // TS
         "steoates.autoimport", // TS
@@ -55,8 +55,9 @@
         // [Other Languages]
         "DavidAnson.vscode-markdownlint",
         "redhat.vscode-yaml",
-        "ms-dotnettools.csharp",
-        "bowlerhatllc.vscode-as3mxml",
+        // "redhat.ansible",
+        // "ms-dotnettools.csharp",
+        // "bowlerhatllc.vscode-as3mxml",
         "mikestead.dotenv",
         "formulahendry.auto-close-tag", // HTML/XML
         "formulahendry.auto-rename-tag", // HTML/XML

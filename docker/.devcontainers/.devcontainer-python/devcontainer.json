@@ -1,13 +1,10 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/powershell
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
 // https://code.visualstudio.com/docs/devcontainers/tips-and-tricks
 {
-  "name": "Python, PowerShell",
+  "name": "Python",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  // "image": "mcr.microsoft.com/devcontainers/python:3.12",
-  "build": {
-    "dockerfile": "./Dockerfile"
-  },
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
@@ -43,32 +40,12 @@
         "ms-python.vscode-pylance",
         "ms-python.isort",
         "njpwerner.autodocstring",
-        // [JavaScript|TypeScript]
-        "dbaeumer.vscode-eslint", // linter
-        "christian-kohler.path-intellisense", // autocompletes filenames
-        "mike-co.import-sorter", // TS
-        "steoates.autoimport", // TS
-        // [CSS]
-        "small-tech.comment-out-css",
-        "kamikillerto.vscode-colorize",
-        "pucelle.vscode-css-navigation",
-        "csstools.postcss",
-        "bradlc.vscode-tailwindcss",
         // [Other Languages]
         "DavidAnson.vscode-markdownlint",
         "redhat.vscode-yaml",
-        // "redhat.ansible",
-        // "ms-dotnettools.csharp",
-        // "bowlerhatllc.vscode-as3mxml",
         "mikestead.dotenv",
         "formulahendry.auto-close-tag", // HTML/XML
         "formulahendry.auto-rename-tag", // HTML/XML
-        // "christian-kohler.npm-intellisense",
-        // "theumletteam.umlet",
-        // "42Crunch.vscode-openapi",
-        // "Angular.ng-template",
-        // "Vue.volar",
-        "hashicorp.terraform",
         // [Other]
         "natqe.reload",
         "donjayamanne.githistory",
@@ -76,7 +53,6 @@
         "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
         "lihui.vs-color-picker"
-        // "mongodb.mongodb-vscode"
       ]
     }
   }

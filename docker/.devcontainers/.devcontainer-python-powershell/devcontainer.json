@@ -1,16 +1,13 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/universal
+// README at: https://github.com/devcontainers/templates/tree/main/src/powershell
+// https://code.visualstudio.com/docs/devcontainers/tips-and-tricks
 {
-  "name": "Universal",
+  "name": "Python, PowerShell",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/universal:2-linux",
-
-  // "mounts": [
-  //   "source=${localWorkspaceFolder}/python/modules,target=/home/codespace/.local/lib/python3.12/site-packages,type=bind,consistency=cached",
-  //   "source=${localWorkspaceFolder}/python/modules/boilerplates,target=/home/codespace/.local/lib/python3.12/site-packages,type=bind,consistency=cached",
-  //   "source=${localWorkspaceFolder}/python/modules/active,target=/home/codespace/.local/lib/python3.12/site-packages,type=bind,consistency=cached"
-  // ],
-  // "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}", // This is usually the default
+  // "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "build": {
+    "dockerfile": "./Dockerfile"
+  },
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
@@ -20,9 +17,11 @@
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "uname -a",
+  // "postCreateCommand": "python -m venv ~/.venv && . ~/.venv/bin/activate && pip install -r /workspaces/pc-env/python/pip-requirements.txt",
   "postCreateCommand": "pip install -r /workspaces/pc-env/python/pip-requirements.txt",
 
   "containerEnv": {
+    // "PYTHONPATH": "~/.venv/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
     "PYTHONPATH": "~/.local/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
   },
 
@@ -33,6 +32,7 @@
       "extensions": [
         "ms-vscode-remote.remote-containers",
         "ms-azuretools.vscode-docker",
+        "esbenp.prettier-vscode", // formatter
         // [Shell]
         "ms-vscode.powershell", // runtime
         "foxundermoon.shell-format",
@@ -45,7 +45,6 @@
         "njpwerner.autodocstring",
         // [JavaScript|TypeScript]
         "dbaeumer.vscode-eslint", // linter
-        "esbenp.prettier-vscode", // formatter
         "christian-kohler.path-intellisense", // autocompletes filenames
         "mike-co.import-sorter", // TS
         "steoates.autoimport", // TS
@@ -58,16 +57,17 @@
         // [Other Languages]
         "DavidAnson.vscode-markdownlint",
         "redhat.vscode-yaml",
-        "ms-dotnettools.csharp",
-        "bowlerhatllc.vscode-as3mxml",
+        // "redhat.ansible",
+        // "ms-dotnettools.csharp",
+        // "bowlerhatllc.vscode-as3mxml",
         "mikestead.dotenv",
         "formulahendry.auto-close-tag", // HTML/XML
         "formulahendry.auto-rename-tag", // HTML/XML
-        "christian-kohler.npm-intellisense",
-        "theumletteam.umlet",
-        "42Crunch.vscode-openapi",
-        "Angular.ng-template",
-        "Vue.volar",
+        // "christian-kohler.npm-intellisense",
+        // "theumletteam.umlet",
+        // "42Crunch.vscode-openapi",
+        // "Angular.ng-template",
+        // "Vue.volar",
         "hashicorp.terraform",
         // [Other]
         "natqe.reload",
@@ -75,8 +75,8 @@
         "bierner.markdown-preview-github-styles",
         "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
-        "lihui.vs-color-picker",
-        "mongodb.mongodb-vscode"
+        "lihui.vs-color-picker"
+        // "mongodb.mongodb-vscode"
       ]
     }
   }

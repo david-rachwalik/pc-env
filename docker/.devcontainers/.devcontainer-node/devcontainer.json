@@ -1,29 +1,27 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/powershell
+// README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
 // https://code.visualstudio.com/docs/devcontainers/tips-and-tricks
 {
-  "name": "Python, PowerShell",
+  "name": "NodeJS",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  // "image": "mcr.microsoft.com/devcontainers/python:3.12",
-  "build": {
-    "dockerfile": "./Dockerfile"
-  },
+  // "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+
+  //   "mounts": [
+  //     "source=${localWorkspaceFolder}/python/modules/active,target=/home/codespace/.local/lib/python3.12/site-packages,type=bind,consistency=cached"
+  //   ],
+  // "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}", // This is usually the default
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
+  "forwardPorts": [4200],
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "uname -a",
-  // "postCreateCommand": "python -m venv ~/.venv && . ~/.venv/bin/activate && pip install -r /workspaces/pc-env/python/pip-requirements.txt",
-  "postCreateCommand": "pip install -r /workspaces/pc-env/python/pip-requirements.txt",
-
-  "containerEnv": {
-    // "PYTHONPATH": "~/.venv/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
-    "PYTHONPATH": "~/.local/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
-  },
+  "postCreateCommand": "npm i && cd client-angular && npm i",
 
   // Configure tool-specific properties.
   "customizations": {
@@ -32,19 +30,11 @@
       "extensions": [
         "ms-vscode-remote.remote-containers",
         "ms-azuretools.vscode-docker",
+        "esbenp.prettier-vscode", // formatter
         // [Shell]
-        "ms-vscode.powershell", // runtime
         "foxundermoon.shell-format",
-        // [Python]
-        "ms-python.python", // runtime
-        "ms-python.pylint",
-        "ms-python.black-formatter", // formatter
-        "ms-python.vscode-pylance",
-        "ms-python.isort",
-        "njpwerner.autodocstring",
         // [JavaScript|TypeScript]
         "dbaeumer.vscode-eslint", // linter
-        "esbenp.prettier-vscode", // formatter
         "christian-kohler.path-intellisense", // autocompletes filenames
         "mike-co.import-sorter", // TS
         "steoates.autoimport", // TS
@@ -57,17 +47,17 @@
         // [Other Languages]
         "DavidAnson.vscode-markdownlint",
         "redhat.vscode-yaml",
-        "ms-dotnettools.csharp",
-        "bowlerhatllc.vscode-as3mxml",
+        // "ms-dotnettools.csharp",
+        // "bowlerhatllc.vscode-as3mxml",
         "mikestead.dotenv",
         "formulahendry.auto-close-tag", // HTML/XML
         "formulahendry.auto-rename-tag", // HTML/XML
-        // "christian-kohler.npm-intellisense",
+        "christian-kohler.npm-intellisense",
         // "theumletteam.umlet",
         // "42Crunch.vscode-openapi",
-        // "Angular.ng-template",
+        "Angular.ng-template",
         // "Vue.volar",
-        "hashicorp.terraform",
+        // "hashicorp.terraform",
         // [Other]
         "natqe.reload",
         "donjayamanne.githistory",
