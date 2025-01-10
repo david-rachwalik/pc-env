@@ -12,33 +12,28 @@ fi
 packages=(
     # --- Productivity ---
     # firefox
-    # opera-stable           # Opera, Opera GX is available only as a browser extension (GX mode)
-    # google-chrome-stable
-    # p7zip-full              # 7zip alternative    * already installed
+    # opera-stable           # Opera, Opera GX is available as browser extension (GX mode)
     hardinfo  # similar to speccy
     bleachbit # similar to ccleaner
-    # ChatGPT doesn't have a native Linux package, consider using the web app or Flatpak options
 
     # --- Development ---
     code # Visual Studio Code
     docker.io
-    docker-compose
 
     # --- Media ---
     gimp
     blender
 
-    # --- Video Editing ---
-    handbrake
-    mkvtoolnix
-    # Lossless Cut, MakeMKV, etc., can be installed via Flatpak or Snap
+    # --- Videogames ---
+    steam
 
     # --- Streaming ---
     obs-studio
 
-    # --- Videogames ---
-    steam
-    # DirectX not required, use Wine for Windows compatibility
+    # --- Video Editing ---
+    handbrake
+    mkvtoolnix
+    # Lossless Cut, MakeMKV, etc., can be installed via Flatpak or Snap
 )
 
 # Commands, packages, and applications for Docker containers
