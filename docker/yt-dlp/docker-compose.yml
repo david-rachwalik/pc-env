@@ -1,0 +1,15 @@
+services:
+  yt-dlp:
+    image: yt-dlp-runner
+    container_name: yt-dlp-runner-container
+    volumes:
+      - ~/.mozilla/firefox:/root/.mozilla/firefox # Mount Firefox cookies
+      - /media/root/HDD-01:/mnt/d # Mount downloads directory
+    stdin_open: true
+    tty: true
+    command: /bin/sh # Default to interactive shell
+
+# :: Usage Example (run interactively) ::
+# cd ~/Repos/pc-env/docker/yt-dlp
+# docker compose build
+# docker compose run yt-dlp

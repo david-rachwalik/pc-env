@@ -1,0 +1,47 @@
+# Master Configuration for yt-dlp (and youtube-dl) settings
+
+# https://github.com/yt-dlp/yt-dlp#configuration
+# https://github.com/ytdl-org/youtube-dl/#configuration (old)
+
+# The app `yt-dlp` supports multiple configuration file locations:
+# - %APPDATA%\yt-dlp\config
+# - %USERPROFILE%\youtube-dl.conf (old)
+
+# The old config is still supported, but yt-dlp will prioritize settings from the first path if both exist.
+
+
+# --- Audio settings ---
+--audio-format mp3      # Save audio as mp3
+
+# --- Subtitles settings ---
+--write-subs            # Downloads subtitles (if available)
+--sub-lang en           # Downloads English subtitles
+--sub-format srt        # Saves subtitles in SRT format
+
+# --- Metadata and info settings ---
+--add-metadata          # Embeds metadata (including chapters)
+# --write-info-json       # Saves additional video information in a .info.json file, which includes chapters and timestamps
+# Time settings
+# --no-mtime              # Do not copy the mtime (use download time instead of upload time)
+
+
+# --- Input format selection ---
+# -S codec:vp9:m4a,res:1080  # Prioritize video codec and resolution
+# NOTE: yt-dlp already follows a built-in preference order: VP9 and AV1 (if available) over AVC1 (H.264)
+# Select best formats for video (1080p resolution) and audio (128 kbps bitrate)
+# -f "bv*[height<=1080]+ba[abr<=128k]/b[height<=1080][abr<=128k]"
+--format "bestvideo*[height<=1080]+bestaudio[abr<=128k]/best[height<=1080][abr<=128k]"
+
+# --- Output settings ---
+--merge-output-format mkv
+--output "/mnt/d/_Downloads/[%(channel)s] %(title)s.%(ext)s"  # Save to Downloads directory
+
+
+# --- Credentials (to download age-restricted content or other flagged videos) ---
+--cookies-from-browser firefox
+
+
+# [COMMON COMMANDS]
+# yt-dlp <URL>                                  # Main download method
+# yt-dlp -F <URL>                               # View source information (available formats) rather than download
+# yt-dlp -x -f "ba[abr<=128k]" <URL>            # Download audio only
