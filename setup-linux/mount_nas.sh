@@ -59,7 +59,7 @@ create_mount_point() {
 add_to_fstab() {
     local share_name="$1"
     local mount_point="$2"
-    local fstab_entry="${NAS_IP}:/Share/${SHARE_NAME} ${MOUNT_POINT} nfs ${MOUNT_OPTS} 0 0"
+    local fstab_entry="${NAS_IP}:/Share/${share_name} ${mount_point} nfs ${MOUNT_OPTS} 0 0"
 
     if [ "$PROTOCOL" = "nfs" ]; then
         # Remove old conflicting CIFS/SMB entries if they exist
