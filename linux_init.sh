@@ -1,17 +1,53 @@
 #!/bin/bash
+set -e
 
-# -------- Run with Bash (use `sudo` for privileged tasks) --------
+# Ensure the script is being run as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "This script must be run as root"
+    exit 1
+fi
 
-# --- Ensure the system is updated first ---
+# -------- Ready the system for setup tasks --------
+
 # Update package lists and installed packages
-sudo apt update && sudo apt upgrade -y
+apt update && apt upgrade -y
+# Install required packages for setup: curl, git, and other essential tools
+apt install -y curl wget git build-essential
 
-# --- Install required packages for setup ---
-# Install curl, git, and other essential tools
-sudo apt install -y curl wget git build-essential
+# -------- Configure Shell --------
 
+# --- Add Aliases ---
 
-# -------- STAGE 1: Configure Shell --------
+ALIASES=(
+    "alias ytdl='bash ~/Repos/pc-env/docker/yt-dlp/run.sh'"
+    "alias joplin='~/.joplin/Joplin.AppImage'"
+)
+
+# Ensure ~/.bash_aliases exists
+if [ ! -f ~/.bash_aliases ]; then
+    touch ~/.bash_aliases
+fi
+
+# Add each alias only if it’s not already in the file
+for ALIAS_CMD in "${ALIASES[@]}"; do
+    if ! grep -Fxq "$ALIAS_CMD" ~/.bash_aliases; then
+        echo "$ALIAS_CMD" >>~/.bash_aliases
+        echo "Added: $ALIAS_CMD"
+    else
+        echo "Already exists: $ALIAS_CMD"
+    fi
+done
+
+# # Ensure ~/.bash_aliases is sourced in ~/.bashrc
+# if ! grep -q "source ~/.bash_aliases" ~/.bashrc; then
+#     echo "source ~/.bash_aliases" >>~/.bashrc
+#     echo "Added source command to ~/.bashrc"
+# fi
+
+# Reload shell configuration
+source ~/.bashrc
+
+echo "Alias setup complete!"
 
 # --- Allow execution of scripts (.sh) on machine ---
 # Ensure the script is executable using `chmod +x script.sh`
@@ -24,8 +60,35 @@ if [ ! -f "$HOME/.ssh/id_rsa" ]; then
     echo "SSH keys generated."
 fi
 
+# -------- Configure Panel (Taskbar) --------
 
-# -------- STAGE 2: Provision Software Installer (e.g., Apt, Snap, Flatpak) --------
+# Function to update a gsettings key if needed
+set_gsetting() {
+    local key="$1"
+    local value="$2"
+    local current_value
+
+    current_value=$(gsettings get org.cinnamon.desktop.interface "$key")
+
+    if [[ "$current_value" != "'$value'" ]]; then
+        gsettings set org.cinnamon.desktop.interface "$key" "$value"
+        echo "Updated $key to: $value"
+    else
+        echo "$key is already set correctly."
+    fi
+}
+
+# Define the desired date formats
+DATE_FORMAT="%b %d, %Y %H:%M"
+TOOLTIP_FORMAT="%A, %B %d, %Y, %-I:%M %p"
+
+# Apply the settings
+set_gsetting "clock-format" "$DATE_FORMAT"
+set_gsetting "clock-show-seconds" "$TOOLTIP_FORMAT"
+
+echo "Done setting custom date format."
+
+# -------- Provision Software Installer (e.g., Apt, Snap, Flatpak) --------
 
 echo "Calling 'provision_apt.sh' from remote..."
 # Define the URL of the script
@@ -34,17 +97,7 @@ provision_apt_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/mast
 curl -s "$provision_apt_url" | bash
 echo "Completed 'provision_apt.sh' process"
 
-# echo "Installing essential software via apt..."
-# # You can install common tools or software as needed here
-# sudo apt install -y vim htop tmux
-
-# Optional: Add software repositories or PPA (Personal Package Archives)
-# Example: Adding the PPA for a specific software
-# sudo add-apt-repository ppa:some/ppa -y
-# sudo apt update
-
-
-# -------- STAGE 3: Provision Python --------
+# -------- Provision Python --------
 
 echo "Setting up Python..."
 
@@ -55,9 +108,8 @@ provision_python_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/m
 curl -s "$provision_python_url" | bash
 echo "Completed 'provision_python.sh' process"
 
-
 # # Ensure Python and pip are installed
-# sudo apt install -y python3 python3-pip
+# apt install -y python3 python3-pip
 # # Optionally install virtual environment tools
 # pip3 install --user virtualenv
 
@@ -70,28 +122,14 @@ echo "Completed 'provision_python.sh' process"
 #     source ~/.bashrc
 # fi
 
-
-# -------- STAGE 4: Running Python script --------
-
-echo "Running Python setup script..."
-# Example of running a Python script (replace path as necessary)
-# python3 ~/scripts/simulate.py "abcd"
-
-
-# -------- STAGE 5: Establishing Scheduled Tasks --------
+# -------- Establishing Scheduled Tasks --------
 
 # Schedule tasks using cron
 echo "Setting up cron jobs..."
 # Example: Add a cron job to run a script periodically
 # (crontab -l ; echo "0 0 * * * /usr/bin/python3 /path/to/script.py") | crontab -
 
-
-# -------- Optional: Configure Additional System Settings --------
-
-# Example: Configure Git
-# git config --global user.name "Your Name"
-# git config --global user.email "youremail@example.com"
-
-
-echo "--- Linux Mint provisioning has completed ---"
+echo "--- Successfully completed Linux provisioning! ---"
 exit 0
+
+# sudo bash ~/Repos/pc-env/linux_init.sh
