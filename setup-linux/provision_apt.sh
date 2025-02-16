@@ -19,10 +19,7 @@ packages=(
     # --- Development ---
     code # Visual Studio Code
     docker.io
-
-    # --- Media ---
-    gimp
-    blender
+    gh
 
     # --- Videogames ---
     steam
@@ -33,10 +30,15 @@ packages=(
     # --- Video Editing ---
     handbrake
     mkvtoolnix
+    mkvtoolnix-gui
     # Lossless Cut, MakeMKV, etc., can be installed via Flatpak or Snap
+
+    # --- Other Editing ---
+    gimp
+    blender
 )
 
-# Commands, packages, and applications for Docker containers
+# Commands, packages, and applications for Docker dev containers
 packages_container=(
     # --- Development ---
     git # Source Control
@@ -71,23 +73,52 @@ for package in "${packages[@]}"; do
     fi
 done
 
-# Additional package installations from Flatpak, Snap, or other sources
+# --- Additional package installations from Flatpak, Snap, or other sources ---
 # e.g., Spotify, GitHub Desktop can be handled separately since they are not directly available via apt
 
 # Install Discord via Linux deb file installer
-url="https://discord.com/api/download?platform=linux&format=deb"
-curl -L -o /tmp/discord.deb $url
-apt install /tmp/discord.deb
+if ! command -v discord &>/dev/null; then
+    DISCORD_INSTALLER_URL="https://discord.com/api/download?platform=linux&format=deb"
+    echo "Discord was not found.  Installing..."
+    curl -L -o /tmp/discord.deb $DISCORD_INSTALLER_URL
+    apt install /tmp/discord.deb
+else
+    DISCORD_VERSION=$(apt list --installed 2>/dev/null | grep discord | awk '{print $2}')
+    echo "Discord is already installed. Version: $DISCORD_VERSION"
+fi
 
 # Install NordVPN on Linux distributions
 # https://support.nordvpn.com/hc/en-us/articles/20196094470929-Installing-NordVPN-on-Linux-distributions
-sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
+if ! command -v nordvpn &>/dev/null; then
+    echo "NordVPN was not found.  Installing..."
+    # https://nordvpn.com/download/linux/#install-nordvpn
+    sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
+    nordvpn login
+    nordvpn connect
+    nordvpn set autoconnect on # automatically connect on boot
+    nordvpn set lan-discovery enabled
+else
+    echo "NordVPN is already installed. Version: $(nordvpn --version)"
+fi
+
+# Install qBittorrent on Linux distributions
+# https://www.qbittorrent.org/download
+if ! command -v qbittorrent &>/dev/null; then
+    echo "qBittorrent was not found.  Installing..."
+    add-apt-repository ppa:qbittorrent-team/qbittorrent-stable
+    apt-get update && apt-get install qbittorrent
+else
+    echo "qBittorrent is already installed. Version: $(qbittorrent --version)"
+fi
 
 # Cleaning up
 echo "Cleaning up unnecessary files..."
 apt autoremove -y && apt clean
 
-echo "--- Completed provisioning of Linux Mint ---"
+echo "--- Completed provisioning of Linux via apt ---"
+
+# chmod +x ~/Repos/pc-env/setup-linux/provision_apt.sh
+# sudo bash ~/Repos/pc-env/setup-linux/provision_apt.sh
 
 # ------------------------------------------------------------------------------------------------
 
