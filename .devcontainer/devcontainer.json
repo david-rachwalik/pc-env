@@ -25,6 +25,11 @@
     "PYTHONPATH": "~/.local/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
   },
 
+  // https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ],
+
   // Configure tool-specific properties.
   "customizations": {
     "vscode": {
