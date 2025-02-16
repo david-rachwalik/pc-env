@@ -14,9 +14,9 @@
 --audio-format mp3      # Save audio as mp3
 
 # --- Subtitles settings ---
---write-subs            # Downloads subtitles (if available)
---sub-lang en           # Downloads English subtitles
---sub-format srt        # Saves subtitles in SRT format
+# --write-subs            # Downloads subtitles (if available)
+# --sub-lang en           # Downloads English subtitles
+# --sub-format srt        # Saves subtitles in SRT format
 
 # --- Metadata and info settings ---
 --add-metadata          # Embeds metadata (including chapters)
@@ -39,6 +39,10 @@
 
 # --- Credentials (to download age-restricted content or other flagged videos) ---
 --cookies-from-browser firefox
+
+# Spoof the request as a browser to bypass any potential restrictions
+# yt-dlp --dump-user-agent
+--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
 
 
 # [COMMON COMMANDS]

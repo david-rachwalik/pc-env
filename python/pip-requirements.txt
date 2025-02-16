@@ -1,3 +1,4 @@
+pip
 pylint-quotes
 colorlog
 pytz

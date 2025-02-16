@@ -11,8 +11,10 @@ RUN apk add --no-cache ffmpeg
 COPY config /root/.config/yt-dlp/config
 
 # Install required packages
+RUN pip install pip -U
 # RUN pip install -r requirements.txt  # Uncomment if you have a requirements.txt file
-RUN pip install yt-dlp
+RUN pip install yt-dlp -U
+# TODO: sometimes needs to be manually updated; can check with `yt-dlp -U`
 
 # Update PATH to include /root/.local/bin
 # ENV PATH="/root/.local/bin:${PATH}"

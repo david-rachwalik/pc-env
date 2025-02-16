@@ -12,4 +12,4 @@ services:
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/yt-dlp
 # docker compose build
-# docker compose run yt-dlp
+# docker compose run --remove-orphans yt-dlp
