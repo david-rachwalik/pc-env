@@ -40,7 +40,7 @@ add_to_fstab() {
     # Check if it's already in fstab
     if ! grep -q "$device" /etc/fstab; then
         echo "Adding $device to /etc/fstab for persistent mounting..."
-        echo "$device $mount_point ntfs-3g defaults 0 0" >>/etc/fstab
+        echo "$device $mount_point ntfs-3g defaults,uid=1000,gid=1000,umask=0022 0 0" >>/etc/fstab
     else
         echo "$device $mount_point is already listed in /etc/fstab."
     fi
@@ -75,3 +75,10 @@ systemctl daemon-reload || {
 }
 
 echo "Mount setup complete!"
+
+# cd ~/Repos/pc-env/setup-linux/
+# sudo bash ./mount_drives.sh
+
+# - Other -
+# sudo umount /dev/sda2         # Unmount the drive
+# sudo ntfsfix /dev/sda2        # Check the NTFS partition status

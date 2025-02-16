@@ -7,12 +7,12 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 CREDENTIALS_FILE="$1"
-SUPPORTED_PROTOCOLS=(cifs" "smb" ""nfs")
+SUPPORTED_PROTOCOLS=("cifs" "smb" "nfs")
 PROTOCOL="${PROTOCOL:-smb}" # Default to NFS if not set
 
 # NAS IP and shares
 NAS_IP="${NAS_IP:-192.168.0.4}"
-if [ "$PROTOCOL" = "nfs"]; then
+if [ "$PROTOCOL" = "nfs" ]; then
     MOUNT_OPTS="defaults,nfsvers=4.1,rsize=1048576,wsize=1048576,noatime"
 elif [ "$PROTOCOL" = "smb" ]; then
     MOUNT_OPTS="iocharset=utf8,vers=3.0,uid=1000,gid=1000"
@@ -110,3 +110,10 @@ for SHARE_NAME in "${!SHARE_MOUNT_POINTS[@]}"; do
 done
 
 echo "Mount setup complete!"
+
+# chmod +x ~/Repos/pc-env/setup-linux/mount_nas.sh
+# sudo bash ~/Repos/pc-env/setup-linux/mount_nas.sh ~/.config/nas_credentials
+
+# :: Credential file format ::
+# username=admin
+# password=<password>
