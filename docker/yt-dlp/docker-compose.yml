@@ -1,13 +1,23 @@
 services:
   yt-dlp:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: yt-dlp-runner
     container_name: yt-dlp-runner-container
     volumes:
       - ~/.mozilla/firefox:/root/.mozilla/firefox # Mount Firefox cookies
       - /media/root/HDD-01:/mnt/d # Mount downloads directory
+      - yt-dlp-persist:/usr/local/lib/python3.12/site-packages # Persist Python packages
+      - yt-dlp-bin:/usr/local/bin
     stdin_open: true
     tty: true
     command: /bin/sh # Default to interactive shell
+
+volumes:
+  yt-dlp-persist:
+  yt-dlp-bin:
+#
 
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/yt-dlp

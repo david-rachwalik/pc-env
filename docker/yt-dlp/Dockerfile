@@ -10,11 +10,10 @@ RUN apk add --no-cache ffmpeg
 # Copy configuration settings to the container
 COPY config /root/.config/yt-dlp/config
 
-# Install required packages
-RUN pip install pip -U
-# RUN pip install -r requirements.txt  # Uncomment if you have a requirements.txt file
-RUN pip install yt-dlp -U
-# TODO: sometimes needs to be manually updated; can check with `yt-dlp -U`
+# Use ENTRYPOINT to update container on every run
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Update PATH to include /root/.local/bin
 # ENV PATH="/root/.local/bin:${PATH}"
