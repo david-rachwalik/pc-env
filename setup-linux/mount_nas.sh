@@ -69,13 +69,16 @@ add_to_fstab() {
             umount "$mount_point"
         fi
     else
-        fstab_entry="//${NAS_IP}/${share_name} ${mount_point} cifs credentials=${CREDENTIALS_FILE},iocharset=utf8,vers=3.0,uid=1000,gid=1000 0 0"
         # Remove old conflicting NFS entries if they exist
         if grep -qs "${NAS_IP}:/Share/${share_name}" /etc/fstab; then
             echo "Removing old NFS entry for ${share_name}"
             sed -i "\|${NAS_IP}:/Share/${share_name}|d" /etc/fstab
             umount "$mount_point"
         fi
+
+        # _netdev: Ensures the mount happens only after the network is ready
+        # x-systemd.automount: Delays mounting until the share is accessed
+        fstab_entry="//${NAS_IP}/${share_name} ${mount_point} cifs credentials=${CREDENTIALS_FILE},iocharset=utf8,vers=3.0,uid=1000,gid=1000,_netdev,x-systemd.automount 0 0"
     fi
 
     # Check if the fstab entry exists and matches
