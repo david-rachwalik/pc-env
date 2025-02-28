@@ -20,6 +20,15 @@ packages=(
     code # Visual Studio Code
     docker.io
     gh
+    git-lfs
+
+    # --- Media ---
+    # Required for ALVR
+    mesa-va-drivers:amd64
+    # mesa-va-drivers
+    # libva-drm2
+    # libva-x11-2
+    vainfo
 
     # --- Videogames ---
     steam
@@ -94,9 +103,11 @@ if ! command -v nordvpn &>/dev/null; then
     # https://nordvpn.com/download/linux/#install-nordvpn
     sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
     nordvpn login
-    nordvpn connect
-    nordvpn set autoconnect on # automatically connect on boot
+    nordvpn connect United_States
+    nordvpn set autoconnect on United_States # automatically connect on boot
     nordvpn set lan-discovery enabled
+    # nordvpn status
+    # nordvpn settings
 else
     echo "NordVPN is already installed. Version: $(nordvpn --version)"
 fi
