@@ -20,7 +20,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 # Set the default command to run your Python script with arguments
 # CMD ["python", "/root/.local/bin/pc_restore", "--debug"]
-CMD ["yt-dlp", "--version"]
+# CMD ["yt-dlp", "--version"]
 
 
 # --- Usage Example (run from project root, build image, and run container) ---
