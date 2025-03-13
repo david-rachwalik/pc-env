@@ -56,4 +56,4 @@ curl -sSL $dotnet_install_path | bash /dev/stdin -c $version
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Run remaining commands as user
-su -c "curl -s https://raw.githubusercontent.com/david-rachwalik/pc-env/master/wsl_su_init.sh | bash" ${run_user}
+su -c "curl -s https://raw.githubusercontent.com/david-rachwalik/pc-env/master/init_wsl_su.sh | bash" ${run_user}
