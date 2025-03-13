@@ -1,135 +1,125 @@
 #!/bin/bash
 set -e
 
-# Ensure the script is being run as root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "This script must be run as root"
+# -------- Run with bash (as root or sudo) --------
+
+# Ensure the script is run as root
+if [[ "$(id -u)" -ne 0 ]]; then
+    echo "This script must be run as root or with sudo.  Exiting..."
     exit 1
 fi
 
-# -------- Ready the system for setup tasks --------
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
 
-# Update package lists and installed packages
-apt update && apt upgrade -y
-# Install required packages for setup: curl, git, and other essential tools
-apt install -y curl wget git build-essential
+# Update package list and install essential packages
+setup_core_system() {
+    apt update && apt upgrade -y
+    apt install -y curl wget git build-essential
+}
 
-# -------- Configure Shell --------
+# Configure shell aliases
+setup_aliases() {
+    local -a aliases=(
+        "alias ytdl='cd ~/Repos/pc-env/docker/yt-dlp && docker compose run --remove-orphans yt-dlp'"
+    )
+    local alias_file="$HOME/.bash_aliases"
 
-# --- Add Aliases ---
-
-ALIASES=(
-    "alias ytdl='bash ~/Repos/pc-env/docker/yt-dlp/run.sh'"
-    "alias joplin='~/.joplin/Joplin.AppImage'"
-)
-
-# Ensure ~/.bash_aliases exists
-if [ ! -f ~/.bash_aliases ]; then
-    touch ~/.bash_aliases
-fi
-
-# Add each alias only if it’s not already in the file
-for ALIAS_CMD in "${ALIASES[@]}"; do
-    if ! grep -Fxq "$ALIAS_CMD" ~/.bash_aliases; then
-        echo "$ALIAS_CMD" >>~/.bash_aliases
-        echo "Added: $ALIAS_CMD"
-    else
-        echo "Already exists: $ALIAS_CMD"
+    # Ensure alias file exists
+    if [ ! -f "$alias_file" ]; then
+        touch "$alias_file"
     fi
-done
 
-# # Ensure ~/.bash_aliases is sourced in ~/.bashrc
-# if ! grep -q "source ~/.bash_aliases" ~/.bashrc; then
-#     echo "source ~/.bash_aliases" >>~/.bashrc
-#     echo "Added source command to ~/.bashrc"
-# fi
+    # Add each alias if missing from file
+    for alias_cmd in "${aliases[@]}"; do
+        if ! grep -Fxq "$alias_cmd" "$alias_file"; then
+            echo "$alias_cmd" >>"$alias_file"
+            echo "Added: $alias_cmd"
+        fi
+    done
+    # Reload shell configuration
+    source "$HOME/.bashrc"
+    echo "Alias setup complete!"
+}
 
-# Reload shell configuration
-source ~/.bashrc
-
-echo "Alias setup complete!"
-
-# --- Allow execution of scripts (.sh) on machine ---
-# Ensure the script is executable using `chmod +x script.sh`
-# Execution policies aren't enforced like PowerShell, but permissions are controlled via `chmod`.
-
-# --- Set up SSH (OpenSSH is usually installed on Mint) ---
-# Generate SSH keys if not already existing
-if [ ! -f "$HOME/.ssh/id_rsa" ]; then
-    ssh-keygen -q -f "$HOME/.ssh/id_rsa" -t rsa -b 4096 -N ""
-    echo "SSH keys generated."
-fi
-
-# -------- Configure Panel (Taskbar) --------
-
-# Function to update a gsettings key if needed
-set_gsetting() {
-    local key="$1"
-    local value="$2"
-    local current_value
-
-    current_value=$(gsettings get org.cinnamon.desktop.interface "$key")
-
-    if [[ "$current_value" != "'$value'" ]]; then
-        gsettings set org.cinnamon.desktop.interface "$key" "$value"
-        echo "Updated $key to: $value"
+# Generate SSH keys if not present
+setup_ssh() {
+    local ssh_key="$HOME/.ssh/id_rsa"
+    if [ ! -f "$ssh_key" ]; then
+        ssh-keygen -q -f "$ssh_key" -t rsa -b 4096 -N ""
+        echo "SSH keys generated."
     else
-        echo "$key is already set correctly."
+        echo "SSH key already exists."
     fi
 }
 
-# Define the desired date formats
-DATE_FORMAT="%b %d, %Y %H:%M"
-TOOLTIP_FORMAT="%A, %B %d, %Y, %-I:%M %p"
+# Update Cinnamon panel settings
+setup_panel_clock() {
+    local schema="org.cinnamon.desktop.interface"
+    local date_format="%b %d, %Y %H:%M"
+    local tooltip_format="%A, %B %d, %Y, %-I:%M %p"
 
-# Apply the settings
-set_gsetting "clock-format" "$DATE_FORMAT"
-set_gsetting "clock-show-seconds" "$TOOLTIP_FORMAT"
+    set_gsetting() {
+        local key="$1"
+        local value="$2"
+        # gsettings list-keys org.cinnamon.desktop.interface
+        local current_value=$(gsettings get $schema "$key")
 
-echo "Done setting custom date format."
+        if [[ "$current_value" != "'$value'" ]]; then
+            gsettings set $schema "$key" "$value"
+            echo "Updated $key to: $value"
+        else
+            echo "$key is already set correctly."
+        fi
+    }
 
-# -------- Provision Software Installer (e.g., Apt, Snap, Flatpak) --------
+    # set_gsetting "clock-format" "$date_format"
+    set_gsetting "clock-use-24-hour" "$date_format"
+    set_gsetting "clock-show-seconds" "$tooltip_format"
+    echo "Panel settings updated."
+}
 
-echo "Calling 'provision_apt.sh' from remote..."
-# Define the URL of the script
-provision_apt_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux/provision_apt.sh"
-# Download and execute the script content directly
-curl -s "$provision_apt_url" | bash
-echo "Completed 'provision_apt.sh' process"
+# Run remote provisioning scripts
+run_provisioning_scripts() {
+    local base_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux"
+    declare -a scripts=("provision_apps/apt.sh" "provision_apps/onedrive.sh" "provision_apps/obsidian.sh")
 
-# -------- Provision Python --------
+    for script in "${scripts[@]}"; do
+        echo "Calling $script from remote..."
+        curl -s "$base_url/$script" | bash
+        echo "Completed $script process."
+    done
+}
 
-echo "Setting up Python..."
+# Setup scheduled cron jobs
+setup_cron() {
+    echo "Setting up cron jobs..."
+    # Example cron job that runs a script periodically
+    # (crontab -l; echo "0 0 * * * /usr/bin/python3 /path/to/script.py") | crontab -
+    echo "Cron jobs configured."
+}
 
-echo "Calling 'provision_python.sh' from remote..."
-# Define the URL of the script
-provision_python_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux/provision_python.sh"
-# Download and execute the script content directly
-curl -s "$provision_python_url" | bash
-echo "Completed 'provision_python.sh' process"
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
 
-# # Ensure Python and pip are installed
-# apt install -y python3 python3-pip
-# # Optionally install virtual environment tools
-# pip3 install --user virtualenv
+# Main execution
+main() {
+    echo "Starting Linux provisioning..."
+    # --- Core System Setup ---
+    setup_core_system
+    setup_aliases
+    # setup_panel_clock # handled manually
+    # setup_ssh         # handled by another script
+    # --- TODO: Software Installation ---
+    # run_provisioning_scripts
+    # --- Developer Environment Setup ---
+    # (these are now handled via Docker containers: NodeJS, Python, .NET, C#)
+    # --- TODO: Automation & Background Tasks ---
+    # setup_cron # app & game backups
+    echo "--- Successfully completed Linux provisioning! ---"
+}
 
-# # Add Python scripts directory to PATH if needed
-# PYTHON_USER_BIN=$(python3 -m site --user-base)/bin
-# if [[ ":$PATH:" != *":$PYTHON_USER_BIN:"* ]]; then
-#     echo "Adding $PYTHON_USER_BIN to PATH"
-#     export PATH="$PYTHON_USER_BIN:$PATH"
-#     echo "export PATH=\"$PYTHON_USER_BIN:\$PATH\"" >> ~/.bashrc
-#     source ~/.bashrc
-# fi
+main
 
-# -------- Establishing Scheduled Tasks --------
-
-# Schedule tasks using cron
-echo "Setting up cron jobs..."
-# Example: Add a cron job to run a script periodically
-# (crontab -l ; echo "0 0 * * * /usr/bin/python3 /path/to/script.py") | crontab -
-
-echo "--- Successfully completed Linux provisioning! ---"
-exit 0
-
+# chmod +x ~/Repos/pc-env/linux_init.sh
 # sudo bash ~/Repos/pc-env/linux_init.sh
