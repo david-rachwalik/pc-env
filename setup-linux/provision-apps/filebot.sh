@@ -88,5 +88,5 @@ filebot -script fn:sysinfo
 
 echo "Installation complete!"
 
-# chmod +x ~/Repos/pc-env/setup-linux/provision_apps/filebot.sh
-# sudo bash ~/Repos/pc-env/setup-linux/provision_apps/filebot.sh
+# chmod +x ~/Repos/pc-env/setup-linux/provision-apps/filebot.sh
+# sudo bash ~/Repos/pc-env/setup-linux/provision-apps/filebot.sh

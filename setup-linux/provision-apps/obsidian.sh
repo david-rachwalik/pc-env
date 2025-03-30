@@ -56,5 +56,5 @@ fi
 
 echo "Installation complete.  You can run $APP_NAME from your applications menu or by executing: $INSTALL_DIR/$APP_NAME.AppImage"
 
-# chmod +x ~/Repos/pc-env/setup-linux/provision_apps/obsidian.sh
-# sudo bash ~/Repos/pc-env/setup-linux/provision_apps/obsidian.sh
+# chmod +x ~/Repos/pc-env/setup-linux/provision-apps/obsidian.sh
+# sudo bash ~/Repos/pc-env/setup-linux/provision-apps/obsidian.sh

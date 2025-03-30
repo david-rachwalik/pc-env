@@ -56,5 +56,5 @@ fi
 
 echo "Installation complete.  You can run P3X OneNote from your applications menu or by executing: $INSTALL_DIR/$APP_NAME.AppImage"
 
-# chmod +x ~/Repos/pc-env/setup-linux/provision_apps/archive/onenote.sh
-# sudo bash ~/Repos/pc-env/setup-linux/provision_apps/archive/onenote.sh
+# chmod +x ~/Repos/pc-env/setup-linux/provision-apps/archive/onenote.sh
+# sudo bash ~/Repos/pc-env/setup-linux/provision-apps/archive/onenote.sh

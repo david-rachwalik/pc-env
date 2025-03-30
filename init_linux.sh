@@ -22,6 +22,7 @@ setup_core_system() {
 setup_aliases() {
     local -a aliases=(
         "alias ytdl='cd ~/Repos/pc-env/docker/yt-dlp && docker compose run --remove-orphans yt-dlp'"
+        "alias rclone='cd ~/Repos/pc-env/docker/rclone && docker compose run --remove-orphans rclone'"
     )
     local alias_file="$HOME/.bash_aliases"
 
@@ -82,7 +83,7 @@ setup_panel_clock() {
 # Run remote provisioning scripts
 run_provisioning_scripts() {
     local base_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux"
-    local -a scripts=("provision_apps/apt.sh" "provision_apps/onedrive.sh" "provision_apps/obsidian.sh")
+    local -a scripts=("provision-apps/apt.sh" "provision-apps/onedrive.sh" "provision-apps/obsidian.sh")
 
     for script in "${scripts[@]}"; do
         echo "Calling $script from remote..."
