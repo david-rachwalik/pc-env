@@ -1,0 +1,53 @@
+services:
+  rclone:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    # image: rclone-runner
+    image: rclone/rclone
+    container_name: rclone-runner-container
+    ports:
+      - '8181:8181'
+    volumes:
+      # container image `rclone/rclone` expects /config/rclone.conf
+      - ~/.config/rclone:/config # Persist rclone config
+      - ~/.cache/rclone:/cache
+      # - rclone-cache:/cache
+      - ~/.local/share/rclone-bisync-workdir:/workdir
+      # --- rclone bisync ---
+      - ~/ObsidianVaults:/ObsidianVaults
+      # --- rclone mount ---
+      - ~/GoogleDrive:/GoogleDrive
+      # --- rclone serve ---
+      - /mnt:/mnt
+      - /media/root/HDD-01:/media/root/HDD-01
+      # - /media/root/HDD-02:/media/root/HDD-02
+    # user: '${UID}:${GID}'
+    environment:
+      # - PUID=${UID}
+      # - PGID=${GID}
+      - RCLONE_CONFIG=/config/rclone.conf
+      - RCLONE_LOG_LEVEL=INFO
+      # - HOME=/config
+      # --cache-dir=/tmp/rclone-cache
+      - XDG_CACHE_HOME=/cache
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    privileged: true # sometimes necessary, sometimes overkill
+    stdin_open: true
+    tty: true
+    command: /bin/sh # Default to interactive shell
+
+# volumes:
+#   rclone-cache:
+# :: Usage Example (run interactively) ::
+# cd ~/Repos/pc-env/docker/rclone
+# docker compose build
+# docker compose run --remove-orphans --rm rclone lsf gdrive:
+
+# :: Usage Example (alias) ::
+# rclone lsf gdrive:
