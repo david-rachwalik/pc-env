@@ -47,6 +47,6 @@ echo "✅ SSH key removed for $GITHUB_USER."
 
 # --- Run the script once per GitHub user (do NOT use sudo) ---
 
-# chmod +x ~/Repos/pc-env/setup-linux/ssh/remove_ssh.sh
-# bash ~/Repos/pc-env/setup-linux/ssh/remove_ssh.sh <USER>
-# bash ~/Repos/pc-env/setup-linux/ssh/remove_ssh.sh david-rachwalik
+# chmod +x ~/Repos/pc-env/setup-linux/ssh/remove-ssh.sh
+# bash ~/Repos/pc-env/setup-linux/ssh/remove-ssh.sh <USER>
+# bash ~/Repos/pc-env/setup-linux/ssh/remove-ssh.sh david-rachwalik

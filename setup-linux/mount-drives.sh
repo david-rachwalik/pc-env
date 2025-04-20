@@ -77,7 +77,7 @@ systemctl daemon-reload || {
 echo "Mount setup complete!"
 
 # cd ~/Repos/pc-env/setup-linux/
-# sudo bash ./mount_drives.sh
+# sudo bash ./mount-drives.sh
 
 # - Other -
 # sudo umount /dev/sda2         # Unmount the drive

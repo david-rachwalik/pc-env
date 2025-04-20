@@ -82,8 +82,8 @@ setup_panel_clock() {
 
 # Run remote provisioning scripts
 run_provisioning_scripts() {
-    local base_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux"
-    local -a scripts=("provision-apps/apt.sh" "provision-apps/onedrive.sh" "provision-apps/obsidian.sh")
+    local base_url="https://raw.githubusercontent.com/david-rachwalik/pc-env/master/setup-linux/provision-apps"
+    local -a scripts=("apt.sh" "onedrive.sh" "obsidian.sh")
 
     for script in "${scripts[@]}"; do
         echo "Calling $script from remote..."
@@ -122,5 +122,5 @@ main() {
 
 main
 
-# chmod +x ~/Repos/pc-env/init_linux.sh
-# sudo bash ~/Repos/pc-env/init_linux.sh
+# chmod +x ~/Repos/pc-env/init-linux.sh
+# sudo bash ~/Repos/pc-env/init-linux.sh

@@ -81,9 +81,9 @@ echo "✅ SSH setup complete for $GITHUB_USER!"
 
 # --- Run the script once per GitHub user (do NOT use sudo) ---
 
-# chmod +x ~/Repos/pc-env/setup-linux/ssh/add_ssh.sh
-# bash ~/Repos/pc-env/setup-linux/ssh/add_ssh.sh <USER> <SYSTEM>
-# bash ~/Repos/pc-env/setup-linux/ssh/add_ssh.sh david-rachwalik Mint-22
+# chmod +x ~/Repos/pc-env/setup-linux/ssh/add-ssh.sh
+# bash ~/Repos/pc-env/setup-linux/ssh/add-ssh.sh <USER> <SYSTEM>
+# bash ~/Repos/pc-env/setup-linux/ssh/add-ssh.sh david-rachwalik Mint-22
 
 # --- Update each Git repository's remote to SSH path ---
 

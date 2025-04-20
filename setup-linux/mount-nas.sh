@@ -114,8 +114,8 @@ done
 
 echo "Mount setup complete!"
 
-# chmod +x ~/Repos/pc-env/setup-linux/mount_nas.sh
-# sudo bash ~/Repos/pc-env/setup-linux/mount_nas.sh ~/.config/nas_credentials
+# chmod +x ~/Repos/pc-env/setup-linux/mount-nas.sh
+# sudo bash ~/Repos/pc-env/setup-linux/mount-nas.sh ~/.config/nas_credentials
 
 # :: Credential file format ::
 # username=admin
