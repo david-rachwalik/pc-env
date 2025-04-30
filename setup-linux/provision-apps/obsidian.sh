@@ -4,7 +4,7 @@ set -e # Exit immediately on error
 # -------- Run with bash (as root or sudo) --------
 
 # Ensure the script is run as root
-if [[ "$(id -u)" -ne 0 ]]; then
+if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root or with sudo.  Exiting..."
     exit 1
 fi

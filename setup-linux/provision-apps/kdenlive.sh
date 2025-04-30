@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e # Exit immediately on error
 
-# Ensure the script is being run with sudo (or sufficient privileges)
-sudo -v || {
-    echo "This script requires sudo privileges.  Exiting..."
+# Ensure the script is run as root (or sudo privileges)
+if [[ $EUID -ne 0 ]]; then
+    echo "❌ This script must be run as root or with sudo.  Exiting..."
     exit 1
-}
+fi
 
 # Kdenlive: Free and Open Source Video Editor (https://kdenlive.org/en)
 
