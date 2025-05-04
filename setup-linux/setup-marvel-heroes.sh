@@ -17,68 +17,26 @@ GAME_NAME="Marvel Heroes"
 GAME_DIR="/media/root/HDD-01/GameFiles/Marvel Heroes/UnrealEngine3/Binaries/Win64"
 EXECUTABLE="MarvelHeroesOmega.exe"
 LAUNCH_ARGS="-siteconfigurl=mhtahiti.com/SiteConfig.xml -nostartupmovies -nosplash"
-LAUNCHER_DIR="/home/$SUDO_USER/.local/bin"
+SUDO_USER_HOME="/home/${SUDO_USER:-$USER}"
+LAUNCHER_DIR="$SUDO_USER_HOME/.local/bin"
 LAUNCHER_SCRIPT="$LAUNCHER_DIR/play-marvel-heroes.sh"
 
-# Proton GE install settings
+# Proton GE config
 PROTON_VERSION="9-27"
-STEAM_DIR="/home/$SUDO_USER/.steam/root"
+PROTON_NAME="GE-Proton${PROTON_VERSION}" # extracted folder name
+STEAM_DIR="$SUDO_USER_HOME/.steam/root"
 STEAM_COMPAT_DIR="$STEAM_DIR/compatibilitytools.d"
-PROTON_DIR="$STEAM_COMPAT_DIR/GE-Proton${PROTON_VERSION}"
+PROTON_DIR="$STEAM_COMPAT_DIR/$PROTON_NAME"
 
 # Desktop entry location (user-level)
-DESKTOP_ENTRY="/home/$SUDO_USER/.local/share/applications/$APP_NAME.desktop"
+DESKTOP_ENTRY="$SUDO_USER_HOME/.local/share/applications/$APP_NAME.desktop"
 ICON_PATH="$GAME_DIR/icon.png"
 
 # Proton compatibility data (Windows emulation)
-PROTON_PREFIX_DIR="/home/$SUDO_USER/.proton/$APP_NAME"
-PROTON_FIXES_DIR="/home/$SUDO_USER/.config/protonfixes"
-
-# Proton GE download URLs
-GITHUB_API_URL="https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest"
-GITHUB_DIRECT_URL="https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton${PROTON_VERSION}"
+PROTON_PREFIX_DIR="$SUDO_USER_HOME/.proton/$APP_NAME"
+PROTON_FIXES_DIR="$SUDO_USER_HOME/.config/protonfixes"
 
 # === Functions ===
-
-# https://github.com/GloriousEggroll/proton-ge-custom?tab=readme-ov-file#native
-install_proton_ge() {
-    echo "\n=== Installing Proton GE ==="
-
-    local proton_temp_dir="/tmp/proton-ge-custom"
-    local tarball_name="GE-Proton${PROTON_VERSION}.tar.gz"
-    local checksum_name="GE-Proton${PROTON_VERSION}.sha512sum"
-    local tarball_url="$GITHUB_DIRECT_URL/$tarball_name"
-    local checksum_url="$GITHUB_DIRECT_URL/$checksum_name"
-
-    # Prepare temp working directory
-    echo "Creating temporary working directory..."
-    rm -rf "$proton_temp_dir"
-    mkdir -p "$proton_temp_dir"
-    cd "$proton_temp_dir"
-
-    # Download working files
-    echo "Downloading Proton GE: $tarball_name"
-    curl -# -L "$tarball_url" -o "$tarball_name" --no-progress-meter
-    echo "Downloading checksum: $checksum_name"
-    curl -# -L "$checksum_url" -o "$checksum_name" --no-progress-meter
-
-    # Verify file integrity
-    echo "Verifying tarball $tarball_name with checksum $checksum_name..."
-    sha512sum -c "$checksum_name"
-
-    # Create Proton directory if missing
-    mkdir -p "$STEAM_COMPAT_DIR"
-
-    # Extract Proton GE
-    echo "Extracting Proton GE to $STEAM_COMPAT_DIR..."
-    tar -xf "$tarball_name" -C "$STEAM_COMPAT_DIR"
-    sudo chown -R "$SUDO_USER:$SUDO_USER" "$PROTON_DIR"
-
-    echo "Cleaning up temporary files..."
-    rm -rf "$proton_temp_dir"
-
-    echo "✅ Proton GE v${PROTON_VERSION} successfully installed!"
-}
 
 setup_wineprefix() {
     echo -e "\n=== Setting up Wine Prefix ==="
@@ -146,7 +104,6 @@ EOF
 
 # Check if Proton is already installed
 if [ ! -d "$PROTON_DIR" ]; then
-    # install_proton_ge
     bash "$(dirname "$0")/provision-apps/proton-ge.sh"
 else
     echo "Proton GE already installed at: $PROTON_DIR"

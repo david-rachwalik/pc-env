@@ -9,52 +9,84 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# === Proton GE Config ===
+# Proton GE config
 PROTON_VERSION="9-27"
+PROTON_NAME="GE-Proton${PROTON_VERSION}" # extracted folder name
 SUDO_USER_HOME="/home/${SUDO_USER:-$USER}"
-STEAM_DIR="$SUDO_USER_HOME/.steam/root"
-STEAM_COMPAT_DIR="$STEAM_DIR/compatibilitytools.d"
-PROTON_DIR="$STEAM_COMPAT_DIR/GE-Proton${PROTON_VERSION}"
+TEMP_DIR="${TEMP_DIR:-/tmp/proton-ge-custom}" # can override for debugging
+# Accept INSTALL_DIR as first argument (default: Steam's compat tools path)
+INSTALL_DIR="${1:-$SUDO_USER_HOME/.steam/root/compatibilitytools.d}"
+PROTON_DIR="$INSTALL_DIR/$PROTON_NAME"
 
-# Proton GE download URLs
-GITHUB_DIRECT_URL="https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton${PROTON_VERSION}"
-TARBALL_NAME="GE-Proton${PROTON_VERSION}.tar.gz"
-CHECKSUM_NAME="GE-Proton${PROTON_VERSION}.sha512sum"
+download_file() {
+    local url="$1"
+    local output="$2"
+
+    if command -v wget >/dev/null 2>&1; then
+        wget -q --show-progress "$url" -O "$output"
+    elif command -v curl >/dev/null 2>&1; then
+        curl -# -L "$url" -o "$output"
+    else
+        echo "Error: Neither wget nor curl is installed." >&2
+        return 1
+    fi
+}
+
+verify_checksum() {
+    local checksum_file="${1:-}"
+
+    if [[ "$checksum_file" == *.sha512sum ]]; then
+        sha512sum -c "$checksum_file"
+    elif [[ "$checksum_file" == *.sha256sum ]]; then
+        sha256sum -c "$checksum_file"
+    else
+        echo "Unknown checksum file format: $checksum_file" >&2
+        return 1
+    fi
+}
 
 # https://github.com/GloriousEggroll/proton-ge-custom?tab=readme-ov-file#native
 install_proton_ge() {
     echo "\n=== Installing Proton GE ==="
 
-    local proton_temp_dir="/tmp/proton-ge-custom"
-    local tarball_url="$GITHUB_DIRECT_URL/$TARBALL_NAME"
-    local checksum_url="$GITHUB_DIRECT_URL/$CHECKSUM_NAME"
+    # Proton GE download URLs
+    local github_direct_url="https://github.com/GloriousEggroll/proton-ge-custom/releases/download/$PROTON_NAME"
+    local tarball_name="$PROTON_NAME.tar.gz"
+    local checksum_name="$PROTON_NAME.sha512sum"
+    local tarball_url="$github_direct_url/$tarball_name"
+    local checksum_url="$github_direct_url/$checksum_name"
 
     # Prepare temp working directory
-    rm -rf "$proton_temp_dir"
-    mkdir -p "$proton_temp_dir"
-    cd "$proton_temp_dir"
+    rm -rf "$TEMP_DIR"
+    mkdir -p "$TEMP_DIR"
+    cd "$TEMP_DIR"
 
     # Download working files
-    echo "Downloading Proton GE: $TARBALL_NAME"
-    curl -# -L "$tarball_url" -o "$TARBALL_NAME" --no-progress-meter
-    echo "Downloading checksum: $CHECKSUM_NAME"
-    curl -# -L "$checksum_url" -o "$CHECKSUM_NAME" --no-progress-meter
+    download_file "$tarball_url" "$tarball_name"
+    download_file "$checksum_url" "$checksum_name"
 
     # Verify file integrity
-    echo "Verifying tarball $TARBALL_NAME with checksum $CHECKSUM_NAME..."
-    sha512sum -c "$CHECKSUM_NAME"
+    echo "Verifying tarball $tarball_name with checksum $checksum_name..."
+    verify_checksum "$checksum_name"
 
     # Ensure Proton directory exists and extract Proton GE
-    mkdir -p "$STEAM_COMPAT_DIR"
-    echo "Extracting Proton GE to $STEAM_COMPAT_DIR..."
-    tar -xf "$TARBALL_NAME" -C "$STEAM_COMPAT_DIR"
-    sudo chown -R "$SUDO_USER:$SUDO_USER" "$PROTON_DIR"
+    mkdir -p "$INSTALL_DIR"
+    echo "Extracting Proton GE to $INSTALL_DIR..."
+    tar -xf "$tarball_name" -C "$INSTALL_DIR"
+    chown -R "$SUDO_USER:$SUDO_USER" "$PROTON_DIR"
 
     echo "Cleaning up temporary files..."
-    rm -rf "$proton_temp_dir"
+    rm -rf "$TEMP_DIR"
 
     echo "✅ Proton GE v${PROTON_VERSION} successfully installed!"
 }
+
+# Help/usage output
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: $0 [INSTALL_DIR]"
+    echo "Example: sudo bash $0 $INSTALL_DIR"
+    exit 0
+fi
 
 # Only run install if not already present
 if [ ! -d "$PROTON_DIR" ]; then
