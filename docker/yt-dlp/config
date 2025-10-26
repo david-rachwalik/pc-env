@@ -30,19 +30,32 @@
 # NOTE: yt-dlp already follows a built-in preference order: VP9 and AV1 (if available) over AVC1 (H.264)
 # Select best formats for video (1080p resolution) and audio (128 kbps bitrate)
 # -f "bv*[height<=1080]+ba[abr<=128k]/b[height<=1080][abr<=128k]"
---format "bestvideo*[height<=1080]+bestaudio[abr<=128k]/best[height<=1080][abr<=128k]"
+# --format "bestvideo*[height<=1080]+bestaudio[abr<=128k]/best[height<=1080][abr<=128k]"
+
+# --- Input format selection ---
+# Prefer 1080p max + 128 kbps audio, but gracefully fallback if unavailable
+--format "bv*[height<=1080]+ba[abr<=128k]/bv*+ba/best/bworst"
+
+# Further refine sorting preference
+--format-sort "res,ext:mp4:m4a" # prefers MP4 over WebM and highest resolution if multiple are available
 
 # --- Output settings ---
 --merge-output-format mkv
 --output "/mnt/d/_Downloads/[%(channel)s] %(title)s.%(ext)s"  # Save to Downloads directory
-
 
 # --- Credentials (to download age-restricted content or other flagged videos) ---
 --cookies-from-browser firefox
 
 # Spoof the request as a browser to bypass any potential restrictions
 # yt-dlp --dump-user-agent
---user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
+# --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
+
+# --- Robustness / fallback behavior ---
+--ignore-errors # Lets batch jobs continue if one fails
+--no-abort-on-error
+--check-formats # Prevents hard failure when a preferred stream doesn’t exist
+# --retries infinite
+# --fragment-retries infinite
 
 
 # [COMMON COMMANDS]
