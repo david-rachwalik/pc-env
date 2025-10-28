@@ -6,7 +6,7 @@ pip install yt-dlp -U
 
 # Define aliases for audio and video downloads
 echo 'alias ytv="yt-dlp"' >>/root/.shrc
-echo 'alias yta="yt-dlp -x -f \"ba[abr<=128k]\""' >>/root/.shrc
+echo 'alias yta="yt-dlp -x"' >>/root/.shrc
 
 # Ensure aliases are sourced for interactive shells
 echo '[ -f /root/.shrc ] && . /root/.shrc' >/root/.profile
