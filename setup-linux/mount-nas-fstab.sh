@@ -1,123 +1,201 @@
-#!/bin/bash
-set -e # Exit immediately on error
+#!/usr/bin/env bash
+set -euo pipefail # Exit immediately on error
 
-# Ensure the script is run as root (or sudo privileges)
-if [[ $EUID -ne 0 ]]; then
-    echo "❌ This script must be run as root or with sudo.  Exiting..."
-    exit 1
-fi
+# Manage NAS mounts in /etc/fstab with x-systemd.automount
 
-CREDENTIALS_FILE="$1"
-SUPPORTED_PROTOCOLS=("cifs" "smb" "nfs")
-PROTOCOL="${PROTOCOL:-smb}" # Default to SMB
-
-# NAS IP and shares
-NAS_IP="${NAS_IP:-192.168.0.4}"
-
-# Mount options
-if [ "$PROTOCOL" = "nfs" ]; then
-    MOUNT_OPTS="x-systemd.automount,_netdev,defaults,nfsvers=4.1,rsize=1048576,wsize=1048576,noatime"
-elif [ "$PROTOCOL" = "smb" ]; then
-    MOUNT_OPTS="x-systemd.automount,_netdev,iocharset=utf8,vers=3.0,uid=1000,gid=1000"
-else
-    MOUNT_OPTS=""
-fi
-
+# -------- CONFIGURATION --------
 declare -A SHARE_MOUNT_POINTS=(
-    ["Portal"]="/mnt/Portal"
-    ["NekoGooVideos"]="/mnt/NekoGooVideos"
-    ["Main"]="/mnt/Main"
-    ["PervyVR"]="/mnt/X"
-    ["Emulation"]="/mnt/Z"
+  ["Portal"]="/mnt/Portal"
+  ["NekoGooVideos"]="/mnt/NekoGooVideos"
+  ["Main"]="/mnt/Main"
+  ["PervyVR"]="/mnt/X"
+  ["Emulation"]="/mnt/Z"
 )
 
-# Check for SMB credentials file
-if [ "$PROTOCOL" = "smb" ] && [ -z "$1" ]; then
-    echo "Error: Please provide the path to the credentials file as an argument."
-    exit 1
+NAS_IP="${NAS_IP:-192.168.1.194}"
+PROTOCOL="${PROTOCOL:-smb}" # or "nfs"
+
+CREDENTIALS_FILE="${1:-}"
+# Expand credentials path (avoid ~ expansion issues under sudo)
+if [[ -n "$CREDENTIALS_FILE" ]]; then
+  if command -v readlink >/dev/null 2>&1; then
+    CREDENTIALS_FILE="$(readlink -f "$CREDENTIALS_FILE" 2>/dev/null || printf '%s' "$CREDENTIALS_FILE")"
+  elif command -v realpath >/dev/null 2>&1; then
+    CREDENTIALS_FILE="$(realpath -m "$CREDENTIALS_FILE" 2>/dev/null || printf '%s' "$CREDENTIALS_FILE")"
+  fi
 fi
 
-# Check credentials file
-if [ "$PROTOCOL" = "smb" ] && [ ! -f "$CREDENTIALS_FILE" ]; then
-    echo "Error: Credentials file '$CREDENTIALS_FILE' not found."
-    exit 1
-fi
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
 
-create_mount_point() {
-    local mount_point="$1"
-    if [ ! -d "$mount_point" ]; then
-        echo "Creating mount point: $mount_point"
-        mkdir -p "$mount_point"
-    else
-        echo "Mount point already exists: $mount_point"
-    fi
+# Ensure the script is running as root (or sudo privileges)
+require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "❌ This script must be run as root or with sudo.  Exiting..."
+    exit 1
+  fi
 }
 
-# Add fstab entry for the share
+# Check for SMB credentials file
+verify_credentials() {
+  # echo "credentials path: $CREDENTIALS_FILE"
+  if [[ "$PROTOCOL" == "smb" ]]; then
+    if [[ -z "$CREDENTIALS_FILE" ]]; then
+      echo "❌ path to credentials file required for SMB.  Command Usage: $0 /path/to/creds"
+      exit 1
+    fi
+    if [[ ! -f "$CREDENTIALS_FILE" ]]; then
+      echo "❌ credentials file not found: $CREDENTIALS_FILE"
+      exit 1
+    fi
+    # chmod 600 "$CREDENTIALS_FILE" || echo "chmod 600 on credentials failed"
+  fi
+}
+
+# Backup /etc/fstab once
+backup_fstab() {
+  local backup_path="/etc/fstab.bak.$(date +%s)"
+  if ! grep -q "^# pc-env-managed-backup" /etc/fstab 2>/dev/null; then
+    cp /etc/fstab "$backup_path"
+    printf '\n# pc-env-managed-backup %s\n' "$(date -Is)" >> /etc/fstab
+    echo "Backed up /etc/fstab to $backup_path"
+  fi
+}
+
+# Safe atomic removal of lines containing a literal pattern from /etc/fstab
+safe_remove_lines_containing() {
+  local pattern="$1"
+  awk -v pat="$pattern" 'index($0,pat)==0 {print}' /etc/fstab > /tmp/fstab.$$ && mv /tmp/fstab.$$ /etc/fstab
+}
+
+# Remove any /etc/fstab lines that use the same mount point (field 2)
+safe_remove_entries_for_mountpoint() {
+  local mount_point="$1"
+  awk -v mp="$mount_point" '($2 != mp) { print }' /etc/fstab > /tmp/fstab.$$ && mv /tmp/fstab.$$ /etc/fstab
+}
+
+# Append entry only if exact line not present
+append_if_missing() {
+  local line="$1"
+  if grep -qxF "$line" /etc/fstab; then
+    echo "fstab entry already present (skipping): $line"
+  else
+    printf '%s\n' "$line" >> /etc/fstab
+    echo "Appended fstab entry: $line"
+  fi
+}
+
+# Build and add fstab entry for a share (preserves original intent)
 add_to_fstab() {
-    local share_name="$1"
-    local mount_point="$2"
-    local fstab_entry
-    # _netdev: Ensures the mount happens only after the network is ready
-    # x-systemd.automount: Delays mounting until the share is accessed
-    # Verify NAS paths: showmount -e 192.168.0.4
+  local share="$1"
+  local mount_point="$2"
+  local mount_opts # Mount options per-protocol
+  local entry
 
-    if [ "$PROTOCOL" = "nfs" ]; then
-        fstab_entry="${NAS_IP}:/${share_name} ${mount_point} nfs ${MOUNT_OPTS} 0 0"
+  # remove old entry for this share
+  safe_remove_entries_for_mountpoint "$mount_point"
+  
+  if [[ "$PROTOCOL" == "nfs" ]]; then
+    mount_opts="x-systemd.automount,_netdev,defaults,nfsvers=4.1,rsize=1048576,wsize=1048576,noatime"
+    entry="${NAS_IP}:/${share} ${mount_point} nfs ${mount_opts} 0 0"
+  elif [[ "$PROTOCOL" == "smb" ]]; then
+    # credentials=/path     -> credentials file with username=...,password=...,domain=...
+    # x-systemd.automount   -> create a systemd automount unit so the share mounts on access
+    # _netdev               -> delay mount until network is available (systemd/network friendly)
+    # iocharset=utf8        -> charset for filenames (UTF-8)
+    # vers=3.1.1            -> SMB protocol version (pin to server-supported version)
+    # sec=ntlmssp           -> authentication method (NTLMSSP / NTLMv2); avoids kernel auth mismatches
+    # --- Other Conditional Options ---
+    # uid=1000,gid=1000     -> map all files to this local user/group (useful for single-user desktop)
+    # file_mode=0644        -> map file permissions (octal) for non-POSIX servers
+    # dir_mode=0755         -> map directory permissions (octal)
+    # noserverino           -> don't trust server inode numbers (fixes DFS/inode mismatches)
+    # nounix                -> disable Unix extensions (stop server from sending unix attrs)
+    # noperm                -> don't do local client-side permission checks (defer to server)
+    # mfsymlinks            -> emulate POSIX symlinks for Windows reparse points/junctions
+    mount_opts="x-systemd.automount,_netdev,iocharset=utf8,vers=3.1.1,sec=ntlmssp,uid=1000,gid=1000,file_mode=0644,dir_mode=0755,noserverino,nounix,noperm"
+    entry="//${NAS_IP}/${share} ${mount_point} cifs credentials=${CREDENTIALS_FILE},${mount_opts} 0 0"
+  else
+    # TODO: exit early on error with empty entry
+    mount_opts=""
+    entry=""
+  fi
 
-        # Remove old conflicting CIFS/SMB entries if they exist
-        if grep -qs "//${NAS_IP}/${share_name}" /etc/fstab; then
-            echo "Removing old entry for ${share_name}"
-            sed -i "\|//${NAS_IP}/${share_name}|d" /etc/fstab
-            umount "$mount_point" 2>/dev/null
-        fi
-    else
-        fstab_entry="//${NAS_IP}/${share_name} ${mount_point} cifs credentials=${CREDENTIALS_FILE},${MOUNT_OPTS} 0 0"
+  append_if_missing "$entry"
+}
 
-        # Remove old conflicting NFS entries if they exist
-        if grep -qs "${NAS_IP}:/${share_name}" /etc/fstab; then
-            echo "Removing old entry for ${share_name}"
-            sed -i "\|${NAS_IP}:/${share_name}|d" /etc/fstab
-            umount "$mount_point" 2>/dev/null
-        fi
-    fi
-
-    # Check if the fstab entry exists and matches
-    # if ! grep -qs "^//${NAS_IP}/${share_name}" /etc/fstab; then
-    # if ! grep -qs "${NAS_IP}:/share/${share_name}" /etc/fstab || ! grep -qs "$mount_point" /etc/fstab; then
-    if ! grep -qsF "$fstab_entry" /etc/fstab; then
-        echo "Updating fstab entry for ${share_name}"
-        # # Remove old conflicting entries
-        # sed -i "\|//${NAS_IP}/${share_name}|d" /etc/fstab
-        # sed -i "\|${NAS_IP}:/share/${share_name}|d" /etc/fstab
-        # umount "$mount_point"
-        echo "$fstab_entry" >>/etc/fstab
-    fi
+create_mount_point() {
+  local mount_point="$1"
+  if [[ ! -d "$mount_point" ]]; then
+    echo "Creating mount point: $mount_point"
+    mkdir -p "$mount_point"
+    # chown 1000:1000 "$mount_point" || true
+  else
+    echo "Mount point already exists: $mount_point"
+  fi
 }
 
 mount_share() {
-    local mount_point="$1"
-    if mountpoint -q "$mount_point"; then
-        echo "$mount_point is already mounted"
-    else
-        echo "Mounting $mount_point"
-        mount "$mount_point"
-    fi
+  local mount_point="$1"
+  if mountpoint -q "$mount_point"; then
+    echo "$mount_point already mounted"
+    return
+  fi
+  if mount "$mount_point"; then
+    echo "Mounted $mount_point"
+  else
+    echo "Mount failed for $mount_point; x-systemd.automount will still automount on access if present"
+  fi
 }
 
-# Ensure shares are configured and mounted
-for SHARE_NAME in "${!SHARE_MOUNT_POINTS[@]}"; do
-    MOUNT_POINT="${SHARE_MOUNT_POINTS[$SHARE_NAME]}"
-    create_mount_point "$MOUNT_POINT"
-    add_to_fstab "$SHARE_NAME" "$MOUNT_POINT"
-    mount_share "$MOUNT_POINT"
-done
+# -------- main flow --------
+main() {
+  require_root
+  verify_credentials
+  # backup_fstab
 
-echo "Mount setup complete!"
+  # First pass: ensure mount points & fstab entries
+  for share in "${!SHARE_MOUNT_POINTS[@]}"; do
+    local mount_point="${SHARE_MOUNT_POINTS[$share]}"
+    echo ""
+    echo "Processing share: $share -> $mount_point"
 
-# chmod +x ~/Repos/pc-env/setup-linux/mount-nas.sh
-# sudo bash ~/Repos/pc-env/setup-linux/mount-nas.sh ~/.config/nas_credentials
+    create_mount_point "$mount_point"
+    add_to_fstab "$share" "$mount_point"
+  done
+  echo ""
+
+  # Tell systemd we changed /etc/fstab so subsequent mount() uses new entries
+  echo "Reloading systemd fstab units..."
+  systemctl daemon-reload || true
+
+  # Second pass: attempt mounts (automount units now visible to systemd)
+  for share in "${!SHARE_MOUNT_POINTS[@]}"; do
+    local mount_point="${SHARE_MOUNT_POINTS[$share]}"
+    mount_share "$mount_point"
+  done
+  echo ""
+
+  echo "Mount setup complete!"
+}
+
+main "$@"
 
 # :: Credential file format ::
-# username=admin
+# username=<username>
 # password=<password>
+# domain=QNAP
+
+# Using domain for Domain Controller users (instead of QNAP/<username>)
+# Verify credentials: smbclient -L //192.168.1.194 -A ~/.config/nas_credentials
+# Verify file permissions (chmod 600): stat -c %a "/path/to/file"
+
+# Verify the mount and contents
+# findmnt /mnt/Portal
+# ls -la /mnt/Portal | head -n 40
+
+# If needing changes to take effect immediately, make sure mount is not busy and run
+# `sudo umount /mnt/name` before the script
+
+# chmod +x ~/Repos/pc-env/setup-linux/mount-nas-fstab.sh
+# sudo bash ~/Repos/pc-env/setup-linux/mount-nas-fstab.sh ~/.config/nas_credentials
