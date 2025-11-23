@@ -135,8 +135,6 @@ write_mount_unit() {
     cat <<EOF >"$SYSTEMD_DIR/$unit_name.mount"
 [Unit]
 Description=Mount for $share
-After=network-online.target
-Wants=network-online.target
 
 [Mount]
 What=${entry}
@@ -158,8 +156,7 @@ write_automount_unit() {
     cat <<EOF >"$SYSTEMD_DIR/$unit_name.automount"
 [Unit]
 Description=Automount for $mount_point
-After=network-online.target
-Wants=network-online.target
+# Intentionally avoid network-online.target to prevent ordering cycles.
 
 [Automount]
 Where=${mount_point}
@@ -230,7 +227,7 @@ main "$@"
 # If needing changes to take effect immediately, make sure mount is not busy and run
 # `sudo umount /mnt/<share>` before the script
 
-# systemctl disable mnt-<share>.automount
+# systemctl disable mnt-Main.automount
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -238,6 +235,8 @@ main "$@"
 # chmod +x ~/Repos/pc-env/setup-linux/mount-nas-systemd.sh
 # sudo bash ~/Repos/pc-env/setup-linux/mount-nas-systemd.sh
 
-# systemctl status mnt-<share>.automount mnt-<share>.mount
-# journalctl -u mnt-<share>.mount
+# sudo systemd-analyze verify /etc/systemd/system/mnt-Main.mount /etc/systemd/system/mnt-Main.automount
+
+# systemctl status mnt-Main.automount mnt-Main.mount
+# journalctl -u mnt-Main.mount
 # journalctl -u mnt-Main.automount -n 200
