@@ -6,7 +6,7 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # Define shares as name:path pairs
 SHARES=(
     "vrporn_downloads:/media/root/HDD-01/_Downloads/_VR Porn"
-    "vrporn_encodes:/media/root/HDD-01/_Encodes/PervyVR"
+    "vrporn_encodes:/media/root/HDD-02/_Encodes/PervyVR"
     "torrents_done:/media/root/HDD-01/_Downloads/_Torrents/Done"
 )
 SAMBA_CONF="/etc/samba/smb.conf"
@@ -89,3 +89,5 @@ main "$@"
 
 # sudo chmod +x ~/Repos/pc-env/setup-linux/provision-apps/samba-serve-vr.sh
 # sudo bash ~/Repos/pc-env/setup-linux/provision-apps/samba-serve-vr.sh
+
+# sudo rm /etc/samba/smb.conf
