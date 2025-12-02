@@ -9,3 +9,4 @@ azure-keyvault-secrets
 azure-mgmt-resource
 azure-mgmt-subscription
 watchdog
+pysubs2
