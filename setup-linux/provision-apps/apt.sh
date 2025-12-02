@@ -32,6 +32,7 @@ packages=(
 
     # --- Videogames ---
     steam
+    lutris
 
     # --- Streaming ---
     obs-studio
