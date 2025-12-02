@@ -82,7 +82,12 @@
         "wayou.vscode-todo-highlight",
         "lihui.vs-color-picker"
         // "mongodb.mongodb-vscode"
-      ]
+      ],
+      // Ensure extension receives the correct interpreter path before auto-detection happens
+      // (more deterministic than `settings.json`)
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
     }
   }
 
