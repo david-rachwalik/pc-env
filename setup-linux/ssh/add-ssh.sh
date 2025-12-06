@@ -76,8 +76,9 @@ echo "✅ SSH setup complete for $GITHUB_USER!"
 # --- Verify GitHub CLI is authenticated to the correct account ---
 
 # gh auth status
+# gh auth login --hostname github.com --web
 # gh auth logout
-# gh auth login --hostname github.com --git-protocol ssh --web
+# gh ssh-key list
 
 # --- Run the script once per GitHub user (do NOT use sudo) ---
 
@@ -89,7 +90,8 @@ echo "✅ SSH setup complete for $GITHUB_USER!"
 
 # git remote -v
 # EXAMPLE HTTPS PATH:   https://github.com/<USER>/<REPO>
-# EXAMPLE SSH PATH:     git@github.com-<ALIAS>:<USER><REPO>.git
+# EXAMPLE SSH PATH:     git@github.com-<ALIAS>:<USER>/<REPO>.git
+# git remote get-url <ALIAS>
 
 # git remote set-url <ALIAS> <PATH>
 # OLD: git remote set-url origin https://github.com/david-rachwalik/pc-env
