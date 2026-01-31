@@ -4,8 +4,9 @@ FROM python:3.12-alpine
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies, including ffmpeg and Node.js (for YouTube throttling bypass)
-RUN apk add --no-cache ffmpeg nodejs
+# Install system dependencies, including ffmpeg and Deno (for YouTube throttling bypass)
+# (Deno used for secure JavaScript-based signature decryption of URLs)
+RUN apk add --no-cache ffmpeg deno
 
 # Copy configuration settings to the container
 COPY config /root/.config/yt-dlp/config

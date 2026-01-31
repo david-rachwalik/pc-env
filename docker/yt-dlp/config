@@ -10,12 +10,19 @@
 # The old config is still supported, but yt-dlp will prioritize settings from the first path if both exist.
 
 
+# --- Do NOT specify player_client when using cookies ---
+# Let yt-dlp auto-select the best client based on cookies
+# Android/iOS clients don't support cookies, causing auth failures
+
+# Deno strongly recommended over Node.js for security and compatibility
+# (runs in sandboxed environment and supports newer ECMAScript features)
+--js-runtimes deno
+
 # --- Input format selection (default=bv*+ba/b) ---
-# Select best formats for video (1080p resolution) and audio (128 kbps bitrate) with gracefully fallbacks
+# Select best formats for video (1080p resolution) and audio (128 kbps bitrate) with graceful fallbacks
 # -f "bv*[height<=1080]+ba[abr<=128k]/b[height<=1080][abr<=128k]"
 # --format "bestvideo*[height<=1080]+bestaudio[abr<=128k]/best[height<=1080][abr<=128k]"
---format "ba[abr<=128k]/ba/bv*[height<=1080]+ba/bv*+ba/b"
-# Placed audio formats first so `--extract-audio` only attempts to download audio when possible
+--format "bv*[height<=1080]+ba/b"
 
 # Further refine sorting preference
 # -S codec:vp9:m4a,res:1080  # Prioritize video codec and resolution
@@ -28,13 +35,40 @@
 --output "/mnt/d/_Downloads/[%(channel)s] %(title)s.%(ext)s"  # Save to Downloads directory
 # Use `--remux-video mkv` if wanting to force an extension even when no merge occurs
 
+
+# --- FFmpeg post-processing options ---
+# Convert thumbnails to JPG format (more compatible than WebP)
+--convert-thumbnails jpg
+# Embed thumbnail in video file (works for MP4/MKV/M4A)
+--embed-thumbnail
+# Embed subtitles directly into MKV files (if downloaded)
+--embed-subs
+# Embed chapter markers (if available)
+--embed-chapters
+# Remove any pre-existing metadata to avoid conflicts before re-embedding
+--parse-metadata ":(?P<meta_description>)"
+--parse-metadata ":(?P<meta_comment>)"
+
+# Specify FFmpeg location (if using multiple versions)
+# --ffmpeg-location /usr/bin/ffmpeg
+
+# Post-processing arguments for FFmpeg (preserve quality during re-encoding)
+# -c:v copy = copy video stream without re-encoding
+# -c:a copy = copy audio stream without re-encoding
+# --postprocessor-args "ffmpeg:-c:v copy -c:a copy"
+
+# For audio-only: normalize volume and remove silence
+# --postprocessor-args "ffmpeg:-af loudnorm"
+
 # --- Audio settings ---
 --audio-format mp3      # Save audio as mp3
+# --audio-quality 0       # Best audio quality (I prefer 128 kbps)
 
 # --- Subtitles settings ---
 # --write-subs            # Downloads subtitles (if available)
 # --sub-lang en           # Downloads English subtitles
 # --sub-format srt        # Saves subtitles in SRT format
+# --write-auto-subs       # Download auto-generated subs if manual ones aren't available
 
 # --- Metadata and info settings ---
 --add-metadata          # Embeds metadata (including chapters)
@@ -52,7 +86,7 @@
 # --- Robustness / fallback behavior ---
 --ignore-errors # Lets batch jobs continue if one fails
 --no-abort-on-error
---check-formats # Prevents hard failure when a preferred stream doesn’t exist
+--check-formats # Prevents hard failure when a preferred stream doesn't exist
 # --retries infinite
 # --fragment-retries infinite
 
@@ -61,3 +95,4 @@
 # yt-dlp <URL>                                  # Main download method
 # yt-dlp -F <URL>                               # View source information (available formats) rather than download
 # yt-dlp -x -f "ba[abr<=128k]" <URL>            # Download audio only
+# yt-dlp --list-formats-as-table <URL>          # Show formats in a readable table
