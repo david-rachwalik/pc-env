@@ -1,0 +1,43 @@
+services:
+  rclone-manager:
+    image: ghcr.io/zarestia-dev/rclone-manager:latest
+    container_name: rclone-manager
+    restart: unless-stopped # starts on boot
+    env_file: .env
+    user: '${PUID}:${PGID}'
+    command: --log-dir /logs
+    ports:
+      - '${WEB_PORT:-8080}:8080'
+      - '53682:53682' # Required for OAuth
+    volumes:
+      # Persists rclone's configuration (rclone.conf)
+      # - ${HOME}/.config/rclone:/home/rclone-manager/.config/rclone
+      - ${HOME}/.config/rclone/rclone.conf:/home/rclone-manager/.config/rclone/rclone.conf
+      # Mounts the project's config dir (for filters) into the container
+      - ./config:/app/config
+      # Mount a dedicated log directory on your host
+      - ${HOME}/logs/rclone-manager:/logs
+      # Persists the rclone-manager application data and UI settings
+      - rclone-manager-data:/home/rclone-manager/.local/share/com.rclone.manager.headless
+      # Mount your local directories into the container for syncing
+      - ${ONEDRIVE_DIR}:${ONEDRIVE_DIR}
+      - ${PCLOUD_DIR}:${PCLOUD_DIR}
+      - ${GDRIVE_DIR}:${GDRIVE_DIR}
+    # Required for rclone's 'mount' feature to work
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    security_opt:
+      - apparmor:unconfined
+
+volumes:
+  rclone-manager-data:
+#
+
+# :: Usage Example ::
+# cd ~/Repos/pc-env/docker/rclone-manager
+# docker compose up -d --force-recreate
+
+# Run a manual sync with the `--resync` flag
+# docker exec rclone-manager rclone bisync onedrive: /home/rhodair/OneDrive --resync --verbose

@@ -118,8 +118,8 @@ fi
 
 echo -e "\nInstallation complete!  You can manage OneDrive using the 'onedrive' CLI command"
 
-# chmod +x ~/Repos/pc-env/setup-linux/provision_onedrive.sh
-# sudo bash ~/Repos/pc-env/setup-linux/provision_onedrive.sh
+# chmod +x ~/Repos/pc-env/setup-linux/provision-apps/onedrive-client.sh
+# sudo bash ~/Repos/pc-env/setup-linux/provision-apps/onedrive-client.sh
 
 # systemctl --user status onedrive
 

@@ -1,0 +1,78 @@
+services:
+  rclone-manager:
+    # image: ghcr.io/zarestia-dev/rclone-manager:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: Dockerfile
+    container_name: rclone-manager
+    restart: unless-stopped
+
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - WEB_PORT=${WEB_PORT:-8080}
+
+      # Bisync schedule configuration (cron format)
+      - ONEDRIVE_SCHEDULE=${ONEDRIVE_SCHEDULE:-0 */6 * * *}
+      - PCLOUD_SCHEDULE=${PCLOUD_SCHEDULE:-0 */6 * * *}
+      - GDRIVE_SCHEDULE=${GDRIVE_SCHEDULE:-0 */6 * * *}
+
+      # Enable/disable specific syncs
+      - ENABLE_ONEDRIVE=${ENABLE_ONEDRIVE:-true}
+      - ENABLE_PCLOUD=${ENABLE_PCLOUD:-true}
+      - ENABLE_GDRIVE=${ENABLE_GDRIVE:-false}
+
+    ports:
+      # Web UI
+      - '${WEB_PORT:-8080}:8080'
+      # OAuth redirect for Google Drive, OneDrive, etc.
+      - '53682:53682'
+
+    volumes:
+      # rclone configuration (persistent)
+      - ./config/rclone:/config/rclone
+
+      # rclone-manager app data (persistent)
+      - rclone-manager-data:/home/rclone-manager/.local/share/com.rclone.manager.headless
+
+      # Local sync directories
+      - ${ONEDRIVE_DIR:-$HOME/OneDrive}:/data/OneDrive
+      - ${PCLOUD_DIR:-$HOME/pCloud}:/data/pCloud
+      - ${GDRIVE_DIR:-$HOME/ObsidianVaults}:/data/ObsidianVaults
+
+      # Optional: Logs (for debugging)
+      - ./logs:/logs
+
+      # Optional: Mount rclone cache
+      - rclone-cache:/home/rclone-manager/.cache/rclone
+
+    # Required for rclone mount functionality
+    cap_add:
+      - SYS_ADMIN
+
+    devices:
+      - /dev/fuse:/dev/fuse
+
+    security_opt:
+      - apparmor:unconfined
+
+    networks:
+      - rclone-network
+
+volumes:
+  rclone-manager-data:
+    driver: local
+  rclone-cache:
+    driver: local
+
+networks:
+  rclone-network:
+    driver: bridge
+#
+
+# :: Usage Example (run interactively) ::
+# cd ~/Repos/pc-env/docker/rclone-manager
+# docker compose build
+# docker compose run --remove-orphans rclone-manager

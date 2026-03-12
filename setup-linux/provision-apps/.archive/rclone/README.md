@@ -119,3 +119,24 @@ rclone config create "<remote-name>" "<storage-type>"
 ### Other
 
 - **[Rclone UI](https://rcloneui.com):**&nbsp; Stop remembering flags & commands and do more with Rclone
+
+<!-- Uninstall the native OneDrive client:
+systemctl --user stop onedrive
+systemctl --user disable onedrive
+sudo apt remove onedrive
+-->
+
+<!-- Configure rclone for OneDrive:
+rclone config create onedrive onedrive
+    tokens are stored in `~/.config/rclone/rclone.conf`
+    rclone automatically refreshes the access token when needed
+    don't need to re-authenticate if rclone is used at least once every 90 days -->
+
+<!-- Test the authentication connection:
+rclone lsf onedrive: --max-depth 1
+-->
+
+<!-- Verify the timer is set correctly:
+systemctl status rclone-bisync-onedrive.timer
+systemctl list-timers rclone-bisync-onedrive.timer
+-->
