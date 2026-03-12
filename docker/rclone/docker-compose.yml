@@ -1,0 +1,49 @@
+services:
+  rclone:
+    build: .
+    image: rclone-bisync:latest
+    environment:
+      # Set timezone for correct log timestamps
+      - TZ=America/Chicago
+    volumes:
+      # Mount the rclone config (auth), cache, and lock files from the host
+      - ${HOME}/.config/rclone:/etc/rclone
+      - ${HOME}/.cache/rclone:/cache
+      # Mount entire host home directory for simple sync paths
+      - ${HOME}:/data
+      # Mount a shared log directory
+      - ${HOME}/logs/rclone:/logs
+    # Run the container with host user permissions to avoid issues
+    # (controls file permissions and what is allowed on mounted volumes)
+    user: '1000:1000' # User ID (PUID) and Group ID (PGID)
+#
+
+# :: Usage Example ::
+# cd ~/Repos/pc-env/docker/rclone
+# docker compose build
+# docker compose run --rm --entrypoint rclone rclone version
+
+# List the contents of the rclone directory:
+# docker compose run --rm --entrypoint ls rclone -al /etc/rclone
+# View the contents of the filters file:
+# docker compose run --rm --entrypoint cat rclone /etc/rclone/bisync-filters.txt
+
+# --- Start an Interactive Shell ---
+# docker compose run --rm --entrypoint bash rclone
+
+# --- Manual Run (rebuild & run script with latest dev changes) ---
+# sudo bash ~/Repos/pc-env/docker/rclone/enable-systemd.sh
+# sudo systemctl start rclone-bisync-pcloud.service
+# systemctl status rclone-bisync-pcloud.service
+# journalctl -xeu rclone-bisync-pcloud.service
+
+# OR
+# docker compose run --rm rclone <remote_name> <sync_dir_name>
+# docker compose run --rm rclone gdrive ObsidianVaults
+# docker compose run --rm rclone onedrive OneDrive --resync
+# docker compose run --rm rclone pcloud pCloud --resync
+
+# --- Test Script Dry Run (interactive shell) ---
+# docker compose run --rm --entrypoint bash rclone
+# rclone bisync pcloud: /data/pCloud --config /etc/rclone/rclone.conf --dry-run -vv --workdir /cache/workdir
+# rclone bisync pcloud: /data/pCloud --config /etc/rclone/rclone.conf --resync -vv --workdir /cache/workdir
