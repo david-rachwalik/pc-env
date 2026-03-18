@@ -86,7 +86,11 @@
       // Ensure extension receives the correct interpreter path before auto-detection happens
       // (more deterministic than `settings.json`)
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python"
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.pylintArgs": [
+          "--init-hook",
+          "import sys; sys.path.append('/home/vscode/.local/lib/python3.12/site-packages')"
+        ]
       }
     }
   }

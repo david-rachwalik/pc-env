@@ -130,5 +130,6 @@
   "powershell.promptToUpdatePowerShell": false,
   "redhat.telemetry.enabled": false,
   "dotnetAcquisitionExtension.enableTelemetry": false,
-  "vsicons.dontShowNewVersionMessage": true
+  "vsicons.dontShowNewVersionMessage": true,
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }
