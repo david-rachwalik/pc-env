@@ -6,9 +6,11 @@ services:
     image: pysubs2-runner
     container_name: pysubs2-runner-container
     volumes:
-      - /media/root/HDD-01:/mnt/hdd-01 # Mount downloads directory
+      - /media/root/HDD-01:/mnt/hdd-01 # Mount media drives
       - /media/root/HDD-02:/mnt/hdd-02
-      - ./:/app # Mount source files
+      # Mount source files for live testing
+      - ./:/app/dev
+      # - ./convert-subtitles.py:/app/convert-subtitles-dev.py:ro
     stdin_open: true
     tty: true
     # The entrypoint will execute this command
@@ -18,15 +20,10 @@ services:
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/pysubs2
 # docker compose build --no-cache
-# docker compose run --remove-orphans pysubs2
+# docker compose run --rm pysubs2
+# --- Inside the container ---
+# Check tool versions:
 # mkvmerge --version
 # ffmpeg -version
 # subtitleedit --version
 # tesseract --version
-# docker compose run --rm pysubs2 python /app/convert-subtitles.py "/mnt/hdd-01/path/to/your/videos"
-
-# Convert a folder (example: /mnt/hdd-01/AnimeSubs)
-# docker compose run --rm pysubs2 python /app/convert-subtitles.py /mnt/hdd-01/AnimeSubs --overwrite
-# python /app/convert-subtitles.py /mnt/hdd-01/AnimeSubs
-
-# python /app/convert-subtitles.py --dry-run "/mnt/hdd-01/_Downloads/_Torrents/Done/That '70s Show (1998) Season 1-8 S01-S08 (1080p BluRay x265 HEVC 10bit AAC 5.1 FreetheFish)/Season 1"
