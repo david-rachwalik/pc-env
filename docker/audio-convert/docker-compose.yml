@@ -1,0 +1,25 @@
+services:
+  audioconvert:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: audioconvert-runner
+    container_name: audioconvert-runner-container
+    volumes:
+      - /media/root/HDD-01:/mnt/hdd-01 # Mount media drives
+      - /media/root/HDD-02:/mnt/hdd-02
+      # Mount source files for live testing
+      - ./:/app/dev
+    stdin_open: true
+    tty: true
+    # The entrypoint will execute this command, defaulting to an interactive shell
+    command: /bin/sh -l # Default to interactive shell
+
+
+# :: Usage Example (run interactively) ::
+# cd ~/Repos/pc-env/docker/audio-convert
+# docker compose build --no-cache
+# docker compose run --rm audioconvert
+# --- Inside the container ---
+# Check tool versions:
+# ffmpeg -version
