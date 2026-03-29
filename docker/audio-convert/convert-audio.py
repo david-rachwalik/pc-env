@@ -24,28 +24,42 @@ OVERWRITE = False
 DRY_RUN = False
 
 PROFILES = {
-    "normal": {
+    "music": {
         "format": "mp3",
         "bitrate": "128k",
         "sample_rate": "44100",
         "channels": 2,
         "extra_args": [],
     },
-    "audiobook": {
+    "music-clean": {
+        "format": "mp3",
+        "bitrate": "128k",
+        "sample_rate": "44100",
+        "channels": 2,
+        # A more gentle filter chain for music:
+        # 1. highpass:  Removes very low-end rumble below 40Hz, preserving more bass frequencies than the vocal filter
+        # 2. afftdn:  Applies very light noise reduction
+        # 3. loudnorm:  Normalize to a standard loudness without extra compression
+        "extra_args": ["-af", "highpass=f=40,afftdn=nr=10:nf=-30,loudnorm"],
+    },
+    "vocal": {
         "format": "mp3",
         "bitrate": "64k",
         "sample_rate": "44100",
         "channels": 1,
         "extra_args": ["-af", "loudnorm"],
     },
-    "audiobook-compressed": {
+    "vocal-clean": {
         "format": "mp3",
         "bitrate": "64k",
         "sample_rate": "44100",
         "channels": 1,
-        # Chain filters: first compress, then normalize
-        # (smooths out internal volume spikes and then makes overall loudness consistent)
-        "extra_args": ["-af", "acompressor=threshold=0.089:ratio=9:attack=20:release=250,loudnorm"],
+        # Chain of filters:
+        # 1. highpass:  Remove low-frequency rumble/hum below 80Hz
+        # 2. afftdn:  Apply gentle broadband noise reduction
+        # 3. acompressor:  Smooth out volume spikes
+        # 4. loudnorm:  Normalize to a standard loudness
+        "extra_args": ["-af", "highpass=f=80,afftdn=nr=12:nf=-25,acompressor=threshold=0.089:ratio=9:attack=20:release=250,loudnorm"],
     },
 }
 
@@ -178,8 +192,8 @@ if __name__ == "__main__":
 
 # --- Inside the container ---
 
-# audio-normal "/mnt/hdd-01/path/to/your/audio/folder"
-# audio-comp "/mnt/hdd-01/path/to/your/audio/folder"
+# music-clean "/mnt/hdd-01/path/to/your/audio/folder"
+# vocal-clean "/mnt/hdd-01/path/to/your/audio/folder"
 
-# audio-comp "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[VchiBan]"
-# audio-comp "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]/Campaign 1 - Vox Machina"
+# vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[VchiBan]"
+# vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]/Campaign 1 - Vox Machina"
