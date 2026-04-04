@@ -2,6 +2,13 @@
 """
 Batch convert audio files to different formats using ffmpeg.
 
+This script scans a directory for audio files and converts them using predefined
+profiles. It intelligently handles album art by probing the file first:
+- If album art is present, it's copied directly.
+- If no art is found, it's cleanly omitted.
+- If audio filters are used, it correctly structures the ffmpeg command to
+  avoid stream mapping conflicts, which was the primary challenge.
+
 Usage:
   python3 convert-audio.py /path/to/folder --profile <profile_name>
 
@@ -10,6 +17,8 @@ Profiles:
   - audiobook: 64kbps, 44.1kHz, mono, normalized audio
 """
 import argparse
+import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -29,7 +38,7 @@ PROFILES = {
         "bitrate": "128k",
         "sample_rate": "44100",
         "channels": 2,
-        "extra_args": [],
+        "filters": "",
     },
     "music-clean": {
         "format": "mp3",
@@ -40,14 +49,14 @@ PROFILES = {
         # 1. highpass:  Removes very low-end rumble below 40Hz, preserving more bass frequencies than the vocal filter
         # 2. afftdn:  Applies very light noise reduction
         # 3. loudnorm:  Normalize to a standard loudness without extra compression
-        "extra_args": ["-af", "highpass=f=40,afftdn=nr=10:nf=-30,loudnorm"],
+        "filters": "highpass=f=40,afftdn=nr=10:nf=-30,loudnorm",
     },
     "vocal": {
         "format": "mp3",
         "bitrate": "64k",
         "sample_rate": "44100",
         "channels": 1,
-        "extra_args": ["-af", "loudnorm"],
+        "filters": "loudnorm",
     },
     "vocal-clean": {
         "format": "mp3",
@@ -59,44 +68,136 @@ PROFILES = {
         # 2. afftdn:  Apply gentle broadband noise reduction
         # 3. acompressor:  Smooth out volume spikes
         # 4. loudnorm:  Normalize to a standard loudness
-        "extra_args": ["-af", "highpass=f=80,afftdn=nr=12:nf=-25,acompressor=threshold=0.089:ratio=9:attack=20:release=250,loudnorm"],
+        "filters": "highpass=f=80,afftdn=nr=12:nf=-25,acompressor=threshold=0.089:ratio=9:attack=20:release=250,loudnorm",
     },
 }
 
 
 # --- Utilities ---
 def info(msg: str):
+    """Logs an informational message to stdout."""
     print(f"[INFO] {msg}")
 
 
 def warn(msg: str):
+    """Logs a warning message to stderr."""
     print(f"[WARN] {msg}", file=sys.stderr)
 
 
 def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
-    info(f"Running command: {' '.join(cmd)}")
+    """Executes a command, logging it and handling dry runs."""
+    # Using shlex.join for a safer and more accurate representation of the command
+    cmd_str = shlex.join(cmd)
     if DRY_RUN:
+        info(f"Dry Run Command:  {cmd_str}")
         return subprocess.CompletedProcess(cmd, 0)
+
+    info(f"Running Command:  {cmd_str}")
     try:
         return subprocess.run(cmd, check=check, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:
         warn(f"Command failed with exit code {e.returncode}")
-        warn(f"Stderr: {e.stderr}")
-        warn(f"Stdout: {e.stdout}")
+        warn(f"Stderr: {e.stderr.strip()}")
+        warn(f"Stdout: {e.stdout.strip()}")
         raise
+
+
+# --- FFprobe Logic ---
+def _has_video_stream(input_path: Path) -> bool:
+    """Uses ffprobe to determine if the input file contains a video stream."""
+    info(f"Probing for video stream in: {input_path.name}")
+    try:
+        probe_cmd = [
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_streams",
+            "-select_streams",
+            "v",
+            str(input_path),
+        ]
+        probe_result = run_command(probe_cmd)
+        probe_data = json.loads(probe_result.stdout)
+        if probe_data.get("streams"):
+            return True
+    except (subprocess.CalledProcessError, json.JSONDecodeError, IndexError) as e:
+        warn(f"Could not probe for video stream in {input_path.name}. Proceeding as if there is none. Reason: {e}")
+
+    return False
+
+
+# --- FFmpeg Command Builder ---
+def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str, Any], has_video: bool) -> List[str]:
+    """
+    Constructs the ffmpeg command list with correct argument order.
+
+    The key to avoiding errors is to define all stream mappings first,
+    then define the codecs and settings for those mapped streams.
+    """
+    cmd = ["ffmpeg", "-i", str(input_path)]
+
+    audio_filters = profile["filters"]
+
+    # --- Step 1: Define all stream mappings ---
+    if audio_filters:
+        # Use -filter_complex to apply filters and map its output
+        filter_graph = f"[0:a]{audio_filters}[a_out]"
+        cmd.extend(["-filter_complex", filter_graph, "-map", "[a_out]"])
+        info("Applied audio filters via -filter_complex.")
+    else:
+        # No filters, so map the original audio stream directly
+        cmd.extend(["-map", "0:a"])
+
+    if has_video:
+        # If a video stream exists, map it
+        cmd.extend(["-map", "0:v?"])
+
+    # --- Step 2: Define codecs and settings for the mapped streams ---
+    if has_video:
+        # Use the efficient 'copy' codec for the video stream
+        info("Video stream found.  Copying directly.")
+        cmd.extend(["-c:v", "copy", "-disposition:v", "attached_pic"])
+    else:
+        info("No video stream found.")
+        cmd.append("-vn")
+
+    # Configure the audio stream's encoding
+    cmd.extend(
+        [
+            "-c:a",
+            profile["format"],
+            "-ar",
+            profile["sample_rate"],
+            "-ac",
+            str(profile["channels"]),
+            "-b:a",
+            profile["bitrate"],
+        ]
+    )
+
+    # --- Step 3: Define the output file ---
+    cmd.append(str(output_path))
+    return cmd
 
 
 # --- Conversion Logic ---
 def get_audio_files(path: Path) -> List[Path]:
-    """Find all audio files in a directory."""
+    """Find all audio files in a directory, excluding the output directory."""
+    info(f"Searching for audio files in {path}...")
     files = []
     for ext in AUDIO_EXTS:
         files.extend(path.rglob(f"*{ext}"))
-    return files
+
+    # Filter out files that are already in a 'converted' subdirectory
+    valid_files = [f for f in files if OUTPUT_SUBDIR not in f.parts]
+    info(f"Found {len(valid_files)} audio file(s) to process.")
+    return valid_files
 
 
 def convert_audio_file(input_path: Path, output_dir: Path, profile: Dict[str, Any]):
-    """Converts a single audio file based on the selected profile."""
+    """Probes, builds, and executes the ffmpeg command for a single file."""
     output_filename = f"{input_path.stem}.{profile['format']}"
     output_path = output_dir / output_filename
 
@@ -104,60 +205,49 @@ def convert_audio_file(input_path: Path, output_dir: Path, profile: Dict[str, An
         info(f"Skipping existing file: {output_path}")
         return
 
+    # Probe the file for a video stream (album/thumbnail art)
+    has_video = _has_video_stream(input_path)
+
+    # Build and run the ffmpeg command
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    cmd = [
-        "ffmpeg",
-        "-i",
-        str(input_path),
-        "-b:a",
-        profile["bitrate"],
-        "-ar",
-        profile["sample_rate"],
-        "-ac",
-        str(profile["channels"]),
-        "-c:v",
-        "copy",  # Copy video stream (e.g., album art)
-        *profile["extra_args"],
-        str(output_path),
-    ]
-
-    try:
-        run_command(cmd)
-        info(f"Converted: {input_path.name} -> {output_path.name}")
-    except subprocess.CalledProcessError:
-        warn(f"Failed to convert {input_path.name}")
+    cmd = _build_ffmpeg_command(input_path, output_path, profile, has_video)
+    run_command(cmd)
+    info(f"Successfully converted: {input_path.name} -> {output_path.name}")
 
 
 def batch_convert(path: Path, profile_name: str):
     """Batch convert all audio files in a directory."""
     if not path.is_dir():
-        warn(f"Error: Path is not a directory: {path}")
-        return
+        warn(f"Error: Source path '{path}' is not a directory.")
+        sys.exit(1)
 
     profile = PROFILES.get(profile_name)
     if not profile:
+        # This should not happen with argparse choices, but is good practice
         warn(f"Error: Profile '{profile_name}' not found.")
-        return
+        sys.exit(1)
 
-    info(f"Starting batch conversion with profile: {profile_name}")
+    info(f"Starting batch conversion with profile: '{profile_name}'")
     info(f"Source directory: {path}")
 
     audio_files = get_audio_files(path)
     if not audio_files:
-        warn("No audio files found.")
+        warn("No audio files found to convert.")
         return
 
     output_dir = path / OUTPUT_SUBDIR
     info(f"Output directory: {output_dir}")
 
-    for audio_file in audio_files:
-        # Don't convert files that are already in the output directory
-        if audio_file.parent.name == OUTPUT_SUBDIR:
-            continue
-        convert_audio_file(audio_file, output_dir, profile)
+    for i, audio_file in enumerate(audio_files, 1):
+        info(f"--- Processing file {i} of {len(audio_files)} ---")
+        try:
+            convert_audio_file(audio_file, output_dir, profile)
+        except Exception as e:
+            # The 'raise' in run_command will stop the script, but this catches other errors
+            warn(f"FATAL: A critical error occurred while processing {audio_file.name}. Halting. Reason: {e}")
+            sys.exit(1)
 
-    info("Batch conversion complete.")
+    info("--- Batch conversion complete. ---")
 
 
 # --- CLI ---
@@ -197,3 +287,5 @@ if __name__ == "__main__":
 
 # vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[VchiBan]"
 # vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]/Campaign 1 - Vox Machina"
+
+# python /app/dev/convert-audio.py --profile vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]/Campaign 1 (test)"
