@@ -21,12 +21,13 @@ import json
 import shlex
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, List
 
 # --- Configuration ---
 AUDIO_EXTS = {".mp3", ".flac", ".wav", ".m4a", ".ogg", ".opus"}
-OUTPUT_SUBDIR = "converted"
+OUTPUT_SUBDIR = "_converted"
 
 # Script-wide settings (set in main)
 OVERWRITE = False
@@ -86,7 +87,7 @@ def warn(msg: str):
 
 def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
     """Executes a command, logging it and handling dry runs."""
-    # Using shlex.join for a safer and more accurate representation of the command
+    # Using shlex.join for a safe, accurate representation of the command in log
     cmd_str = shlex.join(cmd)
     if DRY_RUN:
         info(f"Dry Run Command:  {cmd_str}")
@@ -102,10 +103,10 @@ def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProce
         raise
 
 
-# --- FFprobe Logic ---
+# --- FFprobe & FFmpeg Logic ---
 def _has_video_stream(input_path: Path) -> bool:
     """Uses ffprobe to determine if the input file contains a video stream."""
-    info(f"Probing for video stream in: {input_path.name}")
+    info(f"  Probing for video stream...")
     try:
         probe_cmd = [
             "ffprobe",
@@ -121,14 +122,15 @@ def _has_video_stream(input_path: Path) -> bool:
         probe_result = run_command(probe_cmd)
         probe_data = json.loads(probe_result.stdout)
         if probe_data.get("streams"):
+            info("  -> Video stream found.")
             return True
     except (subprocess.CalledProcessError, json.JSONDecodeError, IndexError) as e:
         warn(f"Could not probe for video stream in {input_path.name}. Proceeding as if there is none. Reason: {e}")
 
+    info("  -> No video stream found.")
     return False
 
 
-# --- FFmpeg Command Builder ---
 def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str, Any], has_video: bool) -> List[str]:
     """
     Constructs the ffmpeg command list with correct argument order.
@@ -138,14 +140,13 @@ def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str
     """
     cmd = ["ffmpeg", "-i", str(input_path)]
 
-    audio_filters = profile["filters"]
-
     # --- Step 1: Define all stream mappings ---
+    audio_filters = profile["filters"]
     if audio_filters:
         # Use -filter_complex to apply filters and map its output
         filter_graph = f"[0:a]{audio_filters}[a_out]"
         cmd.extend(["-filter_complex", filter_graph, "-map", "[a_out]"])
-        info("Applied audio filters via -filter_complex.")
+        # info("Applied audio filters via -filter_complex.")
     else:
         # No filters, so map the original audio stream directly
         cmd.extend(["-map", "0:a"])
@@ -157,10 +158,10 @@ def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str
     # --- Step 2: Define codecs and settings for the mapped streams ---
     if has_video:
         # Use the efficient 'copy' codec for the video stream
-        info("Video stream found.  Copying directly.")
+        # info("Video stream found.  Copying directly.")
         cmd.extend(["-c:v", "copy", "-disposition:v", "attached_pic"])
     else:
-        info("No video stream found.")
+        # info("No video stream found.")
         cmd.append("-vn")
 
     # Configure the audio stream's encoding
@@ -184,39 +185,42 @@ def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str
 
 # --- Conversion Logic ---
 def get_audio_files(path: Path) -> List[Path]:
-    """Find all audio files in a directory, excluding the output directory."""
-    info(f"Searching for audio files in {path}...")
+    """Find all audio files in the specified directory (non-recursive)."""
+    info(f"Searching for audio files in {path} (non-recursive)...")
     files = []
     for ext in AUDIO_EXTS:
-        files.extend(path.rglob(f"*{ext}"))
+        files.extend(path.glob(f"*{ext}"))
 
-    # Filter out files that are already in a 'converted' subdirectory
-    valid_files = [f for f in files if OUTPUT_SUBDIR not in f.parts]
-    info(f"Found {len(valid_files)} audio file(s) to process.")
-    return valid_files
+    info(f"Found {len(files)} audio file(s) to process.")
+    return files
 
 
 def convert_audio_file(input_path: Path, output_dir: Path, profile: Dict[str, Any]):
     """Probes, builds, and executes the ffmpeg command for a single file."""
+    file_start_time = time.monotonic()
     output_filename = f"{input_path.stem}.{profile['format']}"
     output_path = output_dir / output_filename
 
+    info(f"Converting: {input_path.name}")
+
     if output_path.exists() and not OVERWRITE:
-        info(f"Skipping existing file: {output_path}")
+        info(f"  -> Skipping, output file already exists: {output_path.name}")
         return
 
+    output_dir.mkdir(parents=True, exist_ok=True)
     # Probe the file for a video stream (album/thumbnail art)
     has_video = _has_video_stream(input_path)
-
     # Build and run the ffmpeg command
-    output_dir.mkdir(parents=True, exist_ok=True)
     cmd = _build_ffmpeg_command(input_path, output_path, profile, has_video)
     run_command(cmd)
-    info(f"Successfully converted: {input_path.name} -> {output_path.name}")
+
+    elapsed_time = time.monotonic() - file_start_time
+    info(f"  -> Successfully converted in {elapsed_time:.2f}s: {output_path.name}")
 
 
 def batch_convert(path: Path, profile_name: str):
     """Batch convert all audio files in a directory."""
+    batch_start_time = time.monotonic()
     if not path.is_dir():
         warn(f"Error: Source path '{path}' is not a directory.")
         sys.exit(1)
@@ -239,7 +243,7 @@ def batch_convert(path: Path, profile_name: str):
     info(f"Output directory: {output_dir}")
 
     for i, audio_file in enumerate(audio_files, 1):
-        info(f"--- Processing file {i} of {len(audio_files)} ---")
+        info(f"\n--- Processing file {i} of {len(audio_files)} ---")
         try:
             convert_audio_file(audio_file, output_dir, profile)
         except Exception as e:
@@ -247,7 +251,8 @@ def batch_convert(path: Path, profile_name: str):
             warn(f"FATAL: A critical error occurred while processing {audio_file.name}. Halting. Reason: {e}")
             sys.exit(1)
 
-    info("--- Batch conversion complete. ---")
+    total_elapsed_time = time.monotonic() - batch_start_time
+    info(f"\n--- Batch conversion complete in {total_elapsed_time:.2f}s ---")
 
 
 # --- CLI ---
