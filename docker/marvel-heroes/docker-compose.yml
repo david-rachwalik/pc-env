@@ -1,0 +1,83 @@
+services:
+  mhserveremu:
+    build:
+      context: .
+    container_name: mhserveremu
+    # Use host networking to simplify client connection on the same machine
+    network_mode: 'host'
+    # --- Resource Limits ---
+    # Prevent the container from overwhelming the host system
+    # Adjust these values based on your system's capacity and needs
+    deploy:
+      resources:
+        limits:
+          # Limit to using a maximum of 2 CPU cores
+          cpus: '2.0'
+          # Limit to a maximum of 4GB of RAM
+          memory: 4G
+    volumes:
+      # Persist the git repository and build artifacts
+      - mhserveremu-repo:/app
+      # Persist the database and logs
+      - mhserveremu-data:/data
+      # --- Game & Config Files ---
+      # Mount all required host files to a single, clean location.
+      # The entrypoint script will symlink them to their final destinations.
+      - ./config/ConfigOverride.ini:/gamefiles/ConfigOverride.ini:ro
+      - '/media/root/HDD-01/GameFiles/Marvel Heroes/Data/Game/mu_cdata.sip:/gamefiles/mu_cdata.sip:ro'
+      - '/media/root/HDD-01/GameFiles/Marvel Heroes/Data/Game/Calligraphy.sip:/gamefiles/Calligraphy.sip:ro'
+    # restart: unless-stopped
+    restart: 'no'
+
+# Define the named volumes
+volumes:
+  mhserveremu-repo:
+  mhserveremu-data:
+
+# :: Usage Example (start server) ::
+# cd ~/Repos/pc-env/docker/marvel-heroes
+# docker compose build --no-cache
+# docker compose up -d
+
+# :: Usage Example (view logs) ::
+# docker compose logs -f
+
+# :: Usage Example (stop and remove server) ::
+# WARNING: using `compose down -v` will remove all named volumes
+# docker compose down --remove-orphans
+
+# -------------------------------------
+
+# :: Usage Example (run interactively) ::
+# cd ~/Repos/pc-env/docker/marvel-heroes
+# docker compose build --no-cache
+# docker compose run --rm mhserveremu
+# --- Inside the container ---
+# ls -al
+
+# -------------------------------------
+
+# Ensure the image is up-to-date:
+# docker compose -f ~/Repos/pc-env/docker/marvel-heroes/docker-compose.yml build
+
+# Run to get an interactive bash shell inside the container:
+# docker compose -f ~/Repos/pc-env/docker/marvel-heroes/docker-compose.yml run --rm --entrypoint /bin/bash mhserveremu
+
+# --- Inside the container ---
+# cat /app/src/MHServerEmu/bin/x64/Release/net8.0/ConfigOverride.ini
+# Try to run the main server manually:
+# ./src/MHServerEmu/bin/x64/Release/net8.0/MHServerEmu
+
+# -------------------------------------
+
+# --- Accessing the Web Dashboard ---
+# To create your account, open a web browser on your main PC and go to:
+# http://localhost:8088/Dashboard/
+
+# --- First-Time Account Creation ---
+# 1. Start the server: docker compose up -d
+# 2. Open browser to: http://localhost:8088/Dashboard/
+# 3. Create an account (e.g., test@test.com / 123).
+# 4. Promote the account to Admin with the following command (quotes are important):
+#    > docker exec mhserveremu /app/src/MHServerEmu/bin/x64/Release/net8.0/MHServerEmu-cli '!account userlevel test@test.com 2'
+#    This sets the user `test@test.com` to userlevel 2 (Administrator).
