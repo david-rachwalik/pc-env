@@ -1,5 +1,7 @@
 # Marvel Heroes: Local Server & Standalone Client
 
+[MHServerEmu](https://github.com/Crypto137/MHServerEmu) is a server emulator for Marvel Heroes.&nbsp; Most information needed is in their [documentation](https://github.com/Crypto137/MHServerEmu/blob/master/docs/Index.md).&nbsp; Further notes can also be found on their [blog](https://crypto137.github.io/MHServerEmu).
+
 This project provides a complete, automated setup for running a local [`MHServerEmu`](https://github.com/Crypto137/MHServerEmu) server in Docker and playing Marvel Heroes with a standalone client on Linux.&nbsp; It is designed to be efficient and easy to use.
 
 > For a video walkthrough of a similar manual setup, see this [YouTube guide](https://www.youtube.com/watch?v=a1fIxhRZg34).

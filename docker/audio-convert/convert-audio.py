@@ -293,4 +293,4 @@ if __name__ == "__main__":
 # vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[VchiBan]"
 # vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]/Campaign 1 - Vox Machina"
 
-# python /app/dev/convert-audio.py --profile vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]/Campaign 1 (test)"
+# python /app/dev/convert-audio.py --profile vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]"

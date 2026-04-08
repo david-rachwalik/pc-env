@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Proton GE
+# https://github.com/gloriouseggroll/proton-ge-custom/releases
+
 # -------- Run with bash (as root or sudo) --------
 
 # Ensure the script is run as root
@@ -9,8 +12,8 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# Proton GE config
-PROTON_VERSION="9-27"
+# --- CONFIG ---
+PROTON_VERSION="10-26"
 PROTON_NAME="GE-Proton${PROTON_VERSION}" # extracted folder name
 SUDO_USER_HOME="/home/${SUDO_USER:-$USER}"
 TEMP_DIR="${TEMP_DIR:-/tmp/proton-ge-custom}" # can override for debugging
