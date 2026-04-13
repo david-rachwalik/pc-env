@@ -57,7 +57,7 @@ PROFILES = {
         "bitrate": "64k",
         "sample_rate": "44100",
         "channels": 1,
-        "filters": "loudnorm",
+        "filters": "",
     },
     "vocal-clean": {
         "format": "mp3",
@@ -294,3 +294,4 @@ if __name__ == "__main__":
 # vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]/Campaign 1 - Vox Machina"
 
 # python /app/dev/convert-audio.py --profile vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]"
+# vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Kill James Bond]/James Bond Movies"
