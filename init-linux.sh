@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail # Exit immediately on error
 
-# Linux Mint/Ubuntu system provisioning
+# Linux Mint (Ubuntu) system provisioning
 
 # --- Global Read-only Variables ---
 readonly SCRIPT_NAME="$(basename "$0")"
@@ -9,6 +9,7 @@ readonly SUDO_USER_NAME="${SUDO_USER:-}"
 readonly USER_HOME_DIR="$(getent passwd "$SUDO_USER_NAME" | cut -d: -f6)"
 
 # --- Script Configuration ---
+readonly -a CORE_PACKAGES=("curl" "wget" "git" "build-essential")
 readonly -a ALIASES=(
     # "alias <alias-name>='docker compose -f <configuration-file> run --rm <service-name>'"
     "alias ytdl='docker compose -f \"${USER_HOME_DIR}/Repos/pc-env/docker/yt-dlp/docker-compose.yml\" run --rm yt-dlp'"
@@ -27,7 +28,8 @@ readonly PROVISIONING_SCRIPTS_URL="https://raw.githubusercontent.com/david-rachw
 # Log messages with a timestamp and script name
 log() {
     # echo "[INFO] $(date +'%Y-%m-%d %H:%M:%S') - $*"
-    echo "[${SCRIPT_NAME}] [INFO] $(date +'%Y-%m-%d %H:%M:%S') - $*"
+    # echo "[${SCRIPT_NAME}] [INFO] $(date +'%Y-%m-%d %H:%M:%S') - $*"
+    echo "[${SCRIPT_NAME}] $(date +'%Y-%m-%d %H:%M:%S') | $*"
 }
 
 # Log error messages and exit
@@ -64,23 +66,42 @@ ensure_root() {
 
 # Update package list and install essential packages
 setup_core_system() {
-    log "Updating package list and upgrading system..."
-    apt-get update && apt-get upgrade -y
-    log "Installing essential packages..."
-    apt-get install -y curl wget git build-essential
+    log "Checking core system packages..."
+    local packages_to_install=()
+    for pkg in "${CORE_PACKAGES[@]}"; do
+        # dpkg-query is a stable way to check for installed packages
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+            log "Package '$pkg' not found.  Marking for installation."
+            packages_to_install+=("$pkg")
+        fi
+    done
+
+    if [ ${#packages_to_install[@]} -gt 0 ]; then
+        log "Updating package list..."
+        apt-get update
+        log "Installing missing packages: ${packages_to_install[*]}..."
+        apt-get install -y "${packages_to_install[@]}"
+    else
+        log "All core packages are already installed."
+    fi
 }
 # (apt-get is the reliable choice for automated scripts)
 # (apt is preferred for interactive use as the "porcelain", user-friendly tool)
 
 # Configure shell aliases
 setup_aliases() {
-    log "Setting up shell aliases..."
+    log "Checking shell aliases..."
     local alias_file="${USER_HOME_DIR}/.bash_aliases"
 
     # Ensure alias file exists and is owned by the correct user
     if [ ! -f "$alias_file" ]; then
         log "Creating ${alias_file}..."
-        touch "$alias_file"
+        run_as_user touch "$alias_file"
+    fi
+    
+    # Verify and correct ownership if necessary
+    if [[ "$(stat -c '%U' "$alias_file")" != "$SUDO_USER_NAME" ]]; then
+        log "Correcting ownership of ${alias_file}..."
         chown "${SUDO_USER_NAME}:${SUDO_USER_NAME}" "$alias_file"
     fi
 
@@ -91,18 +112,19 @@ setup_aliases() {
             echo "$alias_cmd" >>"$alias_file"
         fi
     done
-    log "Alias setup complete. Please run 'source ~/.bashrc' or restart your shell."
+    log "Alias check complete.  If changes were made, run 'source ~/.bashrc' or restart your shell."
 }
 
-# Generate SSH keys if not present
+# Generate SSH keys for user if not present
 setup_ssh() {
     log "Checking for SSH keys..."
     local ssh_key_path="${USER_HOME_DIR}/.ssh/id_rsa"
-    local ssh_dir
-    ssh_dir=$(dirname "$ssh_key_path")
-
+    
+    # Check if key exists
     if [ ! -f "$ssh_key_path" ]; then
-        log "Generating SSH keys for $SUDO_USER_NAME..."
+        log "No SSH key found.  Generating for $SUDO_USER_NAME..."
+        local ssh_dir
+        ssh_dir=$(dirname "$ssh_key_path")
         run_as_user mkdir -p "$ssh_dir"
         run_as_user chmod 700 "$ssh_dir"
         run_as_user ssh-keygen -q -f "$ssh_key_path" -t rsa -b 4096 -N ""
@@ -112,15 +134,18 @@ setup_ssh() {
     fi
 }
 
-# Update Cinnamon panel clock settings as the user
-# Note: This requires the user to be in an active desktop session
-setup_panel_clock() {
-    log "Configuring Cinnamon panel clock..."
-    local schema="org.cinnamon.desktop.interface"
-    local date_format="%b %d, %Y %H:%M"
-    local tooltip_format="%A, %B %d, %Y, %-I:%M %p"
+# Update Cinnamon panel clock settings as the user (must be in active desktop session)
+setup_panel_clock_old() {
+    # Pre-flight check that gsettings command exists
+    if ! command -v gsettings &> /dev/null; then
+        log "gsettings command not found. Skipping panel clock setup."
+        return
+    fi
 
-    # This must be run as the user to access their D-Bus session
+    log "Checking Cinnamon panel clock settings..."
+    local schema="org.cinnamon.desktop.interface"
+
+    # Must be run as user to access their D-Bus session
     set_gsetting() {
         local key="$1"
         local value="$2"
@@ -133,10 +158,71 @@ setup_panel_clock() {
         fi
     }
 
+    # local date_format="%b %d, %Y %H:%M"
+    # local tooltip_format="%A, %B %d, %Y, %-I:%M %p"
+    # set_gsetting "clock-use-24-hour" "$date_format"
+    # set_gsetting "clock-show-seconds" "$tooltip_format"
+
     # > gsettings list-keys org.cinnamon.desktop.interface
-    set_gsetting "clock-use-24-hour" "$date_format"
-    set_gsetting "clock-show-seconds" "$tooltip_format"
+    set_gsetting "clock-use-24h" "true"
+    set_gsetting "clock-show-seconds" "true"
     echo "Panel clock settings are set."
+}
+
+# Update Cinnamon panel clock settings by modifying its JSON config file
+setup_panel_clock() {
+    log "Checking Cinnamon panel clock settings..."
+    local config_dir="${USER_HOME_DIR}/.config/cinnamon/spices/calendar@cinnamon.org"
+
+    # 1) Pre-flight check: Only run if the applet's config directory exists
+    if [[ ! -d "$config_dir" ]]; then
+        log "Calendar applet config directory not found.  Skipping."
+        return
+    fi
+
+    # 2) Find config file dynamically (not always '13.json')
+    local config_file
+    # Take first .json file in the directory
+    config_file=$(find "$config_dir" -name '*.json' -print -quit)
+
+    if [[ -z "$config_file" ]]; then
+        log "No JSON config file found in '$config_dir'.  Skipping."
+        return
+    fi
+
+    # 3) Define the desired state of the settings
+    local date_format='%b %d, %Y %H:%M'
+    local tooltip_format='%A, %B %d, %Y, %-I:%M %p'
+
+    # 4) Read current values
+    local current_use_custom
+    local current_format
+    local current_tooltip
+    current_use_custom=$(jq -r '."use-custom-format".value' "$config_file")
+    current_format=$(jq -r '."custom-format".value' "$config_file")
+    current_tooltip=$(jq -r '."custom-tooltip-format".value' "$config_file")
+
+    # 5) Update file if any value is incorrect
+    if [[ "$current_use_custom" != "true" || "$current_format" != "$date_format" || "$current_tooltip" != "$tooltip_format" ]]; then
+        log "Updating calendar applet configuration..."
+        
+        # Use jq to update the values and write to temporary file
+        local tmp_file
+        tmp_file=$(mktemp)
+        
+        jq \
+          '."use-custom-format".value = true' \
+          | jq --arg df "$date_format" '."custom-format".value = $df' \
+          | jq --arg tf "$tooltip_format" '."custom-tooltip-format".value = $tf' \
+          "$config_file" > "$tmp_file"
+
+        # Safely replace the original file and set correct ownership
+        mv "$tmp_file" "$config_file"
+        chown "${SUDO_USER_NAME}:${SUDO_USER_NAME}" "$config_file"
+        log "Calendar applet configuration updated."
+    else
+        log "Calendar applet settings are already correct."
+    fi
 }
 
 # Run remote provisioning scripts for applications
@@ -175,7 +261,7 @@ main() {
     # --- Core System Setup ---
     setup_core_system
     setup_aliases
-    # setup_panel_clock # handled manually
+    setup_panel_clock # handled manually
     # setup_ssh         # handled by another script
     # --- TODO: Software Installation ---
     # run_provisioning_scripts
