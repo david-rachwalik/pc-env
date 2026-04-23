@@ -30,6 +30,10 @@ services:
 
 # --- Start an Interactive Shell ---
 # docker compose run --rm --entrypoint bash rclone
+# Test dry run of script:
+# docker compose run --rm --entrypoint bash rclone
+# rclone bisync pcloud: /data/pCloud --config /etc/rclone/rclone.conf --dry-run -vv --workdir /cache/workdir
+# rclone bisync pcloud: /data/pCloud --config /etc/rclone/rclone.conf --resync -vv --workdir /cache/workdir
 
 # --- Manual Run (rebuild & run script with latest dev changes) ---
 # sudo bash ~/Repos/pc-env/docker/rclone/enable-systemd.sh
@@ -37,13 +41,8 @@ services:
 # systemctl status rclone-bisync-pcloud.service
 # journalctl -xeu rclone-bisync-pcloud.service
 
-# OR
+# --- Manual Resync (force clean "memory" of file states) ---
 # docker compose run --rm rclone <remote_name> <sync_dir_name>
+# docker compose run --rm rclone pcloud pCloud --resync
 # docker compose run --rm rclone gdrive ObsidianVaults
 # docker compose run --rm rclone onedrive OneDrive --resync
-# docker compose run --rm rclone pcloud pCloud --resync
-
-# --- Test Script Dry Run (interactive shell) ---
-# docker compose run --rm --entrypoint bash rclone
-# rclone bisync pcloud: /data/pCloud --config /etc/rclone/rclone.conf --dry-run -vv --workdir /cache/workdir
-# rclone bisync pcloud: /data/pCloud --config /etc/rclone/rclone.conf --resync -vv --workdir /cache/workdir

@@ -17,7 +17,7 @@ declare -a BISYNC_JOBS=(
     # "gdrive;ObsidianVaults;daily"
     # "onedrive;OneDrive;*-*-* 06:00:00"
     "pcloud;pCloud;*-*-* 06:05:00"
-    "gdrive;ObsidianVaults;*-*-* 06:10:00"
+    "gdrive;GoogleDrive;*-*-* 06:10:00"
 )
 
 # --- Script Setup ---
