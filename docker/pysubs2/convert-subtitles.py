@@ -23,20 +23,21 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import pysubs2
 
 
 @dataclass
 class SubtitleTrack:
-    """A simple structure to hold metadata about an extracted subtitle track."""
+    """Represents a single subtitle track, from source to destination."""
 
-    source_path: Path
-    video_stem: str
-    lang_code: str
-    tag: str
+    source_path: Path  # path to raw subtitle file (e.g., in _extracted_subs)
+    video_stem: str  # base name of associated video file (e.g., "My Movie")
+    lang_code: str  # ISO 639-2 language code (e.g., "en", "und")
+    tag: str  # optional tag (e.g., "forced", "sdh")
     type: str  # "text" or "image"
+    srt_path: Path  # final, calculated destination path for .srt file
 
 
 # ------------------------ Configuration ------------------------
@@ -89,10 +90,14 @@ def warn(msg: str):
     print(f"[WARN] {msg}", file=sys.stderr)
 
 
-def run_command(cmd: List[str], capture_output: bool = False, check: bool = True) -> subprocess.CompletedProcess:
+# Executes an external command as a subprocess and returns the result
+# - capture_output: If true, prints the standard output and error
+# - check: If true, raises a CalledProcessError if the command exits with a non-zero status
+def run_command(cmd: List[str], capture_output: bool = True, check: bool = False) -> subprocess.CompletedProcess:
     """Run a command, raise on non-zero exit while printing a helpful message."""
     # info(f"Running command: {' '.join(cmd)}")
     try:
+        # https://docs.python.org/3/library/subprocess.html
         return subprocess.run(
             cmd,
             check=check,
@@ -104,7 +109,7 @@ def run_command(cmd: List[str], capture_output: bool = False, check: bool = True
         warn(f"Command failed: {' '.join(cmd)}")
         if capture_output:
             if e.stdout:
-                warn(f"stdout: {e.stdout.strip()}")
+                info(f"stdout: {e.stdout.strip()}")
             if e.stderr:
                 warn(f"stderr: {e.stderr.strip()}")
         raise
@@ -260,6 +265,7 @@ def _generate_unique_filepath(
     """
     Generates a unique, Plex-compliant, and length-safe filepath.
     Handles filename collisions by appending a counter (_2, _3, etc.).
+    Ensures uniqueness within the current script run via `generated_paths`.
     """
     final_name_part = f".{lang_code}"
     if tag:
@@ -285,213 +291,273 @@ def _generate_unique_filepath(
     return out_path
 
 
-def extract_subs_from_mkv(mkv_path: Path, out_dir: Path) -> List[SubtitleTrack]:
+def _parse_subtitle_filename(sub_path: Path) -> tuple[str, str, str]:
     """
-    Extracts subs and attachments from an MKV file.
-    - Filters for English or undefined language subtitle tracks.
-    - Generates Plex-compliant, length-safe, and unique filenames.
-    - Returns a list of structured SubtitleTrack objects.
+    Infers language and tag from a subtitle filename.
+    Example: "Movie.en.forced.srt" -> ("en", "forced", "Movie")
+    Returns (lang_code, tag, stem)
     """
-    extracted_tracks: List[SubtitleTrack] = []
-    info(f"Parsing track and attachment list for {mkv_path.name}")
+    # For .srt files we want to clean in-place, the stem is the filename without .srt
+    if sub_path.suffix.lower() == ".srt":
+        stem_parts = sub_path.stem.split(".")
+        # Assumes format like "file.eng.tag"
+        if len(stem_parts) > 1:
+            lang = stem_parts[1]
+            tag = ".".join(stem_parts[2:])
+            return lang, tag, sub_path.stem
+        else:
+            # It's just "file.srt", so treat it as cleaning itself
+            return sub_path.suffix.strip("."), "", sub_path.stem
+
+    # For other formats, infer from the full stem
+    stem = sub_path.stem
+    parts = stem.split(".")
+    lang_code = "und"
+    tag = ""
+    if len(parts) > 1:
+        # Assume the second to last part is the language
+        lang_code = parts[-1] if len(parts) == 2 else parts[-2]
+        # Assume the last part is a tag if there are more than 2 parts
+        if len(parts) > 2:
+            tag = parts[-1]
+
+    return lang_code, tag, stem
+
+
+def _create_track_from_loose_file(sub_path: Path, base_path: Path, srt_dir: Path, generated_paths: List[Path]) -> SubtitleTrack:
+    """Creates a SubtitleTrack object from a loose subtitle file using filename parsing."""
+    lang_code, tag, stem = _parse_subtitle_filename(sub_path)
+
+    # Try to associate with a video file of the same base name, otherwise use its own stem
+    video_stem = stem.split(".")[0]
+    for video_ext in VIDEO_EXTS:
+        if (base_path / f"{video_stem}{video_ext}").exists():
+            break  # Found associated video
+    else:
+        video_stem = stem  # No associated video, use the sub's own stem
+
+    track_type = "image" if sub_path.suffix.lower() in IMAGE_EXTS else "text"
+
+    srt_output_path = _generate_unique_filepath(video_stem, srt_dir, lang_code, tag, ".srt", generated_paths)
+    generated_paths.append(srt_output_path)
+
+    return SubtitleTrack(sub_path, video_stem, lang_code, tag, track_type, srt_output_path)
+
+
+def extract_subs_from_mkv(mkv_path: Path, out_dir: Path, srt_dir: Path, generated_paths: List[Path]) -> List[SubtitleTrack]:
+    """
+    Parses an MKV file, filters for relevant subtitle tracks, and extracts them.
+    - Filters for English ('eng', 'en') or undefined ('und') language tracks.
+    - Skips extraction if the raw extracted file already exists.
+    - Extracts raw track data to a temporary file in `out_dir`.
+    - Returns a list of SubtitleTrack objects for further processing.
+    """
+    all_possible_tracks: List[SubtitleTrack] = []
+
+    # info(f"Parsing track and attachment list for {mkv_path.name}")
+    info(f"Attempting to extract subtitles with mkvextract from {mkv_path.name}...")
     try:
-        cp = run_command([MKVMERGE, "-J", str(mkv_path)], capture_output=True, check=False)
-        if cp.returncode != 0 and not cp.stdout:
-            warn(f"mkvmerge failed with no output for {mkv_path.name}.  Is it a valid MKV?")
-            return extracted_tracks
-        data = json.loads(cp.stdout)
-    except Exception as e:
-        warn(f"Failed to run or parse mkvmerge output for {mkv_path}: {e}")
-        return extracted_tracks
+        result = run_command([MKVMERGE, "-J", str(mkv_path)])
+        data = json.loads(result.stdout)
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
+        warn(f"Failed to parse mkvmerge output for {mkv_path.name}: {e}")
+        return []
 
-    # --- Extract Subtitle Tracks ---
-    # List prevents filename collisions from multiple tracks within same video file
-    generated_filenames_this_run: List[Path] = []
-    tracks = data.get("tracks", [])
-    if not tracks:
-        warn(f"No tracks found in mkvmerge output for {mkv_path.name}")
+    subtitle_tracks = [t for t in data.get("tracks", []) if t.get("type") == "subtitles"]
+    if not subtitle_tracks:
+        info("No subtitle tracks found in this video.")
+        return []
+    else:
+        info(f"Found {len(subtitle_tracks)} total subtitle track(s).  Beginning extraction...")
 
-    for track in tracks:
-        # Filter for English (eng/en) or Undefined language tracks
-        if track.get("type") != "subtitles":
-            continue
+    for track in subtitle_tracks:
+        track_id = track.get("id")
         props = track.get("properties", {})
-        lang = props.get("language")
-        if lang and lang not in ("eng", "en"):
-            continue
+        codec = props.get("codec_id")
+        lang_code = props.get("language", "und")
+        track_name = props.get("track_name", "")  # This is the 'Title' field in mkvinfo
+        is_forced = props.get("forced_track", False)
+        info(f"(Track ID: {track_id}) using codec '{codec}'")
 
-        tid = track.get("id")
-        codec_id = (props.get("codec_id") or "").lower()
-        track_name = (props.get("track_name") or "").strip()
-
-        # --- Determine File Extension ---
-        if "s_text" in codec_id or "ass" in codec_id or "srt" in codec_id:
+        # Define extension & track type based on codec
+        if codec in ("S_TEXT/ASS", "S_TEXT/SSA"):
             ext, track_type = ".ass", "text"
-        elif "s_hdmv/pgs" in codec_id:
+        elif codec == "S_VOBSUB":
+            ext, track_type = ".sub", "image"  # VobSub is a pair (.idx + .sub)
+        elif codec == "S_HDMV/PGS":
             ext, track_type = ".sup", "image"
-        elif "s_vobsub" in codec_id:
-            ext, track_type = ".idx", "image"  # VobSub is a pair (.idx + .sub)
         else:
-            warn(f"Skipping unsupported subtitle codec '{codec_id}' for track {tid} in {mkv_path.name}")
+            warn(f"Skipping unsupported track codec '{codec}' (Track ID: {track_id})")
             continue
 
-        # --- Descriptive Tagging Logic ---
-        sanitized_name = re.sub(r"[^a-zA-Z0-9]+", "_", track_name).lower().strip("_")
-        tag = ""
-        # Define keywords for track name matching
-        cc_keywords = {"caption", "cc", "sdh"}
-        song_keywords = {"song", "sign"}
-        forced_keywords = {"forced"}
-        # Broad matching for various track types
-        if any(kw in sanitized_name for kw in cc_keywords):
-            tag = "cc"
-        elif any(kw in sanitized_name for kw in song_keywords):
-            tag = "songs"
-        elif any(kw in sanitized_name for kw in forced_keywords):
-            tag = "forced"
+        # --- Filtering logic ---
+        if lang_code not in {"eng", "en", "und"}:
+            info(f"Skipping track #{track_id} with non-target language: '{lang_code}'")
+            continue
 
-        # --- Filename Generation ---
-        lang_code = "eng" if lang in ("eng", "en") else "und"
-        out_path = _generate_unique_filepath(mkv_path.stem, out_dir, lang_code, tag, ext, generated_filenames_this_run)
-        generated_filenames_this_run.append(out_path)
+        # --- Create a tag for the filename ---
+        tag_parts = [t.strip() for t in track_name.split(",") if t.strip()]
+        if is_forced and "forced" not in tag_parts:
+            tag_parts.append("forced")
+        tag = ".".join(tag_parts)
 
-        if out_path.exists() and not OVERWRITE:
-            info(f"Skipping track (exists): {out_path.name}")
+        # --- Determine paths ---
+        extracted_path = _generate_unique_filepath(mkv_path.stem, out_dir, lang_code, tag, ext, generated_paths)
+        srt_output_path = _generate_unique_filepath(mkv_path.stem, srt_dir, lang_code, tag, ".srt", generated_paths)
+        generated_paths.extend([extracted_path, srt_output_path])
+        this_track = SubtitleTrack(extracted_path, mkv_path.stem, lang_code, tag, track_type, srt_output_path)
+
+        # --- Extraction ---
+        if extracted_path.exists() and not OVERWRITE:
+            info(f"Extraction skipped, file already exists: {extracted_path.name}")
         else:
-            info(f"Extracting track {tid} ('{track_name or 'Untitled'}') -> {out_path.name}")
-            if not DRY_RUN:
+            info(f"    Extracting track #{track_id} ({codec}, lang={lang_code}) to {extracted_path.name}")
+            # VobSub is a pair (.idx + .sub); mkvextract creates both for .sub
+            extract_target_path = extracted_path.with_suffix(".sub") if codec == "S_VOBSUB" else extracted_path
+            # https://mkvtoolnix.download/doc/mkvextract.html
+            extract_cmd = [MKVEXTRACT, str(mkv_path), "tracks", f"{track_id}:{extract_target_path}"]
+            if DRY_RUN:
+                info(f"    DRY-RUN: Would extract to {extracted_path.name}")
+                info(f"    DRY-RUN: Would run: {' '.join(extract_cmd)}")
+            else:
                 try:
-                    # WORKAROUND: mkvextract doesn't handle multi-part extensions well
-                    # Extract to a simple temp name, then rename
-                    temp_path = out_dir / f"temp_{tid}{ext}"
-                    # For VobSub, mkvextract needs the base name and creates both .idx and .sub
-                    dest_arg = temp_path.with_suffix("") if ext == ".idx" else temp_path
-
-                    run_command([MKVEXTRACT, str(mkv_path), "tracks", f"{tid}:{dest_arg}"], check=False)
-
-                    # Rename the extracted file(s) to the desired final name
-                    if ext == ".idx":
-                        # VobSub creates two files, rename both
-                        temp_idx = temp_path.with_suffix(".idx")
-                        temp_sub = temp_path.with_suffix(".sub")
-                        final_sub_path = out_path.with_suffix(".sub")
-                        if temp_idx.exists():
-                            temp_idx.rename(out_path)
-                        if temp_sub.exists():
-                            temp_sub.rename(final_sub_path)
-                    elif temp_path.exists():
-                        # For all other types, just rename the one file
-                        temp_path.rename(out_path)
+                    run_command(extract_cmd, capture_output=False, check=True)
+                except subprocess.CalledProcessError as e:
+                    if e.returncode == 1:
+                        # Exit code 1 means mkvextract warnings occurred but file was likely still extracted
+                        warn(f"    Ignoring mkvextract warning (exit code 1) for track #{track_id}.")
                     else:
-                        warn(f"Extraction command ran, but temp file not found: {temp_path}")
+                        # If extraction fails, we can't process this track further
+                        warn(f"    Failed to extract track #{track_id} from {mkv_path.name}: {e}")
+                        continue
 
-                except Exception as e:
-                    warn(f"Failed to extract track {tid} from {mkv_path.name}: {e}")
-                    continue  # Skip adding this track to the list if extraction fails
-
-        # Add successfully extracted/found track to the list for processing
-        extracted_tracks.append(SubtitleTrack(out_path, mkv_path.stem, lang_code, tag, track_type))
+        # If here, the raw file either existed or was extracted successfully
+        all_possible_tracks.append(this_track)
 
     # --- Extract Attachments (e.g., fonts) ---
     for att in data.get("attachments", []):
-        att_id = att["id"]
         att_name = att.get("file_name")
-        if not att_name:
-            warn(f"Skipping attachment {att_id} in {mkv_path.name} due to missing filename.")
-            continue
-
-        # Sanitize attachment name and prefix with video stem to avoid collisions
-        safe_att_name = "".join(c for c in att_name if c.isalnum() or c in "._-")
-        final_name = f"{mkv_path.stem}_{safe_att_name}"
-        out_path = out_dir / final_name
-
+        att_id = att.get("id")
+        out_path = out_dir / f"{mkv_path.stem}_{att_name}"
         if out_path.exists() and not OVERWRITE:
-            info(f"Skipping attachment (exists): {out_path.name}")
             continue
+        try:
+            info(f"Extracting attachment: {att_name}")
+            if not DRY_RUN:
+                run_command([MKVEXTRACT, str(mkv_path), "attachments", f"{att_id}:{out_path}"], capture_output=False)
+        except subprocess.CalledProcessError:
+            warn(f"Failed to extract attachment {att_name} from {mkv_path.name}")
 
-        info(f"Extracting attachment {att_id} -> {out_path.name}")
-        if not DRY_RUN:
-            try:
-                run_command([MKVEXTRACT, str(mkv_path), "attachments", f"{att_id}:{out_path}"], check=False)
-            except Exception as e:
-                warn(f"Failed to extract attachment {att_id} from {mkv_path.name}: {e}")
-
-    return extracted_tracks
+    return all_possible_tracks
 
 
-def extract_subs_with_ffmpeg(video_path: Path, out_dir: Path) -> List[SubtitleTrack]:
+def extract_subs_with_ffmpeg(video_path: Path, out_dir: Path, srt_dir: Path, generated_paths: List[Path]) -> List[SubtitleTrack]:
     """Use ffmpeg to extract subtitle streams from non-MKV containers (best-effort)."""
-    extracted_tracks: List[SubtitleTrack] = []
-    for idx in range(0, 8):  # Try to extract the first 8 subtitle streams
-        # ffmpeg can often extract directly to srt
-        out_path = out_dir / f"{video_path.stem}_ffmpeg_track_{idx}.srt"
+    all_possible_tracks: List[SubtitleTrack] = []
+    info(f"Attempting to extract subtitles with ffmpeg from {video_path.name}...")
 
-        if out_path.exists() and not OVERWRITE:
-            info(f"Skipping extraction (exists): {out_path.name}")
-            # We still create a track object so it can be found by the converter
-            track = SubtitleTrack(out_path, video_path.stem, "und", f"ffmpeg_{idx}", "text")
-            extracted_tracks.append(track)
+    # ffmpeg can extract multiple subtitle streams. We'll loop through potential streams.
+    # We don't know language or tags, so we'll have to use generic names.
+    for i in range(8):  # Check for up to 8 subtitle streams
+        tag = f"stream_{i}"
+        lang_code = "und"
+
+        # Define paths for the extracted file and the final SRT
+        extracted_path = out_dir / f"{video_path.stem}.{lang_code}.{tag}.srt"
+        srt_output_path = _generate_unique_filepath(video_path.stem, srt_dir, lang_code, tag, ".srt", generated_paths)
+        generated_paths.extend([extracted_path, srt_output_path])
+
+        # Skip if the final converted file already exists
+        if srt_output_path.exists() and not OVERWRITE:
+            info(f"  Skipping stream {i}: final output {srt_output_path.name} already exists.")
+            continue
+
+        if DRY_RUN:
+            info(f"  DRY-RUN: Would attempt to extract stream {i} to {extracted_path.name}")
+            # In a dry run, we can't know if a stream exists, so we assume it does to show the full plan
+            all_possible_tracks.append(SubtitleTrack(extracted_path, video_path.stem, lang_code, tag, "text", srt_output_path))
             continue
 
         try:
-            cmd = [FFMPEG, "-y" if OVERWRITE else "-n", "-i", str(video_path), "-map", f"0:s:{idx}", "-c:s", "srt", str(out_path)]
-            if DRY_RUN:
-                info(f"[DRY-RUN] Would run: {' '.join(cmd)}")
-                # In a dry run, we can't know if it would succeed, so we don't create a track
-                continue
+            # ffmpeg command to extract a specific subtitle stream
+            cmd = [FFMPEG, "-i", str(video_path), "-map", f"0:s:{i}", "-c:s", "srt", str(extracted_path)]
+            if OVERWRITE:
+                cmd.insert(1, "-y")  # Add overwrite flag for ffmpeg
 
-            cp = run_command(cmd, capture_output=True, check=False)
-            if out_path.exists() and out_path.stat().st_size > 0:
-                info(f"ffmpeg extracted stream {idx} to {out_path.name}")
-                track = SubtitleTrack(out_path, video_path.stem, "und", f"ffmpeg_{idx}", "text")
-                extracted_tracks.append(track)
-            elif out_path.exists():
-                warn(f"ffmpeg created an empty file for track {idx}; deleting {out_path.name}")
-                out_path.unlink()
-        except Exception as e:
-            # This will catch if the stream doesn't exist, which is normal
-            if "does not contain any stream" not in str(e):
-                # Only log if there's a more serious error message
-                warn(f"ffmpeg extraction failed for stream {idx} of {video_path.name}: {e}")
+            run_command(cmd, check=True)
 
-    return extracted_tracks
+            # If extraction is successful and the file is not empty, add it to the list
+            if extracted_path.exists() and extracted_path.stat().st_size > 0:
+                info(f"  Successfully extracted stream {i} to {extracted_path.name}")
+                all_possible_tracks.append(SubtitleTrack(extracted_path, video_path.stem, lang_code, tag, "text", srt_output_path))
+            else:
+                # If the command succeeded but created an empty file, clean it up
+                extracted_path.unlink(missing_ok=True)
+
+        except subprocess.CalledProcessError as e:
+            # This is expected when a stream doesn't exist, so we can break the loop.
+            if "Subtitle stream" in e.stderr and "not found" in e.stderr:
+                info(f"  No more subtitle streams found (stopped at index {i}).")
+                break
+            warn(f"  ffmpeg failed on stream {i} for {video_path.name}: {e.stderr}")
+
+    if not all_possible_tracks:
+        info("No new subtitle streams were extracted by ffmpeg for this video.")
+
+    return all_possible_tracks
 
 
-def convert_image_sub_to_srt(image_sub_path: Path, srt_output_path: Path) -> Optional[Path]:
+def convert_image_sub_to_srt(image_sub_path: Path, srt_output_path: Path) -> bool:
     """
     Attempt to OCR an image-based subtitle file to a specified .srt path.
-    The srt_output_path is pre-calculated to be unique.
+    The srt_output_path is pre-calculated to be unique. Returns True on success.
     """
+    # Check if file is empty, which can happen with sparse "signs" tracks
+    if not image_sub_path.exists() or image_sub_path.stat().st_size == 0:
+        warn(f"Skipping empty or missing image subtitle file: {image_sub_path.name}")
+        return False
+
+    # Use a simple, static filename for temporary output of subtitleedit,
+    # as it cannot handle complex names (e.g. with periods)
+    temp_output_path = image_sub_path.parent / f"temp_ocr_output.srt"
+
+    # https://github.com/SubtitleEdit/subtitleedit-cli
+    # subtitleedit <input_file> <format_name> /outputfilename:<full_path>
+    cmd = [
+        SUBTITLEEDIT,
+        str(image_sub_path),
+        "subrip",  # format name for .srt
+        f"/outputfilename:{temp_output_path}",
+    ]
+    if OVERWRITE:
+        cmd.append("/overwrite")
+
+    if DRY_RUN:
+        info(f"DRY-RUN: Would OCR: {image_sub_path.name} -> {srt_output_path.name}")
+        info(f"DRY-RUN: Would run: {' '.join(cmd)}")
+        return True
+    else:
+        info(f"Attempting OCR using SubtitleEdit on {image_sub_path.name}")
+
     try:
-        info(f"Attempting OCR with Subtitle Edit on {image_sub_path.name}")
-        # https://github.com/SubtitleEdit/subtitleedit-cli
-        # subtitleedit <input_file> <format_name> /outputfilename:<full_path>
-        cmd = [
-            SUBTITLEEDIT,
-            str(image_sub_path),
-            "subrip",  # format name for .srt
-            f"/outputfilename:{srt_output_path}",
-        ]
-        if OVERWRITE:
-            cmd.append("/overwrite")
+        run_command(cmd)
 
-        if DRY_RUN:
-            info(f"[DRY-RUN] Would OCR: {image_sub_path.name} -> {srt_output_path.name}")
-            info(f"[DRY-RUN] Would run: {' '.join(cmd)}")
-            return srt_output_path
-
-        run_command(cmd, capture_output=True)
-
-        if srt_output_path.exists():
-            info(f"OCR Succeeded: {image_sub_path.name} -> {srt_output_path.name}")
-            return srt_output_path
+        if temp_output_path.exists():
+            # Rename the temp output to its true filename
+            temp_output_path.rename(srt_output_path)
+            info(f"Successfully OCR'd and moved to: {srt_output_path.name}")
+            return True
         else:
-            warn(f"OCR command ran but output file was not created: {srt_output_path.name}")
+            warn(f"OCR of {image_sub_path.name} failed.  Output file not created.")
+            return False
 
     except Exception as e:
-        warn(f"OCR failed for {image_sub_path.name}: {e}")
-
-    return None
+        warn(f"An error occurred during OCR for {image_sub_path.name}: {e}")
+        return False
+    finally:
+        # Clean up the temporary file this function created (if error left behind)
+        if not DRY_RUN:
+            temp_output_path.unlink(missing_ok=True)
 
 
 # ------------------------ High-Level Flow ------------------------
@@ -506,38 +572,12 @@ def find_files(path: Path, exts: set[str]) -> List[Path]:
     return sorted(list(set(found)))
 
 
-def _create_track_from_loose_file(sub_path: Path, base_path: Path) -> SubtitleTrack:
-    """Creates a SubtitleTrack object from a loose subtitle file."""
-    # Try to infer language and tags from filename, e.g., "Movie.en.forced.srt"
-    stem = sub_path.stem
-    parts = stem.split(".")
-    lang_code = "und"
-    tag = ""
-    if len(parts) > 1:
-        # A simple approach: assume the last part before the extension is the language
-        # (not perfect but a reasonable default)
-        # e.g., Movie.eng.srt -> lang_code='eng'
-        lang_code = parts[-1]
-        # Could add more logic here to find tags like 'sdh', 'forced'
-
-    # Try to associate with a video file of the same name, otherwise use its own stem
-    video_stem = sub_path.stem
-    for video_ext in VIDEO_EXTS:
-        if (base_path / f"{sub_path.stem}{video_ext}").exists():
-            video_stem = sub_path.stem
-            break
-
-    track_type = "image" if sub_path.suffix.lower() in IMAGE_EXTS else "text"
-    return SubtitleTrack(sub_path, video_stem, lang_code, tag, track_type)
-
-
 def batch_convert(path: Path):
     """
     Main orchestration function.
-    1. Creates output directories.
-    2. Scans for videos and processes them one by one.
-    3. For each video, extracts all subtitle tracks and converts them.
-    4. Scans for any remaining "loose" subtitle files and converts them.
+    1. Scans for all video and subtitle files to create a work plan.
+    2. Processes each video file and its tracks sequentially (extract -> convert).
+    3. Processes loose subtitle files.
     """
     if not path.exists():
         warn(f"Path does not exist: {path}")
@@ -550,71 +590,81 @@ def batch_convert(path: Path):
         extraction_dir.mkdir(exist_ok=True)
         srt_dir.mkdir(exist_ok=True)
 
-    # --- Initialize ---
     success = skipped = failed = 0
-    generated_srt_paths_this_run: List[Path] = []
+    generated_paths: List[Path] = []  # for unique filenames
 
-    # --- Phase 1: Find and process all videos ---
+    # --- Phase 1: Scan for all video files and loose subtitle files ---
     videos_to_scan = find_files(path, VIDEO_EXTS)
-    if not videos_to_scan:
-        info("No video files found to scan.")
-    else:
-        info(f"Found {len(videos_to_scan)} video file(s) to scan for subtitles.")
+    all_sub_files = find_files(path, TEXT_EXTS | IMAGE_EXTS)
+    loose_sub_files = [f for f in all_sub_files if srt_dir.resolve() not in f.parents and extraction_dir.resolve() not in f.parents and f.suffix != ".sub"]
+
+    if not videos_to_scan and not loose_sub_files:
+        info("No video or subtitle files found to process.")
+        return
+
+    # --- Phase 2: Process each video file sequentially ---
+    if videos_to_scan:
+        info(f"Found {len(videos_to_scan)} video file(s) to process.")
         for video_path in videos_to_scan:
+            info("")
             info(f"--- Processing video: {video_path.name} ---")
             tracks_to_process: List[SubtitleTrack] = []
-            if video_path.suffix.lower() == ".mkv":
-                tracks_to_process = extract_subs_from_mkv(video_path, extraction_dir)
+            ext = video_path.suffix.lower()
+
+            if ext == ".mkv":
+                tracks_to_process = extract_subs_from_mkv(video_path, extraction_dir, srt_dir, generated_paths)
             else:
-                tracks_to_process = extract_subs_with_ffmpeg(video_path, extraction_dir)
+                tracks_to_process = extract_subs_with_ffmpeg(video_path, extraction_dir, srt_dir, generated_paths)
 
             if not tracks_to_process:
-                info("No subtitle tracks found or extracted for this video.")
+                info("No new or relevant subtitle tracks found for this video.")
                 continue
 
-            info(f"Found {len(tracks_to_process)} track(s) to process for this video.")
-            for track in tracks_to_process:
-                srt_output_path = _generate_unique_filepath(track.video_stem, srt_dir, track.lang_code, track.tag, ".srt", generated_srt_paths_this_run)
-                generated_srt_paths_this_run.append(srt_output_path)
+            info(f"Found {len(tracks_to_process)} track(s) to convert for {video_path.name}.")
+            for i, track in enumerate(tracks_to_process):
+                info(f"  - Processing track {i+1}/{len(tracks_to_process)} ('{track.tag or track.type}')...")
 
+                if track.srt_path.exists() and not OVERWRITE:
+                    info(f"    Skipping, output already exists: {track.srt_path.name}")
+                    skipped += 1
+                    continue
+
+                result = False
                 if track.type == "text":
-                    if convert_text_sub_to_srt(track.source_path, srt_output_path):
-                        success += 1
-                    else:
-                        failed += 1
+                    result = convert_text_sub_to_srt(track.source_path, track.srt_path)
                 elif track.type == "image":
-                    if convert_image_sub_to_srt(track.source_path, srt_output_path):
-                        success += 1
-                    else:
-                        failed += 1
+                    result = convert_image_sub_to_srt(track.source_path, track.srt_path)
 
-    # --- Phase 2: Find and process loose subtitle files ---
-    all_sub_files = find_files(path, TEXT_EXTS | IMAGE_EXTS)
-    # This filter does three things:
-    # 1. `extraction_dir not in f.parents`: Keeps ignoring extracted files
-    # 2. `srt_dir not in f.parents`: Prevents re-processing of our own output
-    # 3. `f.suffix != ".sub"`: Skips the raw VobSub data files (the .idx is the one to process)
-    loose_sub_files = [f for f in all_sub_files if extraction_dir not in f.parents and srt_dir not in f.parents and f.suffix != ".sub"]
+                if result:
+                    success += 1
+                else:
+                    failed += 1
+            info("")  # Add a blank line for readability after processing all tracks for a video
 
+    # --- Phase 3: Process loose subtitle files ---
     if loose_sub_files:
         info(f"--- Processing {len(loose_sub_files)} loose subtitle file(s) ---")
-        for sub_path in loose_sub_files:
-            track = _create_track_from_loose_file(sub_path, base_path)
-            srt_output_path = _generate_unique_filepath(track.video_stem, srt_dir, track.lang_code, track.tag, ".srt", generated_srt_paths_this_run)
-            generated_srt_paths_this_run.append(srt_output_path)
+        for sub_file_path in loose_sub_files:
+            track = _create_track_from_loose_file(sub_file_path, base_path, srt_dir, generated_paths)
+            info(f"  - Processing loose file: {track.source_path.name}")
 
+            if track.srt_path.exists() and not OVERWRITE:
+                info(f"    Skipping, output already exists: {track.srt_path.name}")
+                skipped += 1
+                continue
+
+            result = False
             if track.type == "text":
-                if convert_text_sub_to_srt(track.source_path, srt_output_path):
-                    success += 1
-                else:
-                    failed += 1
+                result = convert_text_sub_to_srt(track.source_path, track.srt_path)
             elif track.type == "image":
-                if convert_image_sub_to_srt(track.source_path, srt_output_path):
-                    success += 1
-                else:
-                    failed += 1
+                result = convert_image_sub_to_srt(track.source_path, track.srt_path)
 
-    info(f"--- All processing complete ---")
+            if result:
+                success += 1
+            else:
+                failed += 1
+
+    info("--- All processing complete ---")
     info(f"Done. Succeeded: {success}, Skipped: {skipped}, Failed: {failed}.")
 
 
@@ -682,3 +732,6 @@ if __name__ == "__main__":
 # Run the live-mounted dev script:
 # python /app/dev/convert-subtitles.py --dry-run "/mnt/hdd-01/path/to/videos"
 # python /app/dev/convert-subtitles.py "/mnt/hdd-01/path/to/videos"
+
+# python /app/dev/convert-subtitles.py "/mnt/hdd-01/_Downloads/_Torrents/Done/Sailor Moon (1992) S01 (1080p BluRay x265 10bit DTS 2.0 English + Japanese Bluespots)"
+# python /app/dev/convert-subtitles.py "/mnt/hdd-01/_Downloads/_Torrents/Done/Imma Youjo (JP EN RU)"
