@@ -93,7 +93,7 @@ def warn(msg: str):
 # Executes an external command as a subprocess and returns the result
 # - capture_output: If true, prints the standard output and error
 # - check: If true, raises a CalledProcessError if the command exits with a non-zero status
-def run_command(cmd: List[str], capture_output: bool = True, check: bool = False) -> subprocess.CompletedProcess:
+def run_command(cmd: List[str], capture_output: bool = True, check: bool = False, cwd: str | Path | None = None) -> subprocess.CompletedProcess:
     """Run a command, raise on non-zero exit while printing a helpful message."""
     # info(f"Running command: {' '.join(cmd)}")
     try:
@@ -104,14 +104,15 @@ def run_command(cmd: List[str], capture_output: bool = True, check: bool = False
             stdout=subprocess.PIPE if capture_output else None,
             stderr=subprocess.PIPE if capture_output else None,
             text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=cwd,
         )
     except subprocess.CalledProcessError as e:
         warn(f"Command failed: {' '.join(cmd)}")
         if capture_output:
-            if e.stdout:
-                info(f"stdout: {e.stdout.strip()}")
-            if e.stderr:
-                warn(f"stderr: {e.stderr.strip()}")
+            warn(f"  stdout: {e.stdout.strip()}")
+            warn(f"  stderr: {e.stderr.strip()}")
         raise
 
 
@@ -266,25 +267,31 @@ def _generate_unique_filepath(
     Generates a unique, Plex-compliant, and length-safe filepath.
     Handles filename collisions by appending a counter (_2, _3, etc.).
     Ensures uniqueness within the current script run via `generated_paths`.
+    Format: [base_stem].[tag].[lang_code].[ext]
     """
+    # Sanitize the tag by replacing spaces with underscores for shell safety
+    safe_tag = tag.replace(" ", "-")
+
+    # Start with the video name, then add the descriptive tag first
+    name_with_tag = base_stem
+    if safe_tag:
+        name_with_tag = f"{base_stem}.{safe_tag}"
+
+    # The final name part includes the language
     final_name_part = f".{lang_code}"
-    if tag:
-        final_name_part += f".{tag}"
 
     counter = 1
     while True:
-        current_suffix = f"_{counter}" if counter > 1 else ""
+        suffix = f"_{counter}" if counter > 1 else ""
+        # Combine parts and truncate if necessary to stay within safe limits
+        final_name = f"{name_with_tag}{final_name_part}{suffix}{ext}"
+        if len(final_name) > MAX_FILENAME_LEN:
+            # Truncate the middle part (end of original filename) if too long
+            cutoff = len(final_name) - MAX_FILENAME_LEN
+            final_name = f"{base_stem[:-cutoff]}{safe_tag}{final_name_part}{suffix}{ext}"
 
-        # Dynamically calculate the max length for the base name
-        suffix_len = len(final_name_part) + len(current_suffix) + len(ext)
-        max_base_len = MAX_FILENAME_LEN - suffix_len
-        truncated_stem = base_stem[:max_base_len]
-
-        out_path = out_dir / f"{truncated_stem}{final_name_part}{current_suffix}{ext}"
-
-        # A path is unique if it's not in our list for this run, AND
-        # it either doesn't exist, or we're in overwrite mode.
-        if out_path not in generated_paths and not (out_path.exists() and not OVERWRITE):
+        out_path = out_dir / final_name
+        if out_path not in generated_paths:
             break
         counter += 1
 
@@ -438,7 +445,7 @@ def extract_subs_from_mkv(mkv_path: Path, out_dir: Path, srt_dir: Path, generate
     for att in data.get("attachments", []):
         att_name = att.get("file_name")
         att_id = att.get("id")
-        out_path = out_dir / f"{mkv_path.stem}_{att_name}"
+        out_path = out_dir / f"{mkv_path.stem}.{att_name}"
         if out_path.exists() and not OVERWRITE:
             continue
         try:
@@ -517,6 +524,15 @@ def convert_image_sub_to_srt(image_sub_path: Path, srt_output_path: Path) -> boo
         warn(f"Skipping empty or missing image subtitle file: {image_sub_path.name}")
         return False
 
+    # For VobSub (.sub), the .idx file must be used as the input for tools
+    input_file_for_tool = image_sub_path
+    if image_sub_path.suffix.lower() == ".sub":
+        idx_path = image_sub_path.with_suffix(".idx")
+        if not idx_path.exists():
+            warn(f"Cannot perform OCR on '{image_sub_path.name}': Missing corresponding '.idx' file.")
+            return False
+        input_file_for_tool = idx_path
+
     # Use a simple, static filename for temporary output of subtitleedit,
     # as it cannot handle complex names (e.g. with periods)
     temp_output_path = image_sub_path.parent / f"temp_ocr_output.srt"
@@ -525,34 +541,38 @@ def convert_image_sub_to_srt(image_sub_path: Path, srt_output_path: Path) -> boo
     # subtitleedit <input_file> <format_name> /outputfilename:<full_path>
     cmd = [
         SUBTITLEEDIT,
-        str(image_sub_path),
+        # str(input_file_for_tool),
+        input_file_for_tool.name,  # Use relative filename
         "subrip",  # format name for .srt
         f"/outputfilename:{temp_output_path}",
+        '/ocrdb:"Latin"',  # Explicitly specify the OCR database
     ]
     if OVERWRITE:
         cmd.append("/overwrite")
 
     if DRY_RUN:
-        info(f"DRY-RUN: Would OCR: {image_sub_path.name} -> {srt_output_path.name}")
+        info(f"DRY-RUN: Would OCR: {input_file_for_tool.name} -> {srt_output_path.name}")
         info(f"DRY-RUN: Would run: {' '.join(cmd)}")
         return True
     else:
-        info(f"Attempting OCR using SubtitleEdit on {image_sub_path.name}")
+        info(f"Attempting OCR using SubtitleEdit on {input_file_for_tool.name}")
 
     try:
-        run_command(cmd)
+        # run_command(cmd)
+        # run_command(cmd, check=True)
+        run_command(cmd, check=True, cwd=input_file_for_tool.parent)
 
         if temp_output_path.exists():
             # Rename the temp output to its true filename
-            temp_output_path.rename(srt_output_path)
-            info(f"Successfully OCR'd and moved to: {srt_output_path.name}")
+            shutil.move(str(temp_output_path), str(srt_output_path))
+            info(f"Successfully OCR'd: {input_file_for_tool.name} -> {srt_output_path.name}")
             return True
         else:
-            warn(f"OCR of {image_sub_path.name} failed.  Output file not created.")
+            warn(f"OCR of {input_file_for_tool.name} failed.  Output file not created.")
             return False
 
     except Exception as e:
-        warn(f"An error occurred during OCR for {image_sub_path.name}: {e}")
+        warn(f"An error occurred during OCR for {input_file_for_tool.name}: {e}")
         return False
     finally:
         # Clean up the temporary file this function created (if error left behind)
@@ -732,6 +752,3 @@ if __name__ == "__main__":
 # Run the live-mounted dev script:
 # python /app/dev/convert-subtitles.py --dry-run "/mnt/hdd-01/path/to/videos"
 # python /app/dev/convert-subtitles.py "/mnt/hdd-01/path/to/videos"
-
-# python /app/dev/convert-subtitles.py "/mnt/hdd-01/_Downloads/_Torrents/Done/Sailor Moon (1992) S01 (1080p BluRay x265 10bit DTS 2.0 English + Japanese Bluespots)"
-# python /app/dev/convert-subtitles.py "/mnt/hdd-01/_Downloads/_Torrents/Done/Imma Youjo (JP EN RU)"
