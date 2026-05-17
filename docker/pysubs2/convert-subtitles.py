@@ -274,16 +274,24 @@ def _generate_unique_filename(
 
     counter = 1
     while True:
-        counter_str = f"_{counter}" if counter > 1 else ""
-        full_tag = f".{safe_tag}{counter_str}" if safe_tag else ""
-        # Calculate the maximum allowed length for the base_stem
-        allowed_len = MAX_FILENAME_LEN - (len(full_tag) + len(suffix))
-        # Truncate the base_stem if necessary
-        truncated_stem = base_stem if len(base_stem) <= allowed_len else base_stem[:allowed_len]
-        # Assemble the final path
-        out_path = out_dir / f"{truncated_stem}{full_tag}{suffix}"
+        middle_part = f".{safe_tag}" if safe_tag else ""
+        if counter > 1:
+            middle_part = f"{middle_part}_{counter}"
 
-        if out_path not in generated_paths and not out_path.exists():
+        # Ensure total filename length doesn't exceed OS limits
+        ideal_name = f"{base_stem}{middle_part}{suffix}"
+        if len(ideal_name) > MAX_FILENAME_LEN:
+            # Calculate the maximum allowed length for the base_stem
+            allowed_len = MAX_FILENAME_LEN - len(middle_part) - len(suffix)
+            truncated_stem = base_stem[:allowed_len]
+            out_path = out_dir / f"{truncated_stem}{middle_part}{suffix}"
+        else:
+            out_path = out_dir / ideal_name
+
+        # Only check against paths generated this run
+        # If it exists on disk but not in generated_paths, it's from a previous
+        # run - return it so the skipped logic catches it
+        if out_path not in generated_paths:
             break
         counter += 1
 
@@ -574,32 +582,39 @@ def convert_image_sub_to_srt(image_sub_path: Path, srt_output_path: Path) -> boo
             return True
 
         # Run the command from inside the temporary directory
-        run_command(cmd, check=True, cwd=temp_work_dir)
+        # Use check=False to silently handle failures without dumping big stack traces
+        se_result = run_command(cmd, check=False, cwd=temp_work_dir)
 
-        if temp_output_path.exists():
+        if se_result.returncode == 0 and temp_output_path.exists():
             shutil.move(temp_output_path, srt_output_path)
             info(f"Successfully OCR'd: {input_file_for_tool.name} -> {srt_output_path.name}")
             return True
         else:
-            warn(f"OCR command succeeded, but no output file was found for {input_file_for_tool.name}")
-            return False
+            info(f"OCR with SubtitleEdit failed for {input_file_for_tool.name}.  Falling back to ffmpeg.")
 
-    except Exception as e:
-        warn(f"SubtitleEdit failed for {input_file_for_tool.name}: {e}.  Falling back to ffmpeg.")
-        try:
-            info(f"Attempting OCR fallback using ffmpeg on {input_file_for_tool.name}")
             # ffmpeg needs the original full path
             ffmpeg_cmd = [FFMPEG, "-y" if OVERWRITE else "-n", "-i", str(input_file_for_tool), str(srt_output_path)]
-            run_command(ffmpeg_cmd, check=True)
-            if srt_output_path.exists() and srt_output_path.stat().st_size > 0:
+            ff_result = run_command(ffmpeg_cmd, check=False)
+
+            if ff_result.returncode == 0 and srt_output_path.exists() and srt_output_path.stat().st_size > 0:
                 info(f"Successfully OCR'd with ffmpeg: {input_file_for_tool.name} -> {srt_output_path.name}")
                 return True
+
+            # Intercept the exact empty-track error!
+            elif ff_result.returncode != 0 and ff_result.stderr and "Output file does not contain any stream" in ff_result.stderr:
+                info(f"Confirmed empty data track: {input_file_for_tool.name} (likely a blank 'Signs' stream).")
+                info(f"Creating an empty SRT file to correctly skip this in future runs.")
+                srt_output_path.touch()  # This satisfies the script's idempotency requirement!
+                return True
+
             else:
-                warn(f"ffmpeg fallback failed to produce an output file for {input_file_for_tool.name}")
+                warn(f"Both OCR methods failed for {input_file_for_tool.name}.")
+                if ff_result.stderr:
+                    # Print just the last line to avoid spamming the ffmpeg build configuration
+                    error_msg = ff_result.stderr.strip().split("\n")[-1]
+                    warn(f"  ffmpeg error: {error_msg}")
                 return False
-        except Exception as ffmpeg_e:
-            warn(f"ffmpeg fallback also failed for {input_file_for_tool.name}: {ffmpeg_e}")
-            return False
+
     finally:
         # Clean up the entire temporary directory
         if temp_work_dir.exists():
