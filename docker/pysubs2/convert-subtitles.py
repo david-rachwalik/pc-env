@@ -30,14 +30,14 @@ import pysubs2
 
 @dataclass
 class SubtitleTrack:
-    """Represents a single subtitle track, from source to destination."""
+    """Represents a subtitle track to be processed."""
 
-    source_path: Path  # path to raw subtitle file (e.g., in _extracted_subs)
-    video_stem: str  # base name of associated video file (e.g., "My Movie")
-    lang_code: str  # ISO 639-2 language code (e.g., "en", "und")
-    tag: str  # optional tag (e.g., "forced", "sdh")
-    type: str  # "text" or "image"
-    srt_path: Path  # final, calculated destination path for .srt file
+    raw_path: Path  # Path to the extracted (raw) subtitle file
+    video_stem: str  # Base name of the associated video file
+    tag: str  # Descriptive tag (e.g., 'Signs', 'Full')
+    lang: str  # Language code (e.g., 'eng')
+    track_type: str  # 'text' or 'image'
+    srt_path: Path  # Final destination path for converted .srt file
 
 
 # ------------------------ Configuration ------------------------
@@ -119,9 +119,8 @@ def run_command(cmd: List[str], capture_output: bool = True, check: bool = False
 def is_writable(path: Path) -> bool:
     """Check if a directory is writable by creating and deleting a test file."""
     try:
-        path.mkdir(parents=True, exist_ok=True)
-        test_file = path / ".pysubs2_write_test"
-        test_file.write_text("x")
+        test_file = path / ".writable_test"
+        test_file.touch()
         test_file.unlink()
         return True
     except Exception:
@@ -201,6 +200,7 @@ def process_subs(subs: pysubs2.SSAFile) -> List[pysubs2.SSAEvent]:
         ev_dur = duration_ms(ev)
         if (ev_text_len <= SMALL_CHAR_LEN or ev_dur <= SMALL_DUR_MS) and n > 1:
             if i > 0:
+                # Merge with previous if small
                 final[-1] = merge_events(final[-1], ev)
             elif i + 1 < n:
                 events[i + 1] = merge_events(ev, events[i + 1])
@@ -225,7 +225,7 @@ def process_subs(subs: pysubs2.SSAFile) -> List[pysubs2.SSAEvent]:
 def convert_text_sub_to_srt(input_path: Path, output_path: Path) -> bool:
     """Load any text-based subtitle file, run cleaning pipeline, and save as SRT."""
     # Try a list of common encodings for text files
-    encodings_to_try = ["utf-8", "cp1251", "latin-1"]
+    encodings_to_try = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
     subs = None
     for enc in encodings_to_try:
         try:
@@ -235,7 +235,7 @@ def convert_text_sub_to_srt(input_path: Path, output_path: Path) -> bool:
             continue  # Try the next encoding
 
     if subs is None:
-        warn(f"Failed to load {input_path.name} with any of the attempted encodings.")
+        warn(f"Could not decode text subtitle file: {input_path.name}")
         return False
 
     processed = process_subs(subs)
@@ -247,7 +247,7 @@ def convert_text_sub_to_srt(input_path: Path, output_path: Path) -> bool:
     setattr(outsubs, "events", processed)
 
     if DRY_RUN:
-        info(f"[DRY-RUN] Would convert: {input_path.name} -> {output_path.name} ({len(processed)} lines)")
+        info(f"DRY RUN: Would convert {input_path.name} -> {output_path.name} ({len(processed)} lines)")
         return True
 
     outsubs.save(str(output_path), format_="srt")
@@ -255,11 +255,11 @@ def convert_text_sub_to_srt(input_path: Path, output_path: Path) -> bool:
     return True
 
 
-def _generate_unique_filepath(
+def _generate_unique_filename(
     base_stem: str,
     out_dir: Path,
-    lang_code: str,
     tag: str,
+    lang_code: str,
     ext: str,
     generated_paths: List[Path],
 ) -> Path:
@@ -269,29 +269,21 @@ def _generate_unique_filepath(
     Ensures uniqueness within the current script run via `generated_paths`.
     Format: [base_stem].[tag].[lang_code].[ext]
     """
-    # Sanitize the tag by replacing spaces with underscores for shell safety
-    safe_tag = tag.replace(" ", "-")
-
-    # Start with the video name, then add the descriptive tag first
-    name_with_tag = base_stem
-    if safe_tag:
-        name_with_tag = f"{base_stem}.{safe_tag}"
-
-    # The final name part includes the language
-    final_name_part = f".{lang_code}"
+    safe_tag = tag.replace(" ", "-")  # Sanitize the tag for shell safety
+    suffix = f".{lang_code}{ext}"
 
     counter = 1
     while True:
-        suffix = f"_{counter}" if counter > 1 else ""
-        # Combine parts and truncate if necessary to stay within safe limits
-        final_name = f"{name_with_tag}{final_name_part}{suffix}{ext}"
-        if len(final_name) > MAX_FILENAME_LEN:
-            # Truncate the middle part (end of original filename) if too long
-            cutoff = len(final_name) - MAX_FILENAME_LEN
-            final_name = f"{base_stem[:-cutoff]}{safe_tag}{final_name_part}{suffix}{ext}"
+        counter_str = f"_{counter}" if counter > 1 else ""
+        full_tag = f".{safe_tag}{counter_str}" if safe_tag else ""
+        # Calculate the maximum allowed length for the base_stem
+        allowed_len = MAX_FILENAME_LEN - (len(full_tag) + len(suffix))
+        # Truncate the base_stem if necessary
+        truncated_stem = base_stem if len(base_stem) <= allowed_len else base_stem[:allowed_len]
+        # Assemble the final path
+        out_path = out_dir / f"{truncated_stem}{full_tag}{suffix}"
 
-        out_path = out_dir / final_name
-        if out_path not in generated_paths:
+        if out_path not in generated_paths and not out_path.exists():
             break
         counter += 1
 
@@ -300,40 +292,39 @@ def _generate_unique_filepath(
 
 def _parse_subtitle_filename(sub_path: Path) -> tuple[str, str, str]:
     """
-    Infers language and tag from a subtitle filename.
-    Example: "Movie.en.forced.srt" -> ("en", "forced", "Movie")
-    Returns (lang_code, tag, stem)
+    Infers tag, language, and stem from a subtitle filename,
+    matching the format created by _generate_unique_filepath.
+    Example: "Movie.Name.Part.Signs.eng.srt" -> ("eng", "Signs", "Movie.Name.Part")
+    Returns (tag, lang_code, base_stem)
     """
-    # For .srt files we want to clean in-place, the stem is the filename without .srt
-    if sub_path.suffix.lower() == ".srt":
-        stem_parts = sub_path.stem.split(".")
-        # Assumes format like "file.eng.tag"
-        if len(stem_parts) > 1:
-            lang = stem_parts[1]
-            tag = ".".join(stem_parts[2:])
-            return lang, tag, sub_path.stem
-        else:
-            # It's just "file.srt", so treat it as cleaning itself
-            return sub_path.suffix.strip("."), "", sub_path.stem
-
-    # For other formats, infer from the full stem
     stem = sub_path.stem
     parts = stem.split(".")
+
+    # Set default values for the fallback case (whole stem as base_stem)
     lang_code = "und"
     tag = ""
-    if len(parts) > 1:
-        # Assume the second to last part is the language
-        lang_code = parts[-1] if len(parts) == 2 else parts[-2]
-        # Assume the last part is a tag if there are more than 2 parts
-        if len(parts) > 2:
-            tag = parts[-1]
+    base_stem = stem
 
-    return lang_code, tag, stem
+    # Attempt to parse if the filename structure matches expected format
+    # Need at least 2 parts (e.g., "Movie.eng") and last part must look like a lang code (2-3 letter)
+    if len(parts) >= 2 and len(parts[-1]) in (2, 3):
+        lang_code = parts[-1]
+        # If there are only 2 parts, there's no tag
+        if len(parts) == 2:
+            tag = ""
+            base_stem = parts[0]
+        # If more than 2 parts, tag is before the lang code
+        else:
+            tag = parts[-2]
+            # Everything before is base stem
+            base_stem = ".".join(parts[:-2])
+
+    return lang_code, tag, base_stem
 
 
 def _create_track_from_loose_file(sub_path: Path, base_path: Path, srt_dir: Path, generated_paths: List[Path]) -> SubtitleTrack:
     """Creates a SubtitleTrack object from a loose subtitle file using filename parsing."""
-    lang_code, tag, stem = _parse_subtitle_filename(sub_path)
+    tag, lang_code, stem = _parse_subtitle_filename(sub_path)
 
     # Try to associate with a video file of the same base name, otherwise use its own stem
     video_stem = stem.split(".")[0]
@@ -345,10 +336,10 @@ def _create_track_from_loose_file(sub_path: Path, base_path: Path, srt_dir: Path
 
     track_type = "image" if sub_path.suffix.lower() in IMAGE_EXTS else "text"
 
-    srt_output_path = _generate_unique_filepath(video_stem, srt_dir, lang_code, tag, ".srt", generated_paths)
+    srt_output_path = _generate_unique_filename(video_stem, srt_dir, tag, lang_code, ".srt", generated_paths)
     generated_paths.append(srt_output_path)
 
-    return SubtitleTrack(sub_path, video_stem, lang_code, tag, track_type, srt_output_path)
+    return SubtitleTrack(sub_path, video_stem, tag, lang_code, track_type, srt_output_path)
 
 
 def extract_subs_from_mkv(mkv_path: Path, out_dir: Path, srt_dir: Path, generated_paths: List[Path]) -> List[SubtitleTrack]:
@@ -409,10 +400,10 @@ def extract_subs_from_mkv(mkv_path: Path, out_dir: Path, srt_dir: Path, generate
         tag = ".".join(tag_parts)
 
         # --- Determine paths ---
-        extracted_path = _generate_unique_filepath(mkv_path.stem, out_dir, lang_code, tag, ext, generated_paths)
-        srt_output_path = _generate_unique_filepath(mkv_path.stem, srt_dir, lang_code, tag, ".srt", generated_paths)
+        extracted_path = _generate_unique_filename(mkv_path.stem, out_dir, tag, lang_code, ext, generated_paths)
+        srt_output_path = _generate_unique_filename(mkv_path.stem, srt_dir, tag, lang_code, ".srt", generated_paths)
         generated_paths.extend([extracted_path, srt_output_path])
-        this_track = SubtitleTrack(extracted_path, mkv_path.stem, lang_code, tag, track_type, srt_output_path)
+        this_track = SubtitleTrack(extracted_path, mkv_path.stem, tag, lang_code, track_type, srt_output_path)
 
         # --- Extraction ---
         if extracted_path.exists() and not OVERWRITE:
@@ -471,7 +462,7 @@ def extract_subs_with_ffmpeg(video_path: Path, out_dir: Path, srt_dir: Path, gen
 
         # Define paths for the extracted file and the final SRT
         extracted_path = out_dir / f"{video_path.stem}.{lang_code}.{tag}.srt"
-        srt_output_path = _generate_unique_filepath(video_path.stem, srt_dir, lang_code, tag, ".srt", generated_paths)
+        srt_output_path = _generate_unique_filename(video_path.stem, srt_dir, tag, lang_code, ".srt", generated_paths)
         generated_paths.extend([extracted_path, srt_output_path])
 
         # Skip if the final converted file already exists
@@ -482,7 +473,7 @@ def extract_subs_with_ffmpeg(video_path: Path, out_dir: Path, srt_dir: Path, gen
         if DRY_RUN:
             info(f"  DRY-RUN: Would attempt to extract stream {i} to {extracted_path.name}")
             # In a dry run, we can't know if a stream exists, so we assume it does to show the full plan
-            all_possible_tracks.append(SubtitleTrack(extracted_path, video_path.stem, lang_code, tag, "text", srt_output_path))
+            all_possible_tracks.append(SubtitleTrack(extracted_path, video_path.stem, tag, lang_code, "text", srt_output_path))
             continue
 
         try:
@@ -496,7 +487,7 @@ def extract_subs_with_ffmpeg(video_path: Path, out_dir: Path, srt_dir: Path, gen
             # If extraction is successful and the file is not empty, add it to the list
             if extracted_path.exists() and extracted_path.stat().st_size > 0:
                 info(f"  Successfully extracted stream {i} to {extracted_path.name}")
-                all_possible_tracks.append(SubtitleTrack(extracted_path, video_path.stem, lang_code, tag, "text", srt_output_path))
+                all_possible_tracks.append(SubtitleTrack(extracted_path, video_path.stem, tag, lang_code, "text", srt_output_path))
             else:
                 # If the command succeeded but created an empty file, clean it up
                 extracted_path.unlink(missing_ok=True)
@@ -517,67 +508,102 @@ def extract_subs_with_ffmpeg(video_path: Path, out_dir: Path, srt_dir: Path, gen
 def convert_image_sub_to_srt(image_sub_path: Path, srt_output_path: Path) -> bool:
     """
     Attempt to OCR an image-based subtitle file to a specified .srt path.
+    Copies the extracted subtitle to temporary location to avoid modifying the original.
     The srt_output_path is pre-calculated to be unique. Returns True on success.
     """
     # Check if file is empty, which can happen with sparse "signs" tracks
     if not image_sub_path.exists() or image_sub_path.stat().st_size == 0:
-        warn(f"Skipping empty or missing image subtitle file: {image_sub_path.name}")
+        warn(f"Skipping empty image subtitle file: {image_sub_path.name}")
         return False
 
     # For VobSub (.sub), the .idx file must be used as the input for tools
+    # We must also ensure its companion .sub file is copied
     input_file_for_tool = image_sub_path
+    companion_file = None
     if image_sub_path.suffix.lower() == ".sub":
         idx_path = image_sub_path.with_suffix(".idx")
         if not idx_path.exists():
-            warn(f"Cannot perform OCR on '{image_sub_path.name}': Missing corresponding '.idx' file.")
+            warn(f"Missing .idx file for VobSub track: {image_sub_path.name}")
             return False
         input_file_for_tool = idx_path
+        companion_file = image_sub_path  # The .sub file is the companion to the .idx
+    elif image_sub_path.suffix.lower() == ".idx":
+        sub_path = image_sub_path.with_suffix(".sub")
+        if not sub_path.exists():
+            warn(f"Missing .sub file for VobSub track: {image_sub_path.name}")
+            return False
+        companion_file = sub_path  # The .idx file is the companion to the .sub
 
-    # Use a simple, static filename for temporary output of subtitleedit,
-    # as it cannot handle complex names (e.g. with periods)
-    temp_output_path = image_sub_path.parent / f"temp_ocr_output.srt"
+    # --- Safe Copy Strategy ---
+    # Create a temporary directory to isolate the OCR process
+    temp_work_dir = image_sub_path.parent / "_temp_ocr"
+    if temp_work_dir.exists():
+        shutil.rmtree(temp_work_dir)  # Clean up from any previous failed run
+    temp_work_dir.mkdir()
 
-    # https://github.com/SubtitleEdit/subtitleedit-cli
-    # subtitleedit <input_file> <format_name> /outputfilename:<full_path>
-    cmd = [
-        SUBTITLEEDIT,
-        # str(input_file_for_tool),
-        input_file_for_tool.name,  # Use relative filename
-        "subrip",  # format name for .srt
-        f"/outputfilename:{temp_output_path}",
-        '/ocrdb:"Latin"',  # Explicitly specify the OCR database
-    ]
-    if OVERWRITE:
-        cmd.append("/overwrite")
-
-    if DRY_RUN:
-        info(f"DRY-RUN: Would OCR: {input_file_for_tool.name} -> {srt_output_path.name}")
-        info(f"DRY-RUN: Would run: {' '.join(cmd)}")
-        return True
-    else:
-        info(f"Attempting OCR using SubtitleEdit on {input_file_for_tool.name}")
+    # Force safe names to avoid subtitleedit CLI argument parsing bugs
+    safe_input_name = f"ocr_input{input_file_for_tool.suffix}"
+    safe_input_path = temp_work_dir / safe_input_name
+    temp_output_path = temp_work_dir / "ocr_output.srt"
 
     try:
-        # run_command(cmd)
-        # run_command(cmd, check=True)
-        run_command(cmd, check=True, cwd=input_file_for_tool.parent)
+        # Copy the primary file to the safe name
+        shutil.copy(input_file_for_tool, safe_input_path)
+        # If there's a companion file, it needs the same base name as safe input
+        if companion_file:
+            safe_companion_path = temp_work_dir / f"ocr_input{companion_file.suffix}"
+            shutil.copy(companion_file, safe_companion_path)
+
+        info(f"Attempting OCR using SubtitleEdit on {input_file_for_tool.name}")
+
+        # https://github.com/SubtitleEdit/subtitleedit-cli
+        # subtitleedit <input_file> <format_name> /outputfilename:<full_path>
+        cmd = [
+            SUBTITLEEDIT,
+            safe_input_name,  # Use the simple, relative filename (ocr_input.idx)
+            "subrip",  # Target format (.srt)
+            f"/outputfilename:{temp_output_path.name}",  # Use a simple relative output name
+            '/ocrdb:"Latin"',  # Specify OCR database to help with format detection
+        ]
+        if OVERWRITE:
+            cmd.append("/overwrite")
+
+        if DRY_RUN:
+            info(f"DRY RUN: Would run command: {' '.join(cmd)}")
+            info(f"DRY RUN: Would move {temp_output_path.name} to {srt_output_path.name}")
+            return True
+
+        # Run the command from inside the temporary directory
+        run_command(cmd, check=True, cwd=temp_work_dir)
 
         if temp_output_path.exists():
-            # Rename the temp output to its true filename
-            shutil.move(str(temp_output_path), str(srt_output_path))
+            shutil.move(temp_output_path, srt_output_path)
             info(f"Successfully OCR'd: {input_file_for_tool.name} -> {srt_output_path.name}")
             return True
         else:
-            warn(f"OCR of {input_file_for_tool.name} failed.  Output file not created.")
+            warn(f"OCR command succeeded, but no output file was found for {input_file_for_tool.name}")
             return False
 
     except Exception as e:
-        warn(f"An error occurred during OCR for {input_file_for_tool.name}: {e}")
-        return False
+        warn(f"SubtitleEdit failed for {input_file_for_tool.name}: {e}.  Falling back to ffmpeg.")
+        try:
+            info(f"Attempting OCR fallback using ffmpeg on {input_file_for_tool.name}")
+            # ffmpeg needs the original full path
+            ffmpeg_cmd = [FFMPEG, "-y" if OVERWRITE else "-n", "-i", str(input_file_for_tool), str(srt_output_path)]
+            run_command(ffmpeg_cmd, check=True)
+            if srt_output_path.exists() and srt_output_path.stat().st_size > 0:
+                info(f"Successfully OCR'd with ffmpeg: {input_file_for_tool.name} -> {srt_output_path.name}")
+                return True
+            else:
+                warn(f"ffmpeg fallback failed to produce an output file for {input_file_for_tool.name}")
+                return False
+        except Exception as ffmpeg_e:
+            warn(f"ffmpeg fallback also failed for {input_file_for_tool.name}: {ffmpeg_e}")
+            return False
     finally:
-        # Clean up the temporary file this function created (if error left behind)
-        if not DRY_RUN:
-            temp_output_path.unlink(missing_ok=True)
+        # Clean up the entire temporary directory
+        if temp_work_dir.exists():
+            shutil.rmtree(temp_work_dir)
 
 
 # ------------------------ High-Level Flow ------------------------
@@ -612,127 +638,139 @@ def batch_convert(path: Path):
 
     success = skipped = failed = 0
     generated_paths: List[Path] = []  # for unique filenames
+    all_tracks: List[SubtitleTrack] = []
 
-    # --- Phase 1: Scan for all video files and loose subtitle files ---
-    videos_to_scan = find_files(path, VIDEO_EXTS)
-    all_sub_files = find_files(path, TEXT_EXTS | IMAGE_EXTS)
-    loose_sub_files = [f for f in all_sub_files if srt_dir.resolve() not in f.parents and extraction_dir.resolve() not in f.parents and f.suffix != ".sub"]
+    # --- 1. Find and plan work for all video files ---
+    video_files = find_files(base_path, VIDEO_EXTS)
+    # Filter out videos inside our working directories
+    video_files = [v for v in video_files if "_extracted_subs" not in str(v) and "_converted_subs" not in str(v)]
+    info(f"Found {len(video_files)} video file(s) to process.")
 
-    if not videos_to_scan and not loose_sub_files:
-        info("No video or subtitle files found to process.")
-        return
+    for video_path in video_files:
+        info("\n" + f"--- Processing video: {video_path.name} ---")
+        video_tracks: List[SubtitleTrack] = []
+        if video_path.suffix.lower() == ".mkv":
+            video_tracks = extract_subs_from_mkv(video_path, extraction_dir, srt_dir, generated_paths)
+        else:
+            # Fallback for mp4, etc.
+            video_tracks = extract_subs_with_ffmpeg(video_path, extraction_dir, srt_dir, generated_paths)
 
-    # --- Phase 2: Process each video file sequentially ---
-    if videos_to_scan:
-        info(f"Found {len(videos_to_scan)} video file(s) to process.")
-        for video_path in videos_to_scan:
-            info("")
-            info(f"--- Processing video: {video_path.name} ---")
-            tracks_to_process: List[SubtitleTrack] = []
-            ext = video_path.suffix.lower()
+        if not video_tracks:
+            continue
 
-            if ext == ".mkv":
-                tracks_to_process = extract_subs_from_mkv(video_path, extraction_dir, srt_dir, generated_paths)
-            else:
-                tracks_to_process = extract_subs_with_ffmpeg(video_path, extraction_dir, srt_dir, generated_paths)
-
-            if not tracks_to_process:
-                info("No new or relevant subtitle tracks found for this video.")
-                continue
-
-            info(f"Found {len(tracks_to_process)} track(s) to convert for {video_path.name}.")
-            for i, track in enumerate(tracks_to_process):
-                info(f"  - Processing track {i+1}/{len(tracks_to_process)} ('{track.tag or track.type}')...")
-
-                if track.srt_path.exists() and not OVERWRITE:
-                    info(f"    Skipping, output already exists: {track.srt_path.name}")
-                    skipped += 1
-                    continue
-
-                result = False
-                if track.type == "text":
-                    result = convert_text_sub_to_srt(track.source_path, track.srt_path)
-                elif track.type == "image":
-                    result = convert_image_sub_to_srt(track.source_path, track.srt_path)
-
-                if result:
-                    success += 1
-                else:
-                    failed += 1
-            info("")  # Add a blank line for readability after processing all tracks for a video
-
-    # --- Phase 3: Process loose subtitle files ---
-    if loose_sub_files:
-        info(f"--- Processing {len(loose_sub_files)} loose subtitle file(s) ---")
-        for sub_file_path in loose_sub_files:
-            track = _create_track_from_loose_file(sub_file_path, base_path, srt_dir, generated_paths)
-            info(f"  - Processing loose file: {track.source_path.name}")
-
-            if track.srt_path.exists() and not OVERWRITE:
-                info(f"    Skipping, output already exists: {track.srt_path.name}")
+        info(f"Found {len(video_tracks)} track(s) to convert for {video_path.name}.")
+        for i, track in enumerate(video_tracks):
+            info(f"  - Processing track {i+1}/{len(video_tracks)} ('{track.tag}')...")
+            if not OVERWRITE and track.srt_path.exists():
+                info(f"Final SRT already exists, skipping conversion: {track.srt_path.name}")
                 skipped += 1
                 continue
 
-            result = False
-            if track.type == "text":
-                result = convert_text_sub_to_srt(track.source_path, track.srt_path)
-            elif track.type == "image":
-                result = convert_image_sub_to_srt(track.source_path, track.srt_path)
-
-            if result:
+            # For ffmpeg extractions that go direct to SRT, the work is already done
+            if track.raw_path.suffix == ".srt" and track.raw_path.exists():
+                shutil.move(track.raw_path, track.srt_path)
                 success += 1
-            else:
-                failed += 1
+                continue
 
-    info("--- All processing complete ---")
+            if not track.raw_path.exists() or track.raw_path.stat().st_size == 0:
+                warn(f"Raw subtitle file does not exist or is empty, cannot convert: {track.raw_path.name}")
+                failed += 1
+                continue
+
+            if track.track_type == "text":
+                if convert_text_sub_to_srt(track.raw_path, track.srt_path):
+                    success += 1
+                else:
+                    failed += 1
+            elif track.track_type == "image":
+                if convert_image_sub_to_srt(track.raw_path, track.srt_path):
+                    success += 1
+                else:
+                    failed += 1
+        info("")  # Newline for readability
+
+    # --- 2. Find and plan work for "loose" subtitle files ---
+    # Only search for files in the root of the base_path, not recursively,
+    # and explicitly ignore our working directories.
+    loose_files: List[Path] = []
+    all_sub_exts = TEXT_EXTS | IMAGE_EXTS
+    for ext in all_sub_exts:
+        loose_files.extend(base_path.glob(f"*{ext}"))
+
+    if loose_files:
+        info(f"\n--- Processing {len(loose_files)} loose subtitle file(s) ---")
+        for sub_path in loose_files:
+            track = _create_track_from_loose_file(sub_path, base_path, srt_dir, generated_paths)
+            all_tracks.append(track)
+
+            info(f"  - Processing loose file: {sub_path.name}")
+            if not OVERWRITE and track.srt_path.exists():
+                info(f"Final SRT already exists, skipping conversion: {track.srt_path.name}")
+                skipped += 1
+                continue
+
+            if track.track_type == "text":
+                if convert_text_sub_to_srt(track.raw_path, track.srt_path):
+                    success += 1
+                else:
+                    failed += 1
+            elif track.track_type == "image":
+                if convert_image_sub_to_srt(track.raw_path, track.srt_path):
+                    success += 1
+                else:
+                    failed += 1
+
+    info("\n" + "--- All processing complete ---")
     info(f"Done. Succeeded: {success}, Skipped: {skipped}, Failed: {failed}.")
+    if failed > 0:
+        info("Some files failed to convert. Check warnings above.")
+    info("All done.")
 
 
 # ------------------------ CLI ------------------------
 def main():
-    """Parses command-line arguments and kicks off the conversion process."""
-    global OVERWRITE, DRY_RUN
-
-    p = argparse.ArgumentParser(
-        description="Scan folder (videos/subs) and convert subtitles to cleaned .srt (idempotent).",
+    """CLI entrypoint."""
+    parser = argparse.ArgumentParser(
+        description="Batch convert subtitle folders to .srt using pysubs2 and other tools.",
         formatter_class=argparse.RawTextHelpFormatter,
         epilog="""
-Usage Example:
-  # Run on a directory of videos
-  python3 convert-subtitles.py "/path/to/videos"
-
-  # Run in dry-run mode to see what would happen
-  python3 convert-subtitles.py --dry-run "/path/to/videos"
-
-  # Force overwrite of all existing extracted and converted files
-  python3 convert-subtitles.py --overwrite "/path/to/videos"
+Behavior:
+ - Scans for video files (mkv, mp4, etc.) and extracts their subtitle tracks.
+ - Also finds 'loose' subtitle files in the root of the target directory.
+ - Text-based subtitles (.ass, .ssa) are cleaned and converted to .srt.
+ - Image-based subtitles (.sup, .idx/.sub) are OCR'd to .srt using SubtitleEdit.
+ - Creates '_extracted_subs' for raw tracks and '_converted_subs' for final .srt files.
+ - Idempotent: skips work if the final .srt file already exists.
 """,
     )
-    p.add_argument("path", type=Path, help="Folder or file to scan (recursive).")
-    p.add_argument("--overwrite", action="store_true", help="Force re-extraction and re-conversion of existing files.")
-    p.add_argument("--dry-run", action="store_true", help="Log what would be done without changing any files.")
-    args = p.parse_args()
+    parser.add_argument(
+        "path",
+        type=Path,
+        help="Path to a folder containing media files, or a single media file.",
+    )
+    parser.add_argument(
+        "-o",
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing extracted and converted files.",
+    )
+    parser.add_argument(
+        "-d",
+        "--dry-run",
+        action="store_true",
+        help="Simulate the process without writing any files.",
+    )
+    args = parser.parse_args()
 
-    # Set global flags
+    global OVERWRITE, DRY_RUN
     OVERWRITE = args.overwrite
     DRY_RUN = args.dry_run
 
-    if not args.path.exists():
-        warn(f"Error: Input path does not exist: {args.path}")
-        sys.exit(1)
-
-    # Ensure we can write to the target directory
-    write_dir = args.path.parent if args.path.is_file() else args.path
-    if not DRY_RUN and not is_writable(write_dir):
-        warn(f"Error: Directory is not writable: {write_dir}")
-        sys.exit(1)
-
     if DRY_RUN:
-        info("--- Starting in DRY RUN mode. No files will be changed. ---")
+        info("--- DRY RUN MODE ENABLED ---")
 
     info(f"Starting batch subtitle conversion in: {args.path}")
     batch_convert(args.path)
-    info("All done.")
 
 
 if __name__ == "__main__":
