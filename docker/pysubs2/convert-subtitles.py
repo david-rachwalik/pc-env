@@ -309,8 +309,8 @@ def _parse_subtitle_filename(sub_path: Path) -> tuple[str, str, str]:
     parts = stem.split(".")
 
     # Set default values for the fallback case (whole stem as base_stem)
-    lang_code = "und"
     tag = ""
+    lang_code = "und"
     base_stem = stem
 
     # Attempt to parse if the filename structure matches expected format
@@ -327,7 +327,7 @@ def _parse_subtitle_filename(sub_path: Path) -> tuple[str, str, str]:
             # Everything before is base stem
             base_stem = ".".join(parts[:-2])
 
-    return lang_code, tag, base_stem
+    return tag, lang_code, base_stem
 
 
 def _create_track_from_loose_file(sub_path: Path, base_path: Path, srt_dir: Path, generated_paths: List[Path]) -> SubtitleTrack:
@@ -653,7 +653,7 @@ def batch_convert(path: Path):
 
     success = skipped = failed = 0
     generated_paths: List[Path] = []  # for unique filenames
-    all_tracks: List[SubtitleTrack] = []
+    processed_raw_paths: set[Path] = set()  # prevent Step 2 from double-processing Step 1
 
     # --- 1. Find and plan work for all video files ---
     video_files = find_files(base_path, VIDEO_EXTS)
@@ -675,6 +675,8 @@ def batch_convert(path: Path):
 
         info(f"Found {len(video_tracks)} track(s) to convert for {video_path.name}.")
         for i, track in enumerate(video_tracks):
+            processed_raw_paths.add(track.raw_path)  # Track what is handled in Phase 1
+
             info(f"  - Processing track {i+1}/{len(video_tracks)} ('{track.tag}')...")
             if not OVERWRITE and track.srt_path.exists():
                 info(f"Final SRT already exists, skipping conversion: {track.srt_path.name}")
@@ -683,7 +685,7 @@ def batch_convert(path: Path):
 
             # For ffmpeg extractions that go direct to SRT, the work is already done
             if track.raw_path.suffix == ".srt" and track.raw_path.exists():
-                shutil.move(track.raw_path, track.srt_path)
+                shutil.copy(track.raw_path, track.srt_path)
                 success += 1
                 continue
 
@@ -705,18 +707,38 @@ def batch_convert(path: Path):
         info("")  # Newline for readability
 
     # --- 2. Find and plan work for "loose" subtitle files ---
-    # Only search for files in the root of the base_path, not recursively,
-    # and explicitly ignore our working directories.
     loose_files: List[Path] = []
     all_sub_exts = TEXT_EXTS | IMAGE_EXTS
+
+    # Grab from root dir, and explicitly grab from the extraction dir
     for ext in all_sub_exts:
         loose_files.extend(base_path.glob(f"*{ext}"))
+        if extraction_dir.exists():
+            loose_files.extend(extraction_dir.glob(f"*{ext}"))
 
-    if loose_files:
-        info(f"\n--- Processing {len(loose_files)} loose subtitle file(s) ---")
-        for sub_path in loose_files:
+    # Cleanup the loose files list
+    final_loose_files: List[Path] = []
+    for f in sorted(list(set(loose_files))):
+        if f in processed_raw_paths:
+            continue  # Already handled directly via a video in Phase 1
+
+        # Also skip .idx if the corresponding .sub was handled in Phase 1
+        if f.suffix.lower() == ".idx" and f.with_suffix(".sub") in processed_raw_paths:
+            continue
+
+        # If it's a .sub file and has an identical .idx file, ignore the .sub
+        # (converts via .idx, so don't list the .sub as an independent track)
+        if f.suffix.lower() == ".sub":
+            idx_buddy = f.with_suffix(".idx")
+            if idx_buddy.exists() or idx_buddy.with_suffix(".IDX").exists():
+                continue
+
+        final_loose_files.append(f)
+
+    if final_loose_files:
+        info(f"\n--- Processing {len(final_loose_files)} loose/extracted subtitle file(s) ---")
+        for sub_path in final_loose_files:
             track = _create_track_from_loose_file(sub_path, base_path, srt_dir, generated_paths)
-            all_tracks.append(track)
 
             info(f"  - Processing loose file: {sub_path.name}")
             if not OVERWRITE and track.srt_path.exists():
