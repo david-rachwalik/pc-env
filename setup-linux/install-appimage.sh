@@ -1,51 +1,65 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Generic AppImage installer
-# Usage:
-#   sudo ./install-appimage.sh --name "EmulationStation DE" --id emulationstation-de \
-#     --url "https://..." --system
+# ==============================================================================
+# Generic AppImage Installer
 #
-# Runs as root for system installs (/opt + /usr/local/bin + /usr/share/applications)
-# Can be run as normal user for user-local install (HOME/.local/...).
-#
-# Flags:
-#   --name "Nice Name"         Human name used in desktop file
-#   --id app-id                short id (used for filenames and desktop id)
-#   --url URL                  AppImage download URL
-#   --install-dir DIR          where to place app (defaults: /opt/<id> for --system, $HOME/.local/share/<id> for user)
-#   --wrapper PATH             wrapper path (defaults: /usr/local/bin/<id> for system, $HOME/.local/bin/<id> for user)
-#   --desktop PATH             desktop file path (defaults as above)
-#   --icon ICON                theme icon name or absolute path (default: applications-games)
-#   --extract-icon             attempt best-effort icon extraction (optional)
-#   --no-deps                 skip libfuse2 installation attempt (default = install when root)
-#   --system                  install system-wide (requires root)
-#
-# Minimal, robust and idempotent.
+# Downloads an AppImage, generates an executable wrapper, creates a .desktop 
+# shortcut, and optionally extracts the app's embedded icon. 
+# 
+# Supports user-space (default) or system-wide (--system) installations.
+# Run with -h or --help for full usage instructions.
+# ==============================================================================
 
 progname="$(basename "$0")"
 
-# defaults
+# --- Defaults ---
 NAME=""
 ID=""
 URL=""
 EXTRACT_ICON=false
-NO_DEPS=false
 SYSTEM=false
+FORCE=false
 ICON="applications-games"
 INSTALL_DIR=""
 WRAPPER=""
 DESKTOP=""
-CATEGORIES="Utility;Network;FileTransfer;" # Game;Emulator;
+CATEGORIES="Utility;Network;FileTransfer;"  # Game;Emulator;
 
 usage() {
   cat <<EOF
-Usage: $progname --name "Nice Name" --id short-id --url <AppImage-URL> [--system] [--extract-icon] [--no-deps]
+Generic AppImage Installer
+
+Usage:
+  $progname --name "App Name" --id <short-id> --url <URL> [OPTIONS]
+
+Required Arguments:
+  --name "Nice Name"      Human-readable name used in the desktop file.
+  --id <app-id>           Short internal identifier used for filenames and paths.
+  --url <URL>             Direct download URL for the AppImage binary.
+
+Optional Actions:
+  --extract-icon          Attempt to extract an icon directly from the AppImage.
+  --force                 Force redownload and rewrite even if the app exists.
+  --system                Install system-wide (requires root/sudo). 
+                          Target paths: /opt/, /usr/local/bin, /usr/share/applications
+                          (If omitted, defaults to user-space: ~/.local/...)
+
+Path Overrides (Optional):
+  --install-dir <DIR>     Custom directory to store the AppImage.
+  --wrapper <PATH>        Custom path for the executable shell wrapper.
+  --desktop <PATH>        Custom path for the .desktop launcher.
+  --icon <ICON>           Theme icon name or absolute path (default: applications-games).
+  --categories <CATS>     Desktop file categories (default: Utility;Network;FileTransfer;).
+  -h, --help              Show this help message and exit.
+
+Example to test locally:
+  $progname --name "My App" --id myapp --url "https://..." --extract-icon
 EOF
   exit 1
 }
 
-# parse args (simple)
+# --- Parse args ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --name) NAME="$2"; shift 2;;
@@ -57,144 +71,138 @@ while [[ $# -gt 0 ]]; do
     --icon) ICON="$2"; shift 2;;
     --categories) CATEGORIES="$2"; shift 2;;
     --extract-icon) EXTRACT_ICON=true; shift ;;
-    --no-deps) NO_DEPS=true; shift ;;
     --system) SYSTEM=true; shift ;;
+    --force) FORCE=true; shift ;;
     -h|--help) usage ;;
-    *) echo "Unknown arg: $1"; usage ;;
+    *) echo "[ERROR] Unknown arg: $1"; usage ;;
   esac
 done
 
 if [[ -z "$NAME" || -z "$ID" || -z "$URL" ]]; then
-  echo "Missing required arguments."
+  echo "[ERROR] Missing required arguments."
   usage
 fi
 
-# defaults based on mode
+# --- Apply standard path defaults based on mode ---
 if $SYSTEM; then
-  : ${INSTALL_DIR:="/opt/$ID"}
-  : ${WRAPPER:="/usr/local/bin/$ID"}
-  : ${DESKTOP:="/usr/share/applications/${ID}.desktop"}
+  : "${INSTALL_DIR:="/opt/$ID"}"
+  : "${WRAPPER:="/usr/local/bin/$ID"}"
+  : "${DESKTOP:="/usr/share/applications/${ID}.desktop"}"
 else
-  REAL_HOME="${HOME}"
-  : ${INSTALL_DIR:="$REAL_HOME/.local/share/$ID"}
-  : ${WRAPPER:="$REAL_HOME/.local/bin/$ID"}
-  : ${DESKTOP:="$REAL_HOME/.local/share/applications/${ID}.desktop"}
+  # Respect XDG Base Directory Specification
+  XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+  XDG_BIN_HOME="${HOME}/.local/bin"  # Standard user executable path
+  
+  : "${INSTALL_DIR:="$XDG_DATA_HOME/$ID"}"
+  : "${WRAPPER:="$XDG_BIN_HOME/$ID"}"
+  : "${DESKTOP:="$XDG_DATA_HOME/applications/${ID}.desktop"}"
 fi
 
 APPIMAGE_PATH="$INSTALL_DIR/${ID}.AppImage"
 ICON_PATH="${INSTALL_DIR}/icon.png"
 
-# helpers
-ensure_dirs() {
-  mkdir -p "$INSTALL_DIR"
-  if ! $SYSTEM; then
-    mkdir -p "$(dirname "$DESKTOP")" "$(dirname "$WRAPPER")"
-  fi
-}
+# ----------------------------------------------------------------
+# --- Helpers ---
+# ----------------------------------------------------------------
 
-install_deps_if_needed() {
-  if $NO_DEPS; then
-    return 0
-  fi
-  # only try when root (system) or when user requests; for system installs usually run as root
-  if $SYSTEM && command -v apt-get >/dev/null 2>&1; then
-    if ! dpkg -s libfuse2 >/dev/null 2>&1; then
-      echo "[INFO] Installing libfuse2 (AppImage runtime) via apt..."
-      DEBIAN_FRONTEND=noninteractive apt-get update -qq || echo "[WARN] apt-get update had issues; attempting install"
-      DEBIAN_FRONTEND=noninteractive apt-get install -y libfuse2 || echo "[WARN] apt-get install libfuse2 failed; continuing"
-    fi
-  fi
+ensure_dirs() {
+  mkdir -p "$INSTALL_DIR" "$(dirname "$WRAPPER")" "$(dirname "$DESKTOP")"
 }
 
 download_appimage() {
-  if [[ -f "$APPIMAGE_PATH" ]]; then
-    echo "[INFO] AppImage already present at $APPIMAGE_PATH"
+  if [[ -f "$APPIMAGE_PATH" ]] && ! $FORCE; then
+    echo "[INFO] AppImage already present.  Use --force to redownload."
     return
   fi
 
+  echo "[INFO] Downloading AppImage..."
+  local tmp
   tmp="$(mktemp "${APPIMAGE_PATH}.XXXXXX")"
+  
+  # Ensure temp files are cleaned up on download failure
+  trap 'rm -f "$tmp"' EXIT INT TERM
+  
   if command -v curl >/dev/null 2>&1; then
     curl --location --fail --show-error --output "$tmp" "$URL"
   elif command -v wget >/dev/null 2>&1; then
     wget -q -O "$tmp" "$URL"
   else
-    echo "[ERROR] No curl or wget available"; exit 1
+    echo "[ERROR] Neither curl nor wget available"; exit 1
   fi
+  
   chmod +x "$tmp"
   mv -f "$tmp" "$APPIMAGE_PATH"
-  echo "[INFO] Downloaded $APPIMAGE_PATH"
+  trap - EXIT INT TERM  # Remove trap after successful move
+  echo "[INFO] Downloaded to $APPIMAGE_PATH"
 }
 
 extract_icon_best_effort() {
-  # best-effort: use embedded extractor if available
-  if [[ ! -f "$APPIMAGE_PATH" ]]; then
+  if [[ ! -f "$APPIMAGE_PATH" ]]; then return 0; fi
+  if [[ -f "$ICON_PATH" ]] && ! $FORCE; then 
+    echo "[INFO] Icon already exists.  Skipping extraction."
     return 0
   fi
+
+  echo "[INFO] Attempting to extract icon..."
+  local tmpd
   tmpd="$(mktemp -d)"
-  pushd "$tmpd" >/dev/null
+  
+  # Ensure dir is cleaned up no matter how extraction exits
+  trap 'rm -rf "$tmpd"' EXIT INT TERM
+  
+  pushd "$tmpd" >/dev/null || return 1
+  
   if "$APPIMAGE_PATH" --appimage-extract >/dev/null 2>&1; then
     if [[ -f squashfs-root/.DirIcon ]]; then
       cp squashfs-root/.DirIcon "$ICON_PATH" 2>/dev/null || true
     else
+      local found
       found="$(find squashfs-root -type f \( -iname '*.png' -o -iname '*.ico' \) | head -n1 || true)"
       [[ -n "$found" ]] && cp "$found" "$ICON_PATH" 2>/dev/null || true
     fi
-    rm -rf squashfs-root
-  else
-    # best-effort fallback with bsdtar (if installed)
-    if command -v bsdtar >/dev/null 2>&1; then
-      candidate="$(bsdtar -tf "$APPIMAGE_PATH" | grep -Ei '\.png$|\.ico$' | head -n1 || true)"
-      if [[ -n "$candidate" ]]; then
-        bsdtar -xf "$APPIMAGE_PATH" "$candidate"
-        mkdir -p "$(dirname "$ICON_PATH")"
-        mv "$candidate" "$ICON_PATH" 2>/dev/null || true
-      fi
+  elif command -v bsdtar >/dev/null 2>&1; then
+    local candidate
+    candidate="$(bsdtar -tf "$APPIMAGE_PATH" | grep -Ei '\.png$|\.ico$' | head -n1 || true)"
+    if [[ -n "$candidate" ]]; then
+      bsdtar -xf "$APPIMAGE_PATH" "$candidate"
+      mv "$candidate" "$ICON_PATH" 2>/dev/null || true
     fi
   fi
 
-  # convert ico->png if needed and convert is available
-  if [[ -f "$ICON_PATH" ]] && file "$ICON_PATH" | grep -iq 'ico'; then
-    if command -v convert >/dev/null 2>&1; then
-      convert "$ICON_PATH[0]" -resize 256x256 "${ICON_PATH%.ico}.png" && ICON_PATH="${ICON_PATH%.ico}.png"
-    fi
+  if [[ -f "$ICON_PATH" ]] && file "$ICON_PATH" | grep -iq 'ico' && command -v convert >/dev/null 2>&1; then
+    convert "$ICON_PATH[0]" -resize 256x256 "${ICON_PATH%.ico}.png" && ICON_PATH="${ICON_PATH%.ico}.png"
   fi
 
-  popd >/dev/null
-  rm -rf "$tmpd" || true
-  [[ -f "$ICON_PATH" ]] && echo "[INFO] extracted icon to $ICON_PATH" || echo "[INFO] no icon extracted"
+  popd >/dev/null || return 1
+  rm -rf "$tmpd"  # Normal cleanup
+  trap - EXIT INT TERM # Remove trap after success
+  
+  [[ -f "$ICON_PATH" ]] && echo "[INFO] Extracted icon to $ICON_PATH" || echo "[WARN] No icon extracted."
 }
 
 atomic_write() {
-  # atomic_write <dest> <mode> <<EOF ... EOF
-  dest="$1"; mode="$2"; shift 2
+  local dest="$1"
+  local mode="$2"
+  local tmp
   tmp="$(mktemp "${dest}.XXXXXXXX")"
-  cat > "$tmp" "$@"
+  cat > "$tmp"
   chmod "$mode" "$tmp"
   mv -f "$tmp" "$dest"
 }
 
 create_wrapper() {
-  mkdir -p "$(dirname "$WRAPPER")"
-  tmp="$(mktemp "${WRAPPER}.XXXXXXXX")"
-  cat > "$tmp" <<EOF
+  atomic_write "$WRAPPER" 755 <<EOF
 #!/usr/bin/env sh
 exec "$APPIMAGE_PATH" "\$@"
 EOF
-  chmod 755 "$tmp"
-  mv -f "$tmp" "$WRAPPER"
-  echo "[INFO] wrapper written: $WRAPPER"
+  echo "[INFO] Wrapper written: $WRAPPER"
 }
 
 create_desktop_entry() {
-  mkdir -p "$(dirname "$DESKTOP")"
-  tmp="$(mktemp "${DESKTOP}.XXXXXXXX")"
-  # icon field: absolute path if we extracted, otherwise theme name
   local icon_field="$ICON"
-  if [[ -f "$ICON_PATH" ]]; then
-    icon_field="$ICON_PATH"
-  fi
+  if [[ -f "$ICON_PATH" ]]; then icon_field="$ICON_PATH"; fi
 
-  cat > "$tmp" <<EOF
+  atomic_write "$DESKTOP" 644 <<EOF
 [Desktop Entry]
 Name=$NAME
 Comment=$NAME
@@ -206,26 +214,40 @@ Type=Application
 Categories=$CATEGORIES
 StartupNotify=true
 EOF
-  chmod 644 "$tmp"
-  mv -f "$tmp" "$DESKTOP"
-  echo "[INFO] desktop entry written: $DESKTOP"
+  echo "[INFO] Desktop entry written: $DESKTOP"
 }
 
-# main
-ensure_dirs
-if $SYSTEM; then
-  install_deps_if_needed
-fi
-download_appimage
-if $EXTRACT_ICON; then
-  extract_icon_best_effort || true
-fi
-create_wrapper
-create_desktop_entry
+update_databases() {
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$(dirname "$DESKTOP")" || true
+  fi
+}
 
-echo
-echo "✅ Installed $NAME"
-echo " - AppImage: $APPIMAGE_PATH"
-echo " - Wrapper: $WRAPPER"
-echo " - Desktop: $DESKTOP"
-if [[ -f "$ICON_PATH" ]]; then echo " - Icon: $ICON_PATH"; fi
+post_install_notes() {
+  echo
+  echo "✅ Installed $NAME"
+  echo " - AppImage: $APPIMAGE_PATH"
+  echo " - Wrapper:  $WRAPPER"
+  echo " - Desktop:  $DESKTOP"
+  if [[ -f "$ICON_PATH" ]]; then echo " - Icon:     $ICON_PATH"; fi
+}
+
+# ----------------------------------------------------------------
+# --- Main Execution ---
+# ----------------------------------------------------------------
+
+main() {
+  echo "[INFO] Started provisioning of $NAME..."
+  ensure_dirs
+  download_appimage
+  if $EXTRACT_ICON; then extract_icon_best_effort; fi
+  create_wrapper
+  create_desktop_entry
+  update_databases
+  post_install_notes
+}
+
+main "$@"
+
+# chmod +x ~/Repos/pc-env/setup-linux/install-appimage.sh
+# bash ~/Repos/pc-env/setup-linux/install-appimage.sh
