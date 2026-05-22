@@ -16,8 +16,8 @@ declare -a BISYNC_JOBS=(
     # "pcloud;pCloud;daily"
     # "gdrive;ObsidianVaults;daily"
     # "onedrive;OneDrive;*-*-* 06:00:00"
-    "pcloud;pCloud;*-*-* 06:05:00"
-    "gdrive;GoogleDrive;*-*-* 06:10:00"
+    "pcloud;pCloud;*-*-* 06,18:05:00"  # run at 06:05 & 18:05
+    "gdrive;GoogleDrive;*-*-* 06,18:10:00"
 )
 
 # --- Script Setup ---
@@ -193,7 +193,7 @@ main() {
 
     echo ""
     echo "✅ rclone provisioning complete!"
-    echo "   Run 'systemctl list-timers rclone-bisync-*' to check status."
+    echo "   Run 'systemctl list-timers rclone-bisync-*' to check status of upcoming schedules."
 }
 
 main

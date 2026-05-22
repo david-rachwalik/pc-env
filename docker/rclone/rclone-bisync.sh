@@ -7,62 +7,81 @@ set -euo pipefail
 # ================================================================
 # Usage: rclone-bisync.sh <remote_name> <sync_dir_name>
 
-# Use 'declare -r' to make them readonly after initial assignment
+# Use 'declare -r' for readonly variables to prevent accidental reassignment
 declare -r REMOTE_NAME="${1:-}"
 declare -r SYNC_DIR_NAME="${2:-}"
 
-# Define paths relative to the user's home directory inside the container
+# --- Container Paths ---
+# These are mapped via Docker volumes to the host's actual folders
 declare -r BISYNC_DIR="/data/$SYNC_DIR_NAME"
 declare -r CONFIG_FILE="/etc/rclone/rclone.conf"
 declare -r FILTERS_FILE="/etc/rclone/bisync-filters.txt"
-declare -r LOG_FILE="/logs/bisync-${REMOTE_NAME}.log"
 declare -r LOCK_FILE="/cache/rclone-bisync-${REMOTE_NAME}.lock"
 
+# --- Logging Paths ---
+# Log files kept inside the mounted /logs volume
+declare -r SUMMARY_LOG="/logs/summary.log"
+declare -r DAILY_DIR="/logs/daily"
+declare -r DAILY_LOG="${DAILY_DIR}/bisync-${REMOTE_NAME}-$(date +%Y-%m-%d).log"
+
+# A temporary workspace file just for active script execution
+# Used to analyze exact output of the current run before appending to daily log
+declare -r RUN_LOG="/tmp/rclone-run-${REMOTE_NAME}.log"
 
 # --- Function Definitions ---
 
-# Validates that the required script arguments have been provided
 validate_arguments() {
+    # Ensure the script wasn't called blindly without targets
     if [[ -z "$REMOTE_NAME" ]] || [[ -z "$SYNC_DIR_NAME" ]]; then
-        # Write error to stderr
         echo "❌ Usage: $0 <remote_name> <sync_dir_name>" >&2
         exit 1
     fi
 }
 
-# Sets up logging to redirect all output to a log file and stdout
 setup_logging() {
-    mkdir -p "$(dirname "$LOG_FILE")"
-    # Redirect all subsequent output (stdout and stderr) to a process substitution
-    # that tees to the log file and also prints to the original stdout
-    exec > >(tee -a "$LOG_FILE") 2>&1
-    # (superior to using `--log-file` in command)
+    # Ensure base logging directory exists
+    mkdir -p "$DAILY_DIR"
+    
+    # # Housekeeping: Delete daily logs older than 30 days
+    # find "$DAILY_DIR" -type f -name "bisync-*.log" -mtime +30 -delete 2>/dev/null || true
 }
 
-# Handles lock file creation and cleanup to prevent concurrent runs
+log_summary() {
+    # Appends a single, clean timestamped line to a tracking file
+    # Ex: [2026-05-22 08:00:00] [pcloud] SUCCESS
+    local message="$1"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [${REMOTE_NAME}] ${message}" >> "$SUMMARY_LOG"
+}
+
 handle_locking() {
+    # Check if a previous run is still executing to prevent data corruption
     if [ -f "$LOCK_FILE" ]; then
         local lock_pid
         lock_pid=$(cat "$LOCK_FILE")
-        # Check if process holding the lock is still running
-        if ps -p "$lock_pid" > /dev/null; then
+        # Check if the process indicated by the lock file is actively executing
+        if ps -p "$lock_pid" > /dev/null 2>&1; then
             echo "⚠️  Lock file found and process $lock_pid is still running.  Aborting."
-            exit 0 # Exit gracefully, not as an error
+            log_summary "IGNORED - Process already running (PID $lock_pid)"
+            exit 0
         else
+            # Process died cleanly but left the lock file behind (safe to clean)
             echo "🧹 Stale lock file found for PID $lock_pid.  Removing."
             rm -f "$LOCK_FILE"
         fi
     fi
-    # Create new lock file (with current PID) that removes on exit
+    
+    # Create new lock file containing current Process ID ($$)
+    # The trap ensures that when script exits (normally or via crash), the lock is deleted
     echo $$ > "$LOCK_FILE"
     trap 'rm -f "$LOCK_FILE"' EXIT
 }
 
-# Executes the main bisync command with intelligent error handling and one-time retry
 run_bisync() {
-    echo "🚀 Running bisync check..."
+    echo "🚀 Running bisync check... (Verbose logs: $DAILY_LOG)"
+    
+    # Write daily log header for run clarity
+    echo -e "\n=== Run Started: $(date +'%Y-%m-%d %H:%M:%S') ===" >> "$DAILY_LOG"
 
-    # Build the base command in an array for robustness
     local cmd=(
         rclone bisync "$REMOTE_NAME:" "$BISYNC_DIR"
         --config "$CONFIG_FILE"
@@ -70,54 +89,57 @@ run_bisync() {
         --workdir "/cache/bisync_workdir/${REMOTE_NAME}"
         --filters-file "$FILTERS_FILE"
         --track-renames
-        --resilient
-        # --verbose
-        -vv # debug-level messages
+        --resilient   # Retries operations if the network falters
+        -vv           # Verbose output for debug-level messages
     )
-    # --resilient: Helps with intermittent network errors
-    # --verbose: Provides detailed output for logging
 
-    # --- First Attempt ---
-    local stderr_output
-    local exit_code
-    set +e # Temporarily disable exit-on-error
-    stderr_output=$("${cmd[@]}" 2>&1)
-    exit_code=$?
-    set -e # Re-enable exit-on-error
+    # First Attempt: Write execution data to temporary file (RUN_LOG)
+    set +e  # Temporarily disable standard error crashing
+    "${cmd[@]}" > "$RUN_LOG" 2>&1
+    local exit_code=$?
+    set -e
 
-    # Always print the output, whether it was an error or not
-    echo "$stderr_output"
+    # Pipe data from temp execution into permanent daily log wrapper
+    cat "$RUN_LOG" >> "$DAILY_LOG"
 
-    # --- Analyze Result and Potentially Retry ---
+    # Analyze completion status using rclone standard Exit Codes
     if [ "$exit_code" -eq 0 ]; then
         echo "✅ Bisync completed successfully."
+        log_summary "SUCCESS"
         return 0
     # Exit code 9: "resync is required" (e.g., missing listings, first run)
     # Exit code 7: Fatal error (e.g., filter hash mismatch on first run)
-    # Exit code 1 + specific message: "Safety abort: too many deletes" (e.g., large rename)
-    elif [[ "$exit_code" -eq 9 || "$exit_code" -eq 7 || ("$exit_code" -eq 1 && $(echo "$stderr_output" | grep -c "Safety abort: too many deletes") -gt 0) ]]; then
-        echo "⚠️  Bisync requires resync (Exit Code: $exit_code). This may be due to a large rename or first-time sync. Attempting --resync now..."
+    # Exit code 1: "Safety abort: too many deletes" (e.g., large rename)
+    # (grep from RUN_LOG, not DAILY_LOG, to avoid reading past executions)
+    elif [[ "$exit_code" -eq 9 || "$exit_code" -eq 7 || ("$exit_code" -eq 1 && $(grep -c "Safety abort: too many deletes" "$RUN_LOG") -gt 0) ]]; then
+        echo "⚠️  Bisync requires resync (Exit Code: $exit_code).  Attempting --resync now..."
+        log_summary "WARNING - Require Resync (Exit $exit_code)"
 
-        # Add the --resync flag and run again
+        # Add --resync flag and execute again
         cmd+=(--resync)
         
-        local resync_stderr_output
-        local resync_exit_code
+        echo -e "\n=== RESYNC Started: $(date +'%Y-%m-%d %H:%M:%S') ===" >> "$DAILY_LOG"
+
         set +e
-        resync_stderr_output=$("${cmd[@]}" 2>&1)
-        resync_exit_code=$?
+        "${cmd[@]}" > "$RUN_LOG" 2>&1
+        local resync_exit_code=$?
         set -e
-        echo "$resync_stderr_output"
+
+        cat "$RUN_LOG" >> "$DAILY_LOG"
 
         if [ "$resync_exit_code" -eq 0 ]; then
             echo "✅ Resync completed successfully."
+            log_summary "SUCCESS (Recovered via --resync)"
             return 0
         else
             echo "❌ Resync attempt failed with exit code: $resync_exit_code"
+            log_summary "FAILED - Resync attempt failed (Exit $resync_exit_code)"
             return "$resync_exit_code"
         fi
     else
+        # The script hit an error code outside recovery protocols
         echo "❌ Bisync failed with a critical, non-recoverable error (Exit Code: $exit_code)."
+        log_summary "FAILED - Critical error (Exit $exit_code)"
         return "$exit_code"
     fi
 }
@@ -132,6 +154,7 @@ main() {
     echo "   Local Dir: $BISYNC_DIR"
     echo "================================================================"
 
+    log_summary "STARTED"
     handle_locking
     run_bisync
 
@@ -139,7 +162,6 @@ main() {
     echo ""
 }
 
-# Call the main function with all script arguments
 main "$@"
 
 # :: Usage Examples ::
