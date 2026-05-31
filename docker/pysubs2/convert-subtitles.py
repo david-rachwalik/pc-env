@@ -388,6 +388,8 @@ def extract_subs_from_mkv(mkv_path: Path, out_dir: Path, srt_dir: Path, generate
         # Define extension & track type based on codec
         if codec in ("S_TEXT/ASS", "S_TEXT/SSA"):
             ext, track_type = ".ass", "text"
+        elif codec == "S_TEXT/UTF8":
+            ext, track_type = ".srt", "text"
         elif codec == "S_VOBSUB":
             ext, track_type = ".sub", "image"  # VobSub is a pair (.idx + .sub)
         elif codec == "S_HDMV/PGS":
