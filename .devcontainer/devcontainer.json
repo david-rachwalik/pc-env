@@ -10,7 +10,11 @@
   },
 
   // Features to add to the dev container. More info: https://containers.dev/features.
-  // "features": {},
+  "features": {
+    "ghcr.io/devcontainers/features/node:2.1.0": {
+      "version": "20"
+    }
+  },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
@@ -27,7 +31,12 @@
 
   // https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
   "mounts": [
-    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.continue,target=/home/vscode/.continue,type=bind,consistency=cached"
+  ],
+
+  "runArgs": [
+    "--network=shared-dev-net"
   ],
 
   // Configure tool-specific properties.
@@ -80,8 +89,9 @@
         "bierner.markdown-preview-github-styles",
         "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
-        "lihui.vs-color-picker"
+        "lihui.vs-color-picker",
         // "mongodb.mongodb-vscode"
+        "Continue.continue"
       ],
       // Ensure extension receives the correct interpreter path before auto-detection happens
       // (more deterministic than `settings.json`)
