@@ -1,0 +1,42 @@
+services:
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ollama-runner
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      # Expose Ollama API externally to devcontainer
+      - '11434:11434'
+    devices:
+      # Expose AMD GPU (DRI/ROCm/Vulkan) to Ollama
+      - /dev/dri:/dev/dri
+    volumes:
+      # Persist downloaded models
+      - ollama_data:/root/.ollama
+      - ./:/app/dev
+    stdin_open: true
+    tty: true
+
+networks:
+  default:
+    name: shared-dev-net
+    external: true
+
+volumes:
+  ollama_data:
+
+# :: Usage Example (detached mode) ::
+# cd ~/Repos/pc-env/docker/ollama
+# docker compose down
+# docker compose up -d --build
+
+# To create shared external network:
+# docker network create shared-dev-net
+
+# Jump into container interactively:
+# docker exec -it ollama /bin/bash
+
+# To test Ollama API directly (e.g. from devcontainer):
+# curl http://ollama:11434/api/tags
