@@ -9,12 +9,10 @@ fi
 # --- Third-Party Modules ---
 pip_packages=(
     # --- Development ---
-    autopep8
     colorlog
     pytest
     pytz
     python-dotenv # https://pypi.org/project/python-dotenv
-    pylint-quotes
     dirsync     # https://github.com/tkhyn/dirsync
     pyinstaller # https://pyinstaller.org/en/stable
     requests    # https://requests.readthedocs.io

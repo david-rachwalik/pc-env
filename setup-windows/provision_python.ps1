@@ -13,13 +13,11 @@ $pip_packages = @(
     # * can use Blender's built-in environment (otherwise, know this is only compatible with certain Python versions)
 
     # --- Development ---
-    'autopep8'
     'colorlog'
     'pytest'
     'pytz'
     # https://pypi.org/project/python-dotenv
     'python-dotenv'
-    'pylint-quotes'
     'dirsync' # https://github.com/tkhyn/dirsync
     'pyinstaller' # https://pyinstaller.org/en/stable
     'requests' # https://requests.readthedocs.io

@@ -21,11 +21,9 @@
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "uname -a",
-  // "postCreateCommand": "python -m venv ~/.venv && . ~/.venv/bin/activate && pip install -r /workspaces/pc-env/python/pip-requirements.txt",
   "postCreateCommand": "pip install -r /workspaces/pc-env/python/pip-requirements.txt",
 
   "containerEnv": {
-    // "PYTHONPATH": "~/.venv/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
     "PYTHONPATH": "~/.local/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
   },
 
@@ -52,10 +50,8 @@
         "foxundermoon.shell-format",
         // [Python]
         "ms-python.python", // runtime
-        "ms-python.pylint",
-        "ms-python.black-formatter", // formatter
-        "ms-python.vscode-pylance",
-        "ms-python.isort",
+        "charliermarsh.ruff", // format & lint
+        "ms-python.vscode-pylance", // type-checking
         "njpwerner.autodocstring",
         // [JavaScript|TypeScript]
         "dbaeumer.vscode-eslint", // linter
@@ -96,11 +92,7 @@
       // Ensure extension receives the correct interpreter path before auto-detection happens
       // (more deterministic than `settings.json`)
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.linting.pylintArgs": [
-          "--init-hook",
-          "import sys; sys.path.append('/home/vscode/.local/lib/python3.12/site-packages')"
-        ]
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
       }
     }
   }
