@@ -1,0 +1,30 @@
+services:
+  pc-ops:
+    build:
+      # context: .
+      # With context at root, Dockerfile can easily COPY shared modules & scripts
+      context: ../../
+      dockerfile: docker/pc-ops/Dockerfile
+    image: pc-ops-runner
+    container_name: pc-ops-container
+    environment:
+      - PYTHONPATH=/app/python/modules:/app/python/modules/boilerplates
+    volumes:
+      # Mount source files for live testing (Dev Mode)
+      - ../../:/app/dev:ro
+      # Mount the host directories needed for backup/restore
+      - /home/${USER:-rhodair}:/home/rhodair
+      - /media/root/HDD-01:/media/root/HDD-01
+      - /media/root/HDD-02:/media/root/HDD-02
+    stdin_open: true
+    tty: true
+
+# :: Usage Example (run interactively) ::
+# cd ~/Repos/pc-env/docker/pc-ops
+# docker compose build  # (only when Dockerfile changes)
+# docker compose run --rm pc-ops
+
+# --- Inside the container ---
+# backup-dry
+# backup-dev --dry-run --debug
+# restore-dry --only-apps

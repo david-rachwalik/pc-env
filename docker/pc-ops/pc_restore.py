@@ -48,10 +48,12 @@ def restore_system(tasks: list[str], run_ids: list[str]):
             LOG.info(f"SRC path: {src}")
             LOG.info(f"DEST path: {dest}")
 
-            if ARGS.test_run:
+            if ARGS.dry_run:
                 sh.sync_directory(src, dest, "diff", options=app.options)
-            else:
-                sh.sync_directory(src, dest, options=app.options)
+                continue
+
+            # Perform full restore of apps
+            sh.sync_directory(src, dest, options=app.options)
 
     # --- Restore important game files (screenshots, settings, addons) ---
     if "games" in tasks:
@@ -71,12 +73,14 @@ def restore_system(tasks: list[str], run_ids: list[str]):
             LOG.info(f"SRC path: {src}")
             LOG.info(f"DEST path: {dest}")
 
-            if ARGS.test_run:
+            if ARGS.dry_run:
                 sh.sync_directory(
                     src, dest, "diff", options=game.options, ignore=ignore_opts
                 )
-            else:
-                sh.sync_directory(src, dest, options=game.options, ignore=ignore_opts)
+                continue
+
+            # Perform full restore of games
+            sh.sync_directory(src, dest, options=game.options, ignore=ignore_opts)
 
             # NEVER clear source screenshot directory for restore
 
@@ -89,7 +93,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--log-path", default="")
-    parser.add_argument("--test-run", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--only-apps", action="store_true")
     parser.add_argument("--only-games", action="store_true")
     parser.add_argument(

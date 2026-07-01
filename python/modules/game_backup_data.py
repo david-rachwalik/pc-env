@@ -2,7 +2,6 @@
 """Data for important game files to backup"""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
 
 import shell_boilerplate as sh
 
@@ -10,70 +9,78 @@ import shell_boilerplate as sh
 # https://realpython.com/python-data-classes
 @dataclass
 class GameBackup:
-    """Class model of game backup details"""
+    """Class model of game backup details.
 
-    id: str  # arbitrary 'game_id' given for ad hoc commands (filter_id)
-    root: str  # install directory path without game title
-    name: str  # directory for the game title (mirrored by backup target)
-    options: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
-    screenshot: Optional[str] = field(default=None)
-    # addon: Optional[str] = field(default=None)
-    # # addon_opts: Optional[List[str]] = field(default=None)
-    # addon_opts: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
-    # # screenshot_opts: Optional[List[str]] = field(default=None)
-    # # screenshot_opts: Optional[Dict[str, Any]] = field(default=None)
-    # setting: Optional[str] = field(default=None)
-    # # setting_opts: Optional[List[str]] = field(default=None)
-    # setting_opts: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
+    Attributes:
+        id (str): Arbitrary 'game_id' given for ad hoc commands (filter_id).
+        root (str): Install directory path without game title.
+        name (str): Directory for the game title (mirrored by backup target).
+        options (dict | None): Provide additional options [only, exclude, include].
+        screenshot (str | None): Directory specifically for screenshots.
+        win_root (str | None): Windows-specific directory root override.
+        win_name (str | None): Windows-specific application directory name override.
+    """
+
+    id: str
+    root: str
+    name: str
+    win_root: str | None = field(default=None)
+    win_name: str | None = field(default=None)
+    options: dict | None = field(default=None)
+    screenshot: str | None = field(default=None)
 
 
 active_games = [
     # 'diablo_iii',
     # 'elder_scrolls_online',
     # 'elite_dangerous',
-    "final_fantasy_xiv",
-    "hotline_miami",
-    "killing_floor_2",
-    "rocket_league",
+    # "final_fantasy_xiv",
+    # "hotline_miami",
+    # "killing_floor_2",
+    "marvel_rivals",
+    # "rocket_league",
     # 'skyrim_se',
-    "skyrim_vr",
-    "stardew_valley",
+    # "skyrim_vr",
+    # "stardew_valley",
     # 'wow_retail',
     # 'wow_classic',
     # 'wow_weakauras',
-    "wow_project_ascension",
-    "yiffalicious",
+    # "wow_project_ascension",
+    # "yiffalicious",
 ]
 
 
-# game_c_dir = sh.join_path('C:\\', 'Program Files')
-# game_d_dir = sh.join_path('D:\\', 'GameFiles')
-# user_roaming_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
+# --- Cross-Platform Roots ---
+is_windows = sh.system_platform() == "windows"
 
-game_c_dir = "/mnt/c/Program Files"
-game_d_dir = "/mnt/d/GameFiles"
-user_roaming_dir = "/mnt/c/Users/david/AppData/Roaming"  # %AppData%
-user_local_dir = "/mnt/c/Users/david/AppData/Local"  # %LocalAppData%
-user_docs_dir = "/mnt/c/Users/david/Documents"
-user_games_dir = "/mnt/c/Users/david/Documents/My Games"
+if is_windows:
+    # Windows native paths
+    game_c_dir = "C:\\Program Files"
+    game_d_dir = "D:\\GameFiles"
+    user_roaming_dir = sh.environment_get("APPDATA")
+    user_local_dir = sh.environment_get("LOCALAPPDATA")
+    user_docs_dir = sh.join_path(sh.environment_get("USERPROFILE"), "Documents")
+    user_games_dir = sh.join_path(user_docs_dir, "My Games")
+else:
+    # Linux native paths
+    user_home = sh.expand_path("~")
+    game_c_dir = sh.join_path(user_home, "Games")
+    game_d_dir = sh.join_path(user_home, "Games")
+    user_roaming_dir = sh.join_path(user_home, ".config")
+    user_local_dir = sh.join_path(user_home, ".local", "share")
+    user_docs_dir = sh.join_path(user_home, "Documents")
+    user_games_dir = sh.join_path(user_docs_dir, "My Games")
+    steam_dir = sh.join_path(
+        user_home, ".steam", "debian-installation", "steamapps", "common"
+    )
 
-game_backups_full: List[GameBackup] = [
-    # GameBackup(
-    #     id='blade_and_soul',
-    #     root='/mnt/c/Users/david/Documents/My Games',
-    #     name='BnS',
-    #     setting="NCWEST",
-    # ),
+
+game_backups_full: list[GameBackup] = [
     GameBackup(
         id="diablo_iii",
-        # root='/mnt/c/Users/david/Documents',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents'),  # similar to UserProfile
         root=user_docs_dir,
         name="Diablo III",
         screenshot="Screenshots",
-        # screenshot_opts=['--backup', "--backup-dir=backup_{{ lookup('pipe','date +%Y-%m-%d') }}"],
-        # setting=' ',
-        # setting_opts=['--include=D3Prefs.txt', '--exclude=*'],
         options={
             "only": [
                 "Screenshots/*",
@@ -83,15 +90,9 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="elder_scrolls_online",
-        # root='/mnt/c/Users/david/Documents',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents'),
         root=user_docs_dir,
         name=sh.join_path("Elder Scrolls Online", "live"),
-        # addon='AddOns',
         screenshot="Screenshots",
-        # setting=' ',
-        # setting_opts=['--include=SavedVariables/', '--include=SavedVariables/*',
-        #               '--exclude=*/', '--include=*.txt', '--exclude=*'],
         options={
             "only": [
                 "Screenshots/*",
@@ -103,16 +104,9 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="elite_dangerous",
-        # root='/mnt/c/Users/david/AppData/Local',
-        # root=sh.environment_get('LocalAppData'),
         root=user_local_dir,
         name=sh.join_path("Frontier Developments", "Elite Dangerous"),
         screenshot="Screenshots",
-        # setting=sh.join_path('Options', 'Bindings'),
-        # setting_opts=['--exclude=*.log'],
-        # setting_opts={
-        #     'exclude': ['*.log'],
-        # },
         options={
             "only": [
                 "Screenshots/*",
@@ -123,27 +117,11 @@ game_backups_full: List[GameBackup] = [
             ],
         },
     ),
-    # GameBackup(
-    #     id='elite_dangerous_screenshot',
-    #     root='/mnt/c/Users/david/Pictures',
-    #     name='Frontier Developments/Elite Dangerous',
-    #     screenshot=' ',
-    # ),
     GameBackup(
         id="final_fantasy_xiv",
-        # root='/mnt/c/Users/david/Documents/My Games',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
         root=user_games_dir,
         name="FINAL FANTASY XIV - A Realm Reborn",
         screenshot="screenshots",
-        # setting=' ',
-        # setting_opts=['--include=*.cfg', '--exclude=*'],
-        # setting_opts=[
-        #     '--include=FFXIV_CHR004000174BCC982B/', '--include=FFXIV_CHR004000174BCC982B/*',  # Goo Clone
-        #     '--include=FFXIV_CHR0040002E933812EA/', '--include=FFXIV_CHR0040002E933812EA/*',  # Zaiba Igawa
-        #     '--include=FFXIV_CHR004000174B3A4759/', '--include=FFXIV_CHR004000174B3A4759/*',  # Callia Denma
-        #     '--exclude=log/', '--exclude=log/*', '--exclude=*/'
-        # ],
         options={
             "only": [
                 "screenshots/*",
@@ -160,13 +138,11 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="hotline_miami",
-        # root='/mnt/c/Users/david/Documents/My Games',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
-        root=user_games_dir,
+        root=steam_dir,
+        win_root=user_games_dir,
+        # user_home, ".steam", "debian-installation", "steamapps", "common"
+        # /media/root/HDD-01/GameFiles/SteamLibrary/steamapps/common/hotline_miami
         name="HotlineMiami",
-        # setting=' ',
-        # setting_opts=['--include=*.cfg', '--exclude=*'],
-        # setting_opts=['--include=*.sav', '--exclude=*'],
         options={
             "only": [
                 r".*\.sav$",  # settings ('.sav' extension)
@@ -175,11 +151,18 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="killing_floor_2",
-        # root='/mnt/c/Users/david/Documents/My Games',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
         root=user_games_dir,
         name="KillingFloor2",
-        # setting='KFGame/Config',
+        options={
+            "only": [
+                "KFGame/Config/*",  # settings
+            ],
+        },
+    ),
+    GameBackup(
+        id="marvel_rivals",
+        root=steam_dir,
+        name="MarvelRivals",
         options={
             "only": [
                 "KFGame/Config/*",  # settings
@@ -188,11 +171,8 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="rocket_league",
-        # root='/mnt/c/Users/david/Documents/My Games',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
         root=user_games_dir,
         name="Rocket League",
-        # setting='TAGame/Config',
         options={
             "only": [
                 "TAGame/Config/*",  # settings
@@ -205,12 +185,8 @@ game_backups_full: List[GameBackup] = [
     # ),
     GameBackup(
         id="skyrim_se",
-        # root='/mnt/c/Users/david/Documents/My Games',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
         root=user_games_dir,
         name="Skyrim Special Edition",
-        # setting=' ',
-        # setting_opts=['--include=Saves/', '--include=Saves/*', '--exclude=*/', '--include=*.ini', '--exclude=*'],
         options={
             "only": [
                 r".*\.ini$",  # settings ('.ini' extension)
@@ -220,12 +196,8 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="skyrim_vr",
-        # root='/mnt/c/Users/david/Documents/My Games',
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents', 'My Games'),
         root=user_games_dir,
         name="Skyrim VR",
-        # setting=' ',
-        # setting_opts=['--include=Saves/', '--include=Saves/*', '--exclude=*/', '--include=*.ini', '--exclude=*'],
         options={
             "only": [
                 r".*\.ini$",  # settings ('.ini' extension)
@@ -235,24 +207,17 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="stardew_valley",
-        # root='/mnt/c/Users/david/AppData/Roaming',
         root=user_roaming_dir,
         name="StardewValley",
-        # setting=' ',
         options={
             "only": [r".*"],  # settings
         },
     ),
     GameBackup(
         id="wow_retail",
-        # root='/mnt/e/GameFiles',
         root=game_d_dir,
         name=sh.join_path("World of Warcraft", "_retail_"),
-        # addon='Interface/AddOns',
-        # addon_opts=['--exclude=DataStore*/', '--exclude=TradeSkillMaster_AppHelper/'],
         screenshot="Screenshots",
-        # setting='WTF',
-        # setting_opts=['--exclude=*.bak', '--exclude=*.old'],
         options={
             "only": [
                 "Screenshots/*",
@@ -262,6 +227,7 @@ game_backups_full: List[GameBackup] = [
             "exclude": [
                 r".*\.bak$",  # ignore setting files with '.bak' extension
                 r".*\.old$",  # ignore setting files with '.old' extension
+                r".*Blizzard_.*",  # ignore the 'Blizzard_*' addon directories
                 r".*DataStore.*",  # ignore the 'DataStore*' addon directory
                 r".*/TradeSkillMaster_AppHelper.*",  # ignore the 'TradeSkillMaster_AppHelper' addon directory
             ],
@@ -269,14 +235,9 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="wow_classic",
-        # root='/mnt/e/GameFiles',
         root=game_d_dir,
         name=sh.join_path("World of Warcraft", "_classic_"),
-        # addon='Interface/AddOns',
-        # addon_opts=['--exclude=DataStore*/', '--exclude=TradeSkillMaster_AppHelper/'],
         screenshot="Screenshots",
-        # setting='WTF',
-        # setting_opts=['--exclude=*.bak', '--exclude=*.old'],
         options={
             "only": [
                 "Screenshots/*",
@@ -286,6 +247,7 @@ game_backups_full: List[GameBackup] = [
             "exclude": [
                 r".*\.bak$",  # ignore setting files with '.bak' extension
                 r".*\.old$",  # ignore setting files with '.old' extension
+                r".*Blizzard_.*",  # ignore the 'Blizzard_*' addon directories
                 r".*DataStore.*",  # ignore the 'DataStore*' addon directory
                 r".*/TradeSkillMaster_AppHelper.*",  # ignore the 'TradeSkillMaster_AppHelper' addon directory
             ],
@@ -293,11 +255,8 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="wow_weakauras",
-        # root='/mnt/c/Users/david/AppData/Roaming',
         root=user_roaming_dir,
         name="weakauras-companion",
-        # setting=' ',
-        # setting_opts=['--include=config.json', '--exclude=*'],
         options={
             "only": [
                 "config.json",  # settings
@@ -306,7 +265,8 @@ game_backups_full: List[GameBackup] = [
     ),
     GameBackup(
         id="wow_project_ascension",
-        root=game_c_dir,
+        root=sh.join_path(game_c_dir, "ascension-wow", "drive_c", "Program Files"),
+        win_root=game_c_dir,
         name=sh.join_path("Ascension Launcher", "resources", "client"),
         screenshot="Screenshots",
         options={
@@ -318,17 +278,15 @@ game_backups_full: List[GameBackup] = [
             "exclude": [
                 r".*\.bak$",  # ignore setting files with '.bak' extension
                 r".*\.old$",  # ignore setting files with '.old' extension
-                r".*Blizzard_.*",  # ignore the 'Blizzard_*' addon directory
+                r".*Blizzard_.*",  # ignore the 'Blizzard_*' addon directories
             ],
         },
     ),
     GameBackup(
         id="yiffalicious",
-        # root='/mnt/c/Users/david/AppData/Roaming',
         root=user_roaming_dir,
         name="yiffalicious",
         screenshot="screenshots",
-        # setting='interactions/favorites',
         options={
             "only": [
                 "screenshots/*",
@@ -336,11 +294,9 @@ game_backups_full: List[GameBackup] = [
             ],
         },
     ),
-    # --- Covered by OneDrive ---
-    # overwatch
-    # --- Covered by Steam ---
-    # *most other games
 ]
 
 # Filter backup details to only the active games
-game_backups: List[GameBackup] = [game for game in game_backups_full if game.id in active_games]
+game_backups: list[GameBackup] = [
+    game for game in game_backups_full if game.id in active_games
+]

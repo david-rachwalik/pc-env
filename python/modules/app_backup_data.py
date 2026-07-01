@@ -2,7 +2,6 @@
 """Data for important application files to backup"""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
 
 import shell_boilerplate as sh
 
@@ -10,39 +9,67 @@ import shell_boilerplate as sh
 # https://realpython.com/python-data-classes
 @dataclass
 class AppBackup:
-    """Class model of application backup details"""
+    """Class model of application backup details.
 
-    id: str  # arbitrary 'app_id' given for ad hoc commands (filter_id)
-    root: str  # install directory path without app title
-    name: str  # directory for the app title (mirrored by backup target)
-    # setting_opts: Optional[List[str]] = field(default=None)
-    options: Optional[Dict[str, Any]] = field(default=None)  # provide additional options [only, exclude, include]
+    Attributes:
+        id (str): Arbitrary 'app_id' given for ad hoc commands (filter_id).
+        root (str | None): Install directory path without app title.
+        name (str | None): Directory for the app title (mirrored by backup target).
+        options (dict | None): Provide additional options [only, exclude, include].
+        win_root (str | None): Windows-specific directory root override.
+        win_name (str | None): Windows-specific application directory name override.
+    """
+
+    id: str
+    root: str
+    name: str
+    win_root: str | None = field(default=None)
+    win_name: str | None = field(default=None)
+    options: dict | None = field(default=None)
 
 
 active_apps = [
+    "continue",
     "handbrake",
     "obs",
     "qbittorrent",
     "qbittorrent_data",
-    "voicemeeter",
-    "vscode",
-    "yt_dlp",
+    # "voicemeeter",
+    # "vscode",
+    # "yt_dlp",
 ]
 
 
-# user_roaming_dir = sh.environment_get('AppData')  # %UserProfile%/AppData/Roaming
-# user_local_dir = sh.environment_get('LocalAppData')  # %UserProfile%/AppData/Local
+# --- Cross-Platform Roots ---
+is_windows = sh.system_platform() == "windows"
+if is_windows:
+    # Windows native paths
+    user_home = sh.environment_get("USERPROFILE")
+    user_roaming_dir = sh.environment_get("APPDATA")  # C:\Users\name\AppData\Roaming
+    user_local_dir = sh.environment_get("LOCALAPPDATA")  # C:\Users\name\AppData\Local
+else:
+    # Linux native paths
+    user_home = sh.expand_path("~")
+    user_roaming_dir = sh.join_path(user_home, ".config")
+    user_local_dir = sh.join_path(user_home, ".local", "share")
 
-user_roaming_dir = "/mnt/c/Users/david/AppData/Roaming"  # %AppData%
-user_local_dir = "/mnt/c/Users/david/AppData/Local"  # %LocalAppData%
-user_docs_dir = "/mnt/c/Users/david/Documents"
+CLOUD_ROOT_DIR = sh.join_path(user_home, "pCloud")
+BACKUP_ROOT_DIR = sh.join_path(CLOUD_ROOT_DIR, "Backups")
 
-app_backups_full: List[AppBackup] = [
+
+app_backups_full: list[AppBackup] = [
+    AppBackup(
+        id="continue",
+        root=user_home,
+        name=".continue",
+        options={
+            "only": ["config.yaml", ".continueignore", "rules/*"],
+        },
+    ),
     AppBackup(
         id="handbrake",
         root=user_roaming_dir,
         name="HandBrake",
-        # setting_opts=['--include=presets.json', '--include=settings.json', '--exclude=*'],
         options={
             "only": ["presets.json", "settings.json"],
         },
@@ -51,9 +78,6 @@ app_backups_full: List[AppBackup] = [
         id="obs",
         root=user_roaming_dir,
         name="obs-studio",
-        # Test Command: rsync -a --dry-run --verbose --exclude=*.bak --include=global.ini --include=basic/ --include=basic/**/ --include=basic/**/* --exclude=* /mnt/c/Users/david/AppData/Roaming/obs-studio/ /mnt/d/OneDrive/Backups/Apps/obs-studio
-        # setting_opts=['--exclude=*.bak', '--include=global.ini', '--include=basic/',
-        #               '--include=basic/**/', '--include=basic/**/*', '--exclude=*'],
         options={
             "only": ["global.ini", "basic/*"],
         },
@@ -76,8 +100,8 @@ app_backups_full: List[AppBackup] = [
     ),
     AppBackup(
         id="voicemeeter",
-        # root=sh.join_path(sh.environment_get('Home'), 'Documents'),
-        root=user_docs_dir,
+        root="",
+        win_root=sh.join_path(user_home, "Documents"),  # Windows only
         name="Voicemeeter",
         options={
             "only": ["VoicemeeterProfile.xml"],
@@ -87,7 +111,6 @@ app_backups_full: List[AppBackup] = [
         id="vscode",
         root=user_roaming_dir,
         name=sh.join_path("Code", "User"),
-        # setting_opts=['--include=settings.json', '--include=snippets/', '--exclude=*'],
         options={
             # 'only': ['settings.json', 'snippets/*'],
             "only": ["settings.json"],
@@ -103,5 +126,24 @@ app_backups_full: List[AppBackup] = [
     ),
 ]
 
-# Filter backup details to only the active apps
-app_backups: List[AppBackup] = [app for app in app_backups_full if app.id in active_apps]
+# # Filter backup details to only the active apps
+# app_backups: list[AppBackup] = [
+#     app for app in app_backups_full if app.id in active_apps
+# ]
+
+# Filter backup details to only the active apps, evaluating OS roots
+app_backups: list[AppBackup] = []
+for app in app_backups_full:
+    if app.id not in active_apps:
+        continue
+
+    # Evaluate Windows overrides
+    if is_windows:
+        app.root = app.win_root if app.win_root is not None else app.root
+        app.name = app.win_name if app.win_name is not None else app.name
+
+    # Skip application if it lacks a valid root/name for the current OS platform
+    if not app.root or not app.name:
+        continue
+
+    app_backups.append(app)
