@@ -2,7 +2,6 @@
 """Common logic for Python HTTP request interactions"""
 
 import argparse
-from typing import Any, List, Optional, TypeAlias
 
 import logging_boilerplate as log
 import requests as req
@@ -17,7 +16,7 @@ from requests.auth import HTTPBasicAuth
 # --- Authentication ---
 # https://requests.readthedocs.io/en/latest/user/authentication
 
-AUTH_TYPE: TypeAlias = HTTPBasicAuth
+type AUTH_TYPE = HTTPBasicAuth
 
 
 def authentication_web(user: str, password: str) -> HTTPBasicAuth:
@@ -37,28 +36,32 @@ DEFAULT_TIMEOUT = 100  # seconds before exception is raised if server has not re
 Response = req.Response
 
 
-def create(url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None) -> req.Response:
+def create(
+    url: str, data: dict | str | bytes | None = None, auth: AUTH_TYPE | None = None
+) -> req.Response:
     """Method that creates - performs an HTTP 'POST' request"""
     response = req.post(url, data=data, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
     return response
 
 
-def get(url: str, auth: Optional[AUTH_TYPE] = None) -> req.Response:
+def get(url: str, auth: AUTH_TYPE | None = None) -> req.Response:
     """Method that reads/fetches - performs an HTTP 'GET' request"""
     response = req.get(url, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
     return response
 
 
-def update(url: str, data: Any = None, auth: Optional[AUTH_TYPE] = None) -> req.Response:
+def update(
+    url: str, data: dict | str | bytes | None = None, auth: AUTH_TYPE | None = None
+) -> req.Response:
     """Method that updates - performs an HTTP 'PUT' request"""
     response = req.put(url, data=data, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
     return response
 
 
-def delete(url: str, auth: Optional[AUTH_TYPE] = None) -> req.Response:
+def delete(url: str, auth: AUTH_TYPE | None = None) -> req.Response:
     """Method that deletes - performs an HTTP 'DELETE' request"""
     response = req.delete(url, timeout=DEFAULT_TIMEOUT, auth=auth)
     # LOG.debug(f'response: {response}')
@@ -83,7 +86,9 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: list[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

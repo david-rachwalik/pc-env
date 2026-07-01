@@ -16,6 +16,7 @@ Profiles:
   - normal: 128kbps, 44.1kHz, stereo
   - audiobook: 64kbps, 44.1kHz, mono, normalized audio
 """
+
 import argparse
 import json
 import shlex
@@ -23,7 +24,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
 
 # --- Configuration ---
 AUDIO_EXTS = {".mp3", ".flac", ".wav", ".m4a", ".ogg", ".opus"}
@@ -85,7 +85,7 @@ def warn(msg: str):
     print(f"[WARN] {msg}", file=sys.stderr)
 
 
-def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
+def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
     """Executes a command, logging it and handling dry runs."""
     # Using shlex.join for a safe, accurate representation of the command in log
     cmd_str = shlex.join(cmd)
@@ -106,7 +106,7 @@ def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProce
 # --- FFprobe & FFmpeg Logic ---
 def _has_video_stream(input_path: Path) -> bool:
     """Uses ffprobe to determine if the input file contains a video stream."""
-    info(f"  Probing for video stream...")
+    info("  Probing for video stream...")
     try:
         probe_cmd = [
             "ffprobe",
@@ -125,13 +125,17 @@ def _has_video_stream(input_path: Path) -> bool:
             info("  -> Video stream found.")
             return True
     except (subprocess.CalledProcessError, json.JSONDecodeError, IndexError) as e:
-        warn(f"Could not probe for video stream in {input_path.name}. Proceeding as if there is none. Reason: {e}")
+        warn(
+            f"Could not probe for video stream in {input_path.name}. Proceeding as if there is none. Reason: {e}"
+        )
 
     info("  -> No video stream found.")
     return False
 
 
-def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str, Any], has_video: bool) -> List[str]:
+def _build_ffmpeg_command(
+    input_path: Path, output_path: Path, profile: dict[str, object], has_video: bool
+) -> list[str]:
     """
     Constructs the ffmpeg command list with correct argument order.
 
@@ -168,13 +172,13 @@ def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str
     cmd.extend(
         [
             "-c:a",
-            profile["format"],
+            str(profile["format"]),
             "-ar",
-            profile["sample_rate"],
+            str(profile["sample_rate"]),
             "-ac",
             str(profile["channels"]),
             "-b:a",
-            profile["bitrate"],
+            str(profile["bitrate"]),
         ]
     )
 
@@ -184,7 +188,7 @@ def _build_ffmpeg_command(input_path: Path, output_path: Path, profile: Dict[str
 
 
 # --- Conversion Logic ---
-def get_audio_files(path: Path) -> List[Path]:
+def get_audio_files(path: Path) -> list[Path]:
     """Find all audio files in the specified directory (non-recursive)."""
     info(f"Searching for audio files in {path} (non-recursive)...")
     files = []
@@ -195,7 +199,7 @@ def get_audio_files(path: Path) -> List[Path]:
     return files
 
 
-def convert_audio_file(input_path: Path, output_dir: Path, profile: Dict[str, Any]):
+def convert_audio_file(input_path: Path, output_dir: Path, profile: dict[str, object]):
     """Probes, builds, and executes the ffmpeg command for a single file."""
     file_start_time = time.monotonic()
     output_filename = f"{input_path.stem}.{profile['format']}"
@@ -248,7 +252,9 @@ def batch_convert(path: Path, profile_name: str):
             convert_audio_file(audio_file, output_dir, profile)
         except Exception as e:
             # The 'raise' in run_command will stop the script, but this catches other errors
-            warn(f"FATAL: A critical error occurred while processing {audio_file.name}. Halting. Reason: {e}")
+            warn(
+                f"FATAL: A critical error occurred while processing {audio_file.name}. Halting. Reason: {e}"
+            )
             sys.exit(1)
 
     total_elapsed_time = time.monotonic() - batch_start_time
@@ -259,10 +265,22 @@ def batch_convert(path: Path, profile_name: str):
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Batch convert audio files.")
-    parser.add_argument("path", type=Path, help="Path to the directory with audio files.")
-    parser.add_argument("--profile", type=str, required=True, choices=PROFILES.keys(), help="Conversion profile to use.")
-    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing files.")
-    parser.add_argument("--dry-run", action="store_true", help="Print commands without executing them.")
+    parser.add_argument(
+        "path", type=Path, help="Path to the directory with audio files."
+    )
+    parser.add_argument(
+        "--profile",
+        type=str,
+        required=True,
+        choices=PROFILES.keys(),
+        help="Conversion profile to use.",
+    )
+    parser.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing files."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print commands without executing them."
+    )
     return parser.parse_args()
 
 
@@ -282,7 +300,7 @@ if __name__ == "__main__":
 
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/audio-convert
-# docker compose build --no-cache  # (only when Dockerfile changes)
+# docker compose build  # (only when Dockerfile changes)
 # docker compose run --rm audioconvert
 
 # --- Inside the container ---
@@ -295,3 +313,4 @@ if __name__ == "__main__":
 
 # python /app/dev/convert-audio.py --profile vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Critical Role]"
 # vocal-clean "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Kill James Bond]/James Bond Movies"
+# vocal "/mnt/hdd-01/_Downloads/_Audio (YouTube)/[Legends of Avantris]/Once Upon a Witchlight (Feywild D&D Campaign)"

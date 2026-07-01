@@ -9,7 +9,6 @@
 # - pull methods:               work_fetch, work_merge, work_rebase, work_reset
 
 import argparse
-from typing import List, Optional, Tuple
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
@@ -24,7 +23,7 @@ def repo_exists(path: str, bare: bool = False) -> bool:
     result: bool = False
     if bare:
         if sh.path_exists(path, "d"):
-            command: List[str] = ["git", "rev-parse", "--is-bare-repository"]
+            command: list[str] = ["git", "rev-parse", "--is-bare-repository"]
             sh.print_command(command)
             process = sh.run_subprocess(command, path)
             # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -36,16 +35,19 @@ def repo_exists(path: str, bare: bool = False) -> bool:
 
 
 # Initialize the repository
-def repo_create(path: str, bare: bool = False) -> Tuple[bool, bool]:
+def repo_create(path: str, bare: bool = False) -> tuple[bool, bool]:
     """Method that creates a repository"""
-    command: List[str] = ["git", "init"]
+    command: list[str] = ["git", "init"]
     if bare:
         sh.create_directory(path)  # Directory must exist prior
         command.append("--bare")
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
-    failed: bool = process.returncode != 0 and "Reinitialized existing Git repository" not in process.stdout
+    failed: bool = (
+        process.returncode != 0
+        and "Reinitialized existing Git repository" not in process.stdout
+    )
     changed: bool = not failed and "skipped, since" not in process.stdout
     return (not failed, changed)
 
@@ -58,26 +60,36 @@ def work_remote(path: str, remote_path: str, remote_alias: str = "origin") -> bo
     """Method that sets a remote path for the repository"""
     failed: bool = False
     # Check local repository for remote alias
-    command: List[str] = ["git", "config", "--get", f"remote.{remote_alias}.url"]
+    command: list[str] = ["git", "config", "--get", f"remote.{remote_alias}.url"]
     process = sh.run_subprocess(command, path)
     if not process.stdout:
         # Repository is missing remote path, adding...
-        LOG.warning(f"Remote ({remote_alias}) for local repository is missing, adding...")
+        LOG.warning(
+            f"Remote ({remote_alias}) for local repository is missing, adding..."
+        )
         command = ["git", "remote", "add", remote_alias, remote_path]
 
         sh.print_command(command)
         process = sh.run_subprocess(command, path)
-        failed = process.returncode != 0 and f"remote {remote_alias} already exists" not in process.stderr
+        failed = (
+            process.returncode != 0
+            and f"remote {remote_alias} already exists" not in process.stderr
+        )
         LOG.info("Successfully added remote path for local repository!")
 
     elif process.stdout != remote_path:
         # Repository has outdated remote path, updating...
-        LOG.warning(f"Remote ({remote_alias}) for local repository is outdated, updating...")
+        LOG.warning(
+            f"Remote ({remote_alias}) for local repository is outdated, updating..."
+        )
         command = ["git", "remote", "set-url", remote_alias, remote_path]
 
         sh.print_command(command)
         process = sh.run_subprocess(command, path)
-        failed = process.returncode != 0 and f"remote {remote_alias} already exists" not in process.stderr
+        failed = (
+            process.returncode != 0
+            and f"remote {remote_alias} already exists" not in process.stderr
+        )
         LOG.info("Successfully updated remote path for local repository!")
 
     # don't be tempted to remove the copy-paste job above; they only occur in 2/3 conditionals, not the else condition
@@ -86,7 +98,7 @@ def work_remote(path: str, remote_path: str, remote_alias: str = "origin") -> bo
 
 def work_status(path: str) -> bool:
     """Method that checks the working directory status of a repository"""
-    command: List[str] = ["git", "status"]
+    command: list[str] = ["git", "status"]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -94,7 +106,9 @@ def work_status(path: str) -> bool:
     return is_clean
 
 
-def work_commit(path: str, message: str = "auto-commit", initial: bool = False) -> Tuple[bool, bool]:
+def work_commit(
+    path: str, message: str = "auto-commit", initial: bool = False
+) -> tuple[bool, bool]:
     """Method that commits the working directory of a repository"""
     if not initial:
         # Stage working directory; copies files into '.git' directory
@@ -109,8 +123,14 @@ def work_commit(path: str, message: str = "auto-commit", initial: bool = False) 
         sh.print_command(command)
         process = sh.run_subprocess(command, path)
         # sh.log_subprocess(LOG, process, debug=ARGS.debug)
-        failed = process.returncode != 0 and "nothing to commit (working directory clean)" not in process.stdout
-        changed = not failed and "nothing to commit (working directory clean)" not in process.stdout
+        failed = (
+            process.returncode != 0
+            and "nothing to commit (working directory clean)" not in process.stdout
+        )
+        changed = (
+            not failed
+            and "nothing to commit (working directory clean)" not in process.stdout
+        )
         return (not failed, changed)  # (succeeded, changed)
     else:
         # Initial commit so 'master' branch exists; helps prevent dangling HEAD refs
@@ -125,7 +145,7 @@ def work_commit(path: str, message: str = "auto-commit", initial: bool = False) 
 # TODO: Set upstream (-u) on initial push; streamlines fetch
 def work_push(path: str, version: str = "master", remote_alias: str = "origin"):
     """Method that pushes the commits of a repository"""
-    command: List[str] = ["git", "push", remote_alias, version]
+    command: list[str] = ["git", "push", remote_alias, version]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -138,17 +158,17 @@ def work_push(path: str, version: str = "master", remote_alias: str = "origin"):
 
 
 # Trim extra apostrophes; expected format to validate against
-def _ref_formatter(in_list: List[str]) -> List[str]:
+def _ref_formatter(in_list: list[str]) -> list[str]:
     # LOG.debug(f"(_ref_formatter): in_list: {in_list}")
-    results: List[str] = [i.strip("'") for i in in_list]
+    results: list[str] = [i.strip("'") for i in in_list]
     # LOG.debug(f"(_ref_formatter): results: {results}")
     return results
 
 
 def ref_head(path: str) -> str:
     """Method that fetches the branch name of a repository"""
-    # command: List[str] = ["git", "show-ref", "--head"]
-    command: List[str] = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
+    # command: list[str] = ["git", "show-ref", "--head"]
+    command: list[str] = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -158,9 +178,9 @@ def ref_head(path: str) -> str:
 
 # git for-each-ref --format='%(refname:short)' refs/heads
 # git show-ref --heads      # decent but no formatting and rc=1 when empty
-def ref_heads(path: str) -> List[str]:
+def ref_heads(path: str) -> list[str]:
     """Method that lists the branch names of a repository"""
-    command: List[str] = [
+    command: list[str] = [
         "git",
         "for-each-ref",
         "--format='%(refname:short)'",
@@ -169,17 +189,17 @@ def ref_heads(path: str) -> List[str]:
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
-    stdout_lines: List[str] = process.stdout.splitlines()
+    stdout_lines: list[str] = process.stdout.splitlines()
     # LOG.debug(f"(ref_heads): stdout_lines: {stdout_lines}")
-    results: List[str] = _ref_formatter(stdout_lines)
+    results: list[str] = _ref_formatter(stdout_lines)
     return results
 
 
 # git for-each-ref --format='%(refname:short)' refs/remotes
 # 'git for-each-ref' has better formatting than 'git branch -r'
-def ref_remotes(path: str) -> List[str]:
+def ref_remotes(path: str) -> list[str]:
     """Method that lists the remote names of a repository"""
-    command: List[str] = [
+    command: list[str] = [
         "git",
         "for-each-ref",
         "--format='%(refname:short)'",
@@ -188,17 +208,17 @@ def ref_remotes(path: str) -> List[str]:
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
-    stdout_lines: List[str] = process.stdout.splitlines()
+    stdout_lines: list[str] = process.stdout.splitlines()
     # LOG.debug(f"(ref_remotes): stdout_lines: {stdout_lines}")
-    results: List[str] = _ref_formatter(stdout_lines)
+    results: list[str] = _ref_formatter(stdout_lines)
     return results
 
 
 # git for-each-ref --format='%(refname:short)' refs/tags
 # git show-ref --tags       # decent but no formatting and rc=1 when empty
-def ref_tags(path: str) -> List[str]:
+def ref_tags(path: str) -> list[str]:
     """Method that lists the tags of a repository"""
-    command: List[str] = [
+    command: list[str] = [
         "git",
         "for-each-ref",
         "--format='%(refname:short)'",
@@ -207,9 +227,9 @@ def ref_tags(path: str) -> List[str]:
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
-    stdout_lines: List[str] = process.stdout.splitlines()
+    stdout_lines: list[str] = process.stdout.splitlines()
     # LOG.debug(f"(ref_tags): stdout_lines: {stdout_lines}")
-    results: List[str] = _ref_formatter(stdout_lines)
+    results: list[str] = _ref_formatter(stdout_lines)
     return results
 
 
@@ -222,7 +242,7 @@ def branch_validate(path: str, version: str = "master") -> bool:
     failed: bool = False
     if version == "HEAD":
         return failed
-    command: List[str] = ["git", "check-ref-format", "--branch", version]
+    command: list[str] = ["git", "check-ref-format", "--branch", version]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -231,11 +251,11 @@ def branch_validate(path: str, version: str = "master") -> bool:
 
 
 # Providing 'remote_alias' will search in remotes instead of heads
-def branch_list(path: str, remote_alias: str = "") -> List[str]:
+def branch_list(path: str, remote_alias: str = "") -> list[str]:
     """Method that lists the branch names of a repository"""
     # Determine which metadata to check for branch list
     ref_method = ref_remotes if remote_alias else ref_heads
-    branch_results: List[str] = ref_method(path)
+    branch_results: list[str] = ref_method(path)
     ref_descriptor: str = "remote" if remote_alias else "local"
     LOG.debug(f"branches: ({ref_descriptor}): {branch_results}")
     return branch_results
@@ -247,7 +267,7 @@ def branch_exists(
     path: str,
     version: str = "master",
     remote_alias: str = "",
-    branches: Optional[List[str]] = None,
+    branches: list[str] | None = None,
 ) -> bool:
     """Method that verifies whether a branch exists in a repository"""
     remote_branch: str = f"{remote_alias}/{version}"
@@ -264,10 +284,10 @@ def branch_exists(
     return is_found
 
 
-def branch_create(path: str, version: str = "master") -> Tuple[bool, bool]:
+def branch_create(path: str, version: str = "master") -> tuple[bool, bool]:
     """Method that creates a branch in the repository"""
     # 'git branch --force' resets the branch's HEAD (not wanted)
-    command: List[str] = ["git", "branch", version]
+    command: list[str] = ["git", "branch", version]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -278,11 +298,13 @@ def branch_create(path: str, version: str = "master") -> Tuple[bool, bool]:
 
 
 # TODO: option to call exists and create
-def branch_switch(path: str, version: str = "master", remote_alias: str = "") -> Tuple[bool, bool]:
+def branch_switch(
+    path: str, version: str = "master", remote_alias: str = ""
+) -> tuple[bool, bool]:
     """Method that creates a branch in the repository"""
     remote_branch: str = f"{remote_alias}/{version}"
     branch_use_name: str = remote_branch if remote_alias else version
-    command: List[str] = ["git", "checkout", branch_use_name]
+    command: list[str] = ["git", "checkout", branch_use_name]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -292,9 +314,9 @@ def branch_switch(path: str, version: str = "master", remote_alias: str = "") ->
 
 
 # Supports either local or remote paths
-def branch_delete(path: str, version: str = "master") -> Tuple[bool, bool]:
+def branch_delete(path: str, version: str = "master") -> tuple[bool, bool]:
     """Method that deletes a branch from the repository"""
-    command: List[str] = ["git", "branch", "-D", version]
+    command: list[str] = ["git", "branch", "-D", version]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -309,13 +331,17 @@ def branch_delete(path: str, version: str = "master") -> Tuple[bool, bool]:
 
 # Fetch the latest meta data; increases '.git' directory size
 # Consider 'git fetch --all' https://www.atlassian.com/git/tutorials/syncing/git-fetch
-def work_fetch(path: str, remote_alias: str = "origin") -> Tuple[bool, bool]:
+def work_fetch(path: str, remote_alias: str = "origin") -> tuple[bool, bool]:
     """Method that fetches the contents of a remote repository"""
-    command: List[str] = ["git", "fetch", "--prune", remote_alias]
+    command: list[str] = ["git", "fetch", "--prune", remote_alias]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     failed: bool = process.returncode != 0 and "find remote ref" not in process.stdout
-    changed: bool = not failed and "find remote ref" not in process.stdout and "Everything up-to-date" not in process.stderr
+    changed: bool = (
+        not failed
+        and "find remote ref" not in process.stdout
+        and "Everything up-to-date" not in process.stderr
+    )
     return (not failed, changed)
 
 
@@ -327,20 +353,26 @@ def work_merge(
     message: str = "auto-merge",
     fast_forward: bool = True,
     pull_type: str = "ours",
-) -> Tuple[bool, bool]:
+) -> tuple[bool, bool]:
     """Method that merges commits into the current branch of a remote repository"""
     # Merge pull branch (auto-resolve)
     remote_branch: str = f"{remote_alias}/{version}"
     branch_use_name: str = remote_branch if remote_alias else version
-    command: List[str] = ["git", "merge", branch_use_name]
+    command: list[str] = ["git", "merge", branch_use_name]
     if not fast_forward:
         command.append("--no-ff")
-    command.extend(["--strategy=recursive", f"--strategy-option={pull_type}", f"-m '{message}'"])
+    command.extend(
+        ["--strategy=recursive", f"--strategy-option={pull_type}", f"-m '{message}'"]
+    )
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
     failed: bool = process.returncode != 0
-    changed: bool = not failed and "Already uptodate" not in process.stdout and "Already up-to-date" not in process.stdout
+    changed: bool = (
+        not failed
+        and "Already uptodate" not in process.stdout
+        and "Already up-to-date" not in process.stdout
+    )
     return (not failed, changed)
 
 
@@ -348,10 +380,10 @@ def work_merge(
 # - automatically uses default of --strategy='recursive' --strategy-option='theirs'
 # - ours/theirs is reverse of merge; theirs is currently active branch - ours is target branch
 # - 'remote_alias' parameter not implemented so rebase is only used for local work (e.g. feature branch)
-def work_rebase(path: str, version: str = "master") -> Tuple[bool, bool]:
+def work_rebase(path: str, version: str = "master") -> tuple[bool, bool]:
     """Method that appends a sequence of commits to the current branch of a remote repository"""
     # Merge pull branch (auto-resolve)
-    command: List[str] = ["git", "rebase", version]
+    command: list[str] = ["git", "rebase", version]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -365,7 +397,7 @@ def work_reset(path: str, version: str = "master", remote_alias: str = "") -> bo
     """Method that resets the current branch of a remote repository"""
     remote_branch: str = f"{remote_alias}/{version}"
     branch_use_name: str = remote_branch if remote_alias else version
-    command: List[str] = ["git", "reset", "--hard", branch_use_name]
+    command: list[str] = ["git", "reset", "--hard", branch_use_name]
     sh.print_command(command)
     process = sh.run_subprocess(command, path)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -390,7 +422,9 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: list[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

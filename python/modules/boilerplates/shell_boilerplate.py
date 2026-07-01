@@ -16,19 +16,14 @@
 # await_results, is_done, format_output
 
 import argparse
-
-# import distutils.dir_util
-# import distutils.file_util
 import json
 import os
 import shutil
-
-# import signal
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import dirsync
 import logging_boilerplate as log
@@ -107,7 +102,7 @@ def random_password(length: int = 16) -> str:
     for i in range(length - 4):
         password += random.choice(random_source)
     # Randomly shuffle all the characters
-    password_list: List[str] = list(password)
+    password_list: list[str] = list(password)
     random.SystemRandom().shuffle(password_list)
     password = "".join(password_list)
     return password
@@ -142,9 +137,9 @@ def list_differences(first, second):
 
 
 # Provide beginning text of command option to 'secure' and remaining will be hidden
-def print_command(command: List[str], secure: str = "") -> str:
+def print_command(command: list[str], secure: str = "") -> str:
     """Method that prints the main command text and hiding sensitive text"""
-    _command: List[str] = command.copy()
+    _command: list[str] = command.copy()
     if secure:
         # Print password-safe version of command
         for i, line in enumerate(_command):
@@ -155,7 +150,7 @@ def print_command(command: List[str], secure: str = "") -> str:
     return display_command
 
 
-# --- Process (List State) Commands ---
+# --- Process State Commands ---
 
 
 def exit_process():
@@ -237,11 +232,11 @@ def path_filename(name: str) -> str:
 # --- Directory Commands ---
 
 
-def list_directory(path: str) -> List[str]:
+def list_directory(path: str) -> list[str]:
     """Method that lists a directory's contents"""
     if not path_exists(path, "d"):
         return []
-    paths: List[str] = os.listdir(path)
+    paths: list[str] = os.listdir(path)
     paths.sort()
     return paths
 
@@ -250,7 +245,6 @@ def create_directory(path: str, mode=0o777) -> bool:
     """Method that creates a directory"""
     if path_exists(path, "d"):
         return False
-    # directories_created: List[str] = distutils.dir_util.mkpath(path, mode)
     # No longer using 'mode' here - prefer to change permissions (os.chmod) when needed
     # https://stackoverflow.com/questions/1627198/python-mkdir-giving-me-wrong-permissions
     # https://docs.python.org/3/library/os.html#os.makedirs
@@ -263,7 +257,6 @@ def delete_directory(path: str):
     if not path_exists(path, "d"):
         return False
     try:
-        # distutils.dir_util.remove_tree(path)
         shutil.rmtree(path)
         return True
     except Exception as e:
@@ -288,14 +281,14 @@ def rsync_directory(
     recursive: bool = True,
     purge: bool = True,
     cut: bool = False,
-    include: Tuple = (),
-    exclude: Tuple = (),
+    include: tuple = (),
+    exclude: tuple = (),
     debug: bool = False,
-) -> Tuple[List[str], List[str]]:
+) -> tuple[list[str], list[str]]:
     """Method that syncs a directory's contents"""
     LOG.debug("Init")
-    changed_files: List[str] = []
-    changes_dirs: List[str] = []
+    changed_files: list[str] = []
+    changes_dirs: list[str] = []
     # Create sequence of command options
     command_options = []
     # --itemize-changes returns files with any change (e.g. permission attributes)
@@ -340,7 +333,7 @@ def rsync_directory(
     process = run_subprocess(command)
     # log_subprocess(LOG, process)
 
-    results: List[str] = str.splitlines(str(process.stdout))
+    results: list[str] = str.splitlines(str(process.stdout))
     LOG.debug(f"results: {results}")
 
     for r in results:
@@ -360,8 +353,8 @@ def sync_directory(
     sourcedir: str,
     targetdir: str,
     action: str = "sync",
-    options: Optional[Dict[str, Any]] = None,
-    ignore: Optional[List[str]] = None,
+    options: dict[str, object] | None = None,
+    ignore: list[str] | None = None,
 ) -> bool:
     """Method that copies a directory
 
@@ -374,7 +367,7 @@ def sync_directory(
     Returns:
         bool: Whether directories are in sync
     """
-    action_choices: List[str] = ["diff", "sync", "update"]
+    action_choices: list[str] = ["diff", "sync", "update"]
     if action not in action_choices:
         return False
 
@@ -383,7 +376,7 @@ def sync_directory(
 
     # https://github.com/tkhyn/dirsync/#additional-options
     # https://github.com/tkhyn/dirsync/#custom-logger
-    default_options: Dict[str, Any] = {
+    default_options: dict[str, object] = {
         "logger": LOG,  # custom logger to send output somewhere other than stdout
         "verbose": True,
         "create": True,  # create target directory if it does not exist
@@ -395,14 +388,8 @@ def sync_directory(
             *ignore,
         ],  # regex patterns to ignore (https://regexr.com)
     }
-    if options:
-        LOG.debug(f"options provided: {options}")
-        full_options: Dict[str, Any] = {
-            **default_options,
-            **options,
-        }
-    else:
-        full_options: Dict[str, Any] = default_options
+
+    full_options = (default_options | options) if options else default_options
     LOG.debug(f"options used: {full_options}")
 
     try:
@@ -415,9 +402,9 @@ def sync_directory(
 
 
 # https://stackoverflow.com/questions/47093561/remove-empty-folders-python
-def remove_empty_directories(root) -> List[str]:
+def remove_empty_directories(root) -> list[str]:
     """Method that recursively removes empty subdirectories"""
-    removed_dirs: List[str] = []
+    removed_dirs: list[str] = []
 
     for current_dir, subdirs, files in os.walk(root, topdown=False):
         if files:
@@ -443,7 +430,7 @@ def remove_empty_directories(root) -> List[str]:
 
 
 # Touch file and optionally fill with content
-def write_file(path: str, content: Optional[Any] = None, append: bool = False):
+def write_file(path: str, content: object | None = None, append: bool = False):
     """Method that creates a file"""
     strategy = "a" if (append) else "w"  # write mode
     # open() only accepts absolute paths, not relative
@@ -513,10 +500,10 @@ def hash_file(path: str) -> str:
     if not path_exists(path, "f"):
         return ""
     # Using SHA-2 hash check (more secure than MD5|SHA-1)
-    command: List[str] = ["sha256sum", path]
+    command: list[str] = ["sha256sum", path]
     process = run_subprocess(command)
     # log_subprocess(LOG, process, debug=ARGS.debug)
-    results: List[str] = str(process.stdout).split()
+    results: list[str] = str(process.stdout).split()
     # LOG.debug(f"results: {results}")
     return results[0]
 
@@ -554,7 +541,9 @@ def _decode_dict(dct) -> DictObj:
 
 
 # Deserialize JSON string to Python dictionary: https://docs.python.org/3/library/json.html
-def from_json(jsonstr: str, object_hook: Optional[Callable] = None) -> Dict[str, Any] | None:
+def from_json(
+    jsonstr: str, object_hook: Callable | None = None
+) -> dict[str, object] | None:
     """Method that deserializes JSON string to Python dictionary"""
     results = None
     if not (jsonstr and isinstance(jsonstr, str)):
@@ -571,7 +560,7 @@ def from_json(jsonstr: str, object_hook: Optional[Callable] = None) -> Dict[str,
 
 
 # Serialize Python dictionary into JSON string
-def to_json(data: Any, indent: Optional[int] = None) -> str:
+def to_json(data: object, indent: int | None = None) -> str:
     """Method that serializes Python dictionary into JSON string"""
     results = ""
     try:
@@ -585,7 +574,7 @@ def to_json(data: Any, indent: Optional[int] = None) -> str:
 
 
 # TODO: only backup if content has changed
-def save_json(path: str, data: Any, indent: Optional[int] = 2) -> bool:
+def save_json(path: str, data: object, indent: int | None = 2) -> bool:
     """Method that saves JSON to a file"""
     # Handle previous service principal if found
     if path_exists(path, "f"):
@@ -619,13 +608,12 @@ def is_json_str(json_str: str) -> bool:
 # Creates asyncronous process and immediately awaits the tuple results
 # NOTE: Only accepting 'command' as list; argument options can have spaces
 def run_subprocess(
-    command: List[str],
-    cwd: Optional[str] = None,
-    env: Optional[Dict[str, str]] = None,
-    # ) -> Tuple[str, str, int]:
+    command: list[str],
+    cwd: str | None = None,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess:
     """Method that runs a command in a subprocess"""
-    run_command: List[str] = []
+    run_command: list[str] = []
 
     # process: SubProcess = SubProcess(command, cwd, env)
     # (stdout, stderr, rc) = process.await_results()
@@ -649,7 +637,7 @@ def run_subprocess(
         cwd=cwd,
         check=False,  # False avoids need to try/except (only CompletedProcess, no CalledProcessError)
         env=env,
-        universal_newlines=True,
+        text=True,  # Replaces universal_newlines
     )
     # LOG.debug(f'subprocess result: {result}')
 
@@ -662,7 +650,9 @@ def run_subprocess(
 
 
 # Log the subprocess output provided
-def log_subprocess(logger: log.Logger, process: subprocess.CompletedProcess, debug: bool = False):
+def log_subprocess(
+    logger: log.Logger, process: subprocess.CompletedProcess, debug: bool = False
+):
     """Method that logs a command in a subprocess"""
     if isinstance(process.stdout, str) and len(process.stdout) > 0:
         log_stdout = f"stdout: {process.stdout}" if debug else process.stdout
@@ -682,29 +672,6 @@ def log_subprocess(logger: log.Logger, process: subprocess.CompletedProcess, deb
     # [Debug]               "rc: {0}"
 
 
-# --- Signal Commands ---
-
-# def max_signal() -> int:
-#     return int(signal.NSIG) - 1
-
-
-# # Accepts 'task' of <function>, 0 (signal.SIG_DFL), or 1 (signal.SIG_IGN)
-# def handle_signal(signal_num: int, task: Callable | int):
-#     task_whitelist = [signal.SIG_DFL, signal.SIG_IGN]
-#     valid_task = callable(task) or task in task_whitelist
-#     if not valid_task:
-#         raise ValueError(
-#             "handle_signal() expects 'task' parameter as callable <function> or an integer of 0 or 1 (signal.SIG_DFL or signal.SIG_IGN)")
-#     # Update the signal handler (callback method)
-#     signal.signal(signal_num, task)
-
-
-# def send_signal(pid: int, signal_num: int = signal.SIGTERM):
-#     if not pid:
-#         raise ValueError("send_signal() expects 'pid' parameter as a positive integer")
-#     os.kill(pid, signal_num)
-
-
 # ------------------------ SubProcess Class ------------------------
 
 
@@ -715,13 +682,13 @@ class SubProcess(object):
 
     def __init__(
         self,
-        command: List[str],
+        command: list[str],
         chdir: str = "",
-        env: Optional[Dict[str, str]] = None,
+        env: dict[str, str] | None = None,
         shell: bool = False,
     ):
         # Initial values
-        self.command: List[str] = command
+        self.command: list[str] = command
         self.cwd: str = current_path()
         self.chdir: str = str(chdir)
         self.env = env
@@ -733,7 +700,7 @@ class SubProcess(object):
         # Build arguments and environment variables to support command
         command_args = {
             "close_fds": True,
-            "universal_newlines": True,
+            "text": True,  # Replaces universal_newlines
             "stdout": subprocess.PIPE,
             "stderr": subprocess.PIPE,
         }
@@ -773,10 +740,10 @@ class SubProcess(object):
     def __str__(self):
         return str(self.process)
 
-    def await_results(self) -> Tuple[str, str, int]:
+    def await_results(self) -> tuple[str, str, int]:
         """Method that waits for the process to finish and return its output (stdout, stderr, rc)"""
         try:
-            (stdout, stderr) = self.process.communicate()
+            stdout, stderr = self.process.communicate()
             self.pid = self.process.pid
             self.rc = self.process.returncode
             self.stdout = self.format_output(stdout)
@@ -829,7 +796,7 @@ if __name__ == "__main__":
         # Build command to send
         xml_config: str = "$HOME/configuration.xml"
         xml_schema: str = "$HOME/configuration.xsd"
-        validator_command: List[str] = [
+        validator_command: list[str] = [
             "/usr/bin/xmllint",
             "--noout",
             f"--schema {xml_schema}",
@@ -840,14 +807,16 @@ if __name__ == "__main__":
         # Validate configuration against the schema
         PROCESS = run_subprocess(validator_command)
         if PROCESS.returncode != 0:
-            LOG.error(f"XML file ({xml_config}) failed to validate against schema ({xml_schema})")
+            LOG.error(
+                f"XML file ({xml_config}) failed to validate against schema ({xml_schema})"
+            )
             log_subprocess(LOG, PROCESS, debug=ARGS.debug)
         else:
             LOG.debug(f"{xml_config} was successfully validated")
 
     # -------- SubProcess Test --------
     elif ARGS.test == "subprocess":
-        test_command: List[str] = ["ls", "-la", "/var"]
+        test_command: list[str] = ["ls", "-la", "/var"]
         LOG.debug(f"test command => {test_command}")
         PROCESS = run_subprocess(test_command)
         log_subprocess(LOG, PROCESS, debug=ARGS.debug)
@@ -855,7 +824,7 @@ if __name__ == "__main__":
         # Test writing to files
         test_file = "/tmp/ewertz"
         test_command = ["cat", test_file]
-        inputs: List[str] = ["", "123", "12345", "1"]
+        inputs: list[str] = ["", "123", "12345", "1"]
         for I in inputs:
             write_file(test_file, I)
             PROCESS = run_subprocess(test_command)

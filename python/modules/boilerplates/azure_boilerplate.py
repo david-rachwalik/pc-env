@@ -29,7 +29,6 @@
 import argparse
 import re
 from dataclasses import dataclass, fields
-from typing import Any, Dict, List, Optional, Type, TypeAlias
 
 import azure.identity as azid
 import azure.keyvault.secrets as azkv
@@ -40,8 +39,12 @@ import azure.mgmt.subscription as az_sub
 import logging_boilerplate as log
 import shell_boilerplate as sh
 
-# https://docs.python.org/3/library/typing.html#typing.TypeAlias
-Credential: TypeAlias = azid.DefaultAzureCredential | azid.AzureCliCredential | azid.EnvironmentCredential | azid.ClientSecretCredential
+type Credential = (
+    azid.DefaultAzureCredential
+    | azid.AzureCliCredential
+    | azid.EnvironmentCredential
+    | azid.ClientSecretCredential
+)
 
 # ------------------------ Data Classes ------------------------
 
@@ -77,13 +80,13 @@ class Account:
 
     tenantId: str = ""  # active directory
     # Microsoft account (*@outlook.com, *@hotmail.com)
-    user: Optional[AccountUser] = None
+    user: AccountUser | None = None
     name: str = ""  # subscription name
     id: str = ""  # subscription id
     isDefault: bool = False  # subscription is default
 
-    auth: Optional[Credential] = None
-    login_sp: Optional[ServicePrincipal] = None
+    auth: Credential | None = None
+    login_sp: ServicePrincipal | None = None
     devops_pat: str = ""
 
     @property
@@ -215,16 +218,16 @@ class ActiveDirectoryApplication(AzureBase):
         obj = sh.from_json(data)
 
         if obj:
-            self.name = obj.get("displayName", "")
-            self.appId = obj.get("appId", "")
-            self.domain = obj.get("homepage", "")
+            self.name = str(obj.get("displayName", ""))
+            self.appId = str(obj.get("appId", ""))
+            self.domain = str(obj.get("homepage", ""))
             self.identifierUri = obj.get("identifierUris", [""])[0]
-            self.objectId = obj.get("objectId", "")
-            self.objectType = obj.get("objectType", "")
-            self.publisherDomain = obj.get("publisherDomain", "")
+            self.objectId = str(obj.get("objectId", ""))
+            self.objectType = str(obj.get("objectType", ""))
+            self.publisherDomain = str(obj.get("publisherDomain", ""))
             self.replyUrl = obj.get("replyUrls", [""])[0]
-            self.signInAudience = obj.get("signInAudience", "")
-            self.wwwHomepage = obj.get("wwwHomepage", "")
+            self.signInAudience = str(obj.get("signInAudience", ""))
+            self.wwwHomepage = str(obj.get("wwwHomepage", ""))
 
 
 class ArmParameters(AzureBase):
@@ -234,11 +237,13 @@ class ArmParameters(AzureBase):
         self.content = {}
         # Business logic for parsing
         obj = sh.from_json(data)
-        if obj:
-            self.content = obj.get("parameters", {})
+        if obj and isinstance(obj, dict):
+            content_val = obj.get("parameters", {})
+            if isinstance(content_val, dict):
+                self.content = content_val
 
     def __repr__(self):
-        return self.content
+        return str(self.content)
 
     def __str__(self):
         return str(self.content)
@@ -260,7 +265,6 @@ class Subscription:
 def format_resource_name(raw_name: str, lowercase: bool = True) -> str:
     """Method that formats a string name into a resource name"""
     name = raw_name.lower() if lowercase else raw_name  # lowercase
-    # name = re.sub('[^a-zA-Z0-9 \n\.]', '-', raw_name) # old, ignores '.'
     name = re.sub("[^a-zA-Z0-9-]", "-", name)  # replace
     return name
 
@@ -272,18 +276,19 @@ def is_valid_resource_name(raw_name: str, lowercase: bool = True) -> bool:
     return og_name == formatted_name
 
 
-def filter_datafields(data: Any, datatype: Type) -> Dict[str, Any]:
+def filter_datafields(data: dict, datatype: type) -> dict:
     """Method that reduces data to only viable fields based on dataclass provided"""
     # https://stackoverflow.com/questions/54678337/how-does-one-ignore-extra-arguments-passed-to-a-dataclass
     # LOG.debug(f'data.items(): {data.items()}')
     field_names = set(f.name for f in fields(datatype))
     # LOG.debug(f'field_names: {field_names}')
-    filtered_data: Dict[str, Any] = {k: v for k, v in data.items() if k in field_names}
+    filtered_data: dict = {k: v for k, v in data.items() if k in field_names}
     # LOG.debug(f'filtered_data: {filtered_data}')
     return filtered_data
 
 
-def json_to_dataclass(jsonstr: str, datatype: Type) -> Any:
+# Modern PEP 695 Generics natively enforces the datatype of the dataclass being built
+def json_to_dataclass[T](jsonstr: str, datatype: type[T]) -> T:
     """Method that handles common actions to convert JSON string to a dataclass"""
     data = sh.from_json(jsonstr)
     # LOG.debug(f'data: {data}')
@@ -302,7 +307,7 @@ def json_to_dataclass(jsonstr: str, datatype: Type) -> Any:
     return result
 
 
-def subscription_details(credential: Credential, name: str) -> Optional[Subscription]:
+def subscription_details(credential: Credential, name: str) -> Subscription | None:
     """Method that fetches Azure account"""
     sub_client = az_sub.SubscriptionClient(credential)
     sub_list = sub_client.subscriptions.list()
@@ -311,7 +316,9 @@ def subscription_details(credential: Credential, name: str) -> Optional[Subscrip
         # LOG.debug(f'sub.display_name: {sub.display_name}')
         if name == sub.display_name:
             # Reduce data to only viable fields
-            filtered_data = filter_datafields(sub, Subscription)
+            # (Azure SDK objects occasionally don't resolve strictly to dict natively)
+            sub_dict = sub.as_dict() if hasattr(sub, "as_dict") else vars(sub)
+            filtered_data = filter_datafields(sub_dict, Subscription)
             return Subscription(**filtered_data)
     return None
 
@@ -366,7 +373,7 @@ def sdk_credential_default(account: Account) -> Credential:
 
 def account_get(subscription: str) -> Account:
     """Method that fetches Azure account"""
-    command: List[str] = ["az", "account", "show", f"--subscription={subscription}"]
+    command: list[str] = ["az", "account", "show", f"--subscription={subscription}"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -377,9 +384,9 @@ def account_get(subscription: str) -> Account:
     return account
 
 
-def account_list() -> Optional[Account]:
+def account_list() -> Account | None:
     """Method that lists Azure accounts"""
-    command: List[str] = ["az", "account", "list", "--all"]
+    command: list[str] = ["az", "account", "list", "--all"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -393,7 +400,7 @@ def account_list() -> Optional[Account]:
 
 def account_logout() -> bool:
     """Method that signs out of Azure account"""
-    command: List[str] = ["az", "logout"]
+    command: list[str] = ["az", "logout"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -404,7 +411,7 @@ def account_logout() -> bool:
 # Login with username (service principal) and password (client secret/certificate)
 def account_login(tenant: str = "", name: str = "", password: str = "") -> Account:
     """Method that signs into Azure account"""
-    command: List[str] = ["az", "login"]
+    command: list[str] = ["az", "login"]
     # az login --service-principal -u <app-url> -p <password-or-cert> --tenant <tenant>
     if tenant and name and password:
         command.append("--service-principal")
@@ -427,7 +434,7 @@ def account_login(tenant: str = "", name: str = "", password: str = "") -> Accou
 
 def account_set(subscription: str) -> bool:
     """Method that sets the default Azure account"""
-    command: List[str] = ["az", "account", "set", f"--subscription={subscription}"]
+    command: list[str] = ["az", "account", "set", f"--subscription={subscription}"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -440,7 +447,7 @@ def account_set(subscription: str) -> bool:
 
 def ad_group_get(name: str) -> AdGroup:
     """Method that fetches Azure Active Directory group"""
-    command: List[str] = ["az", "ad", "group", "show", f"--group={name}"]
+    command: list[str] = ["az", "ad", "group", "show", f"--group={name}"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -453,7 +460,7 @@ def ad_group_get(name: str) -> AdGroup:
 
 def ad_group_set(name: str) -> AdGroup:
     """Method that sets the Azure Active Directory group"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "ad",
         "group",
@@ -478,7 +485,7 @@ def ad_group_set(name: str) -> AdGroup:
 
 def ad_group_member_get(group_name: str, member_id: str) -> bool:
     """Method that fetches Azure Active Directory group member"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "ad",
         "group",
@@ -496,7 +503,7 @@ def ad_group_member_get(group_name: str, member_id: str) -> bool:
 
 def ad_group_member_set(group_name: str, member_id: str) -> bool:
     """Method that sets Azure Active Directory group member"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "ad",
         "group",
@@ -517,10 +524,12 @@ def ad_group_member_set(group_name: str, member_id: str) -> bool:
 # https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-cli
 
 
-def role_assign_get(assignee_id: str, scope: str = "", role: str = "Contributor") -> bool:
+def role_assign_get(
+    assignee_id: str, scope: str = "", role: str = "Contributor"
+) -> bool:
     """Method that fetches Azure role"""
     # NOTE: do not wrap --role value in '', gets evaluated as part of string
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "role",
         "assignment",
@@ -538,10 +547,12 @@ def role_assign_get(assignee_id: str, scope: str = "", role: str = "Contributor"
     return process.returncode == 0
 
 
-def role_assign_set(assignee_id: str, scope: str = "", role: str = "Contributor") -> bool:
+def role_assign_set(
+    assignee_id: str, scope: str = "", role: str = "Contributor"
+) -> bool:
     """Method that assigns Azure role"""
     # NOTE: do not wrap --role value in '', gets evaluated as part of string
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "role",
         "assignment",
@@ -561,7 +572,9 @@ def role_assign_set(assignee_id: str, scope: str = "", role: str = "Contributor"
 
 
 # Always use service principal name (not id)
-def service_principal_get(sp_name: str, sp_dir: str = "", tenant: str = "") -> ServicePrincipal:
+def service_principal_get(
+    sp_name: str, sp_dir: str = "", tenant: str = ""
+) -> ServicePrincipal:
     """Method that fetches Azure service principal"""
     jsonstr: str = ""
     # Full filepath to service principal data
@@ -600,13 +613,15 @@ def service_principal_get(sp_name: str, sp_dir: str = "", tenant: str = "") -> S
 def service_principal_set(sp_name: str, obj_id: str) -> ServicePrincipal:
     """Method that sets a Azure service principal"""
     # Using '--sdk-auth' produces better output but not available for reset
-    command: List[str] = ["az", "ad", "sp", "create", f"--id={obj_id}"]
+    command: list[str] = ["az", "ad", "sp", "create", f"--id={obj_id}"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
     if process.returncode != 0:
         return ServicePrincipal()
-    service_principal: ServicePrincipal = json_to_dataclass(process.stdout, ServicePrincipal)
+    service_principal: ServicePrincipal = json_to_dataclass(
+        process.stdout, ServicePrincipal
+    )
     service_principal.changed = True
     # LOG.debug(f"service_principal: {service_principal}")
     return service_principal
@@ -617,7 +632,7 @@ def service_principal_set(sp_name: str, obj_id: str) -> ServicePrincipal:
 def service_principal_rbac_set(sp_name: str, reset: bool = False) -> ServicePrincipal:
     """Method that sets Azure service principal RBAC"""
     # Using '--sdk-auth' produces nice output but is not available for reset
-    command: List[str] = ["az", "ad", "sp"]
+    command: list[str] = ["az", "ad", "sp"]
     if not reset:
         command.append("create-for-rbac")
         command.append(f"--display-name=http://{sp_name}")
@@ -632,7 +647,9 @@ def service_principal_rbac_set(sp_name: str, reset: bool = False) -> ServicePrin
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
     if process.returncode != 0:
         return ServicePrincipal()
-    service_principal: ServicePrincipal = json_to_dataclass(process.stdout, ServicePrincipal)
+    service_principal: ServicePrincipal = json_to_dataclass(
+        process.stdout, ServicePrincipal
+    )
     service_principal.changed = True
     # sp_action = 'reset' if reset else 'created'
     # LOG.info(f'successfully {sp_action} service principal credentials!')
@@ -642,7 +659,8 @@ def service_principal_rbac_set(sp_name: str, reset: bool = False) -> ServicePrin
 
 def service_principal_save(path: str, service_principal: ServicePrincipal) -> bool:
     """Method that saves Azure service principal to a file"""
-    data = vars(service_principal)  # same as *.__dict__
+    # Create copy to avoid modifying the active class instance in memory
+    data = vars(service_principal).copy()
     # Remove keys to exclude from JSON file
     data.pop("changed", None)
     data.pop("isValid", None)
@@ -660,7 +678,9 @@ def resource_group_get_sdk(account: Account, rg_name: str):
     if not account.auth:
         return ResourceGroup()
     # Obtain the management object for resources
-    resource_client = az_res.ResourceManagementClient(account.auth, account.subscriptionId)
+    resource_client = az_res.ResourceManagementClient(
+        account.auth, account.subscriptionId
+    )
     # Provision the resource group
     resource_group = resource_client.resource_groups.get(rg_name)
     LOG.debug(f"resource group: {resource_group}")
@@ -673,9 +693,13 @@ def resource_group_set_sdk(account: Account, rg_name: str, location: str):
     if not account.auth:
         return ResourceGroup()
     # Obtain the management object for resources
-    resource_client = az_res.ResourceManagementClient(account.auth, account.subscriptionId)
+    resource_client = az_res.ResourceManagementClient(
+        account.auth, account.subscriptionId
+    )
     # Provision the resource group
-    resource_group = resource_client.resource_groups.create_or_update(rg_name, {"location": location})  # type: ignore
+    resource_group = resource_client.resource_groups.create_or_update(
+        rg_name, {"location": location}
+    )  # type: ignore
     LOG.debug(f"resource group: {resource_group}")
     LOG.debug(f"resource group id: {resource_group.id}")
     return resource_group
@@ -683,7 +707,7 @@ def resource_group_set_sdk(account: Account, rg_name: str, location: str):
 
 def resource_group_get(name: str) -> ResourceGroup:
     """Method that fetches Azure resource group"""
-    command: List[str] = ["az", "group", "show", f"--name={name}"]
+    command: list[str] = ["az", "group", "show", f"--name={name}"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -697,7 +721,7 @@ def resource_group_get(name: str) -> ResourceGroup:
 
 def resource_group_set(name: str, location: str) -> ResourceGroup:
     """Method that sets Azure resource group"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "group",
         "create",
@@ -722,7 +746,7 @@ def resource_group_set(name: str, location: str) -> ResourceGroup:
 
 def key_vault_get(name: str, resource_group_name: str) -> KeyVault:
     """Method that fetches Azure key vault"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "keyvault",
         "show",
@@ -743,7 +767,7 @@ def key_vault_get(name: str, resource_group_name: str) -> KeyVault:
 # Create a hardened container (vault) in Azure
 def key_vault_set(name: str, resource_group_name: str) -> KeyVault:
     """Method that sets Azure key vault"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "keyvault",
         "create",
@@ -768,7 +792,7 @@ def key_vault_set(name: str, resource_group_name: str) -> KeyVault:
 
 def key_vault_secret_get(key_vault: str, secret_key: str) -> str:
     """Method that fetches Azure key vault secret"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "keyvault",
         "secret",
@@ -809,7 +833,7 @@ def key_vault_secret_get_new(auth: Credential, key_vault: str, secret_key: str) 
 
 def key_vault_secret_set(key_vault: str, secret_key: str, secret_value: str) -> bool:
     """Method that sets Azure key vault secret"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "keyvault",
         "secret",
@@ -832,7 +856,7 @@ def key_vault_secret_set(key_vault: str, secret_key: str, secret_value: str) -> 
 def active_directory_application_get(app_name: str) -> ActiveDirectoryApplication:
     """Method that fetches Azure Active Directory application"""
     # az_ad_app_project_query: "[?displayName=='{{az_app_registration}}'].{appId: appId, displayName: displayName}"
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "ad",
         "app",
@@ -847,7 +871,9 @@ def active_directory_application_get(app_name: str) -> ActiveDirectoryApplicatio
     return ad_app
 
 
-def active_directory_application_set(tenant: str, app_name: str, app_id: str = "") -> ActiveDirectoryApplication:
+def active_directory_application_set(
+    tenant: str, app_name: str, app_id: str = ""
+) -> ActiveDirectoryApplication:
     """Method that sets Azure Active Directory application"""
     az_ad_domain: str = f"https://{tenant}.onmicrosoft.com"
     az_ad_identifier_url: str = f"{az_ad_domain}/{app_name}"
@@ -895,7 +921,7 @@ def deployment_group_valid_sdk(
     account: Account,
     rg_name: str,
     template_path: str,
-    parameters: Optional[List[str]] = None,
+    parameters: list[str] | None = None,
     deploy_name: str = "Main",
 ) -> bool:
     """Method that validates Azure deployment group"""
@@ -903,7 +929,9 @@ def deployment_group_valid_sdk(
         return False
 
     # Create client
-    resource_client = az_res.ResourceManagementClient(credential=account.auth, subscription_id=account.subscriptionId)
+    resource_client = az_res.ResourceManagementClient(
+        credential=account.auth, subscription_id=account.subscriptionId
+    )
     LOG.debug(f"client: {resource_client}")
 
     # Validate deployment
@@ -927,11 +955,11 @@ def deployment_group_valid_sdk(
 def deployment_group_valid(
     rg_name: str,
     template_path: str,
-    parameters: Optional[List[str]] = None,
+    parameters: list[str] | None = None,
     deploy_name: str = "Main",
 ) -> bool:
     """Method that validates Azure deployment group"""
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "deployment",
         "group",
@@ -952,13 +980,13 @@ def deployment_group_valid(
 def deployment_group_get(
     rg_name: str,
     template_path: str,
-    parameters: Optional[List[str]] = None,
+    parameters: list[str] | None = None,
     deploy_name: str = "Main",
 ) -> bool:
     """Method that fetches Azure deployment group"""
     if parameters is None:
         parameters = []
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "deployment",
         "group",
@@ -980,13 +1008,13 @@ def deployment_group_get(
 def deployment_group_set(
     rg_name: str,
     template_path: str,
-    parameters: Optional[List[str]] = None,
+    parameters: list[str] | None = None,
     deploy_name: str = "Main",
 ) -> bool:
     """Method that sets Azure deployment group"""
     if parameters is None:
         parameters = []
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "deployment",
         "group",
@@ -1023,7 +1051,9 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: list[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

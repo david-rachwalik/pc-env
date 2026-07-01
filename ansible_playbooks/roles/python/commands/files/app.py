@@ -42,10 +42,16 @@ import shell_boilerplate as sh
 
 # --- Strategies ---
 
-def resource_group_strategy(resource_group: str, location: str) -> Tuple[az.ResourceGroup, bool]:
-    if not _az.is_signed_in: return (az.ResourceGroup(), False)
-    if not (resource_group and isinstance(resource_group, str)): TypeError("'resource_group' parameter expected as string")
-    if not (location and isinstance(location, str)): TypeError("'location' parameter expected as string")
+
+def resource_group_strategy(
+    resource_group: str, location: str
+) -> Tuple[az.ResourceGroup, bool]:
+    if not _az.is_signed_in:
+        return (az.ResourceGroup(), False)
+    if not (resource_group and isinstance(resource_group, str)):
+        TypeError("'resource_group' parameter expected as string")
+    if not (location and isinstance(location, str)):
+        TypeError("'location' parameter expected as string")
     resource_group_changed = False
     # Ensure resource group exists
     resource_group_data = az.resource_group_get(resource_group)
@@ -58,14 +64,20 @@ def resource_group_strategy(resource_group: str, location: str) -> Tuple[az.Reso
 
 
 def key_vault_strategy(location: str, resource_group: str, key_vault: str):
-    if not _az.is_signed_in: return (None, False)
-    if not (location and isinstance(location, str)): TypeError("'location' parameter expected as string")
-    if not (resource_group and isinstance(resource_group, str)): TypeError("'resource_group' parameter expected as string")
-    if not (key_vault and isinstance(key_vault, str)): TypeError("'key_vault' parameter expected as string")
+    if not _az.is_signed_in:
+        return (None, False)
+    if not (location and isinstance(location, str)):
+        TypeError("'location' parameter expected as string")
+    if not (resource_group and isinstance(resource_group, str)):
+        TypeError("'resource_group' parameter expected as string")
+    if not (key_vault and isinstance(key_vault, str)):
+        TypeError("'key_vault' parameter expected as string")
     key_vault_changed: bool = False
 
     # Ensure resource group exists
-    (resource_group_data, resource_group_changed) = resource_group_strategy(resource_group, location)
+    (resource_group_data, resource_group_changed) = resource_group_strategy(
+        resource_group, location
+    )
     _log.debug("resource_group_data: {0}".format(resource_group_data))
     if not resource_group_data.is_valid:
         _log.error("failed to create resource group")
@@ -82,10 +94,15 @@ def key_vault_strategy(location: str, resource_group: str, key_vault: str):
     return (key_vault_data, key_vault_changed)
 
 
-def ad_group_strategy(ad_member_id: str, ad_group: str="main-ad-group") -> Tuple[az.AdGroup, bool]:
-    if not _az.is_signed_in: return (az.AdGroup(), False)
-    if not (ad_member_id and isinstance(ad_member_id, str)): TypeError("'ad_member_id' parameter expected as string")
-    if not (ad_group and isinstance(ad_group, str)): TypeError("'ad_group' parameter expected as string")
+def ad_group_strategy(
+    ad_member_id: str, ad_group: str = "main-ad-group"
+) -> Tuple[az.AdGroup, bool]:
+    if not _az.is_signed_in:
+        return (az.AdGroup(), False)
+    if not (ad_member_id and isinstance(ad_member_id, str)):
+        TypeError("'ad_member_id' parameter expected as string")
+    if not (ad_group and isinstance(ad_group, str)):
+        TypeError("'ad_group' parameter expected as string")
 
     # Ensure active directory group exists
     ad_group_data: az.AdGroup = az.ad_group_get(ad_group)
@@ -110,16 +127,24 @@ def ad_group_strategy(ad_member_id: str, ad_group: str="main-ad-group") -> Tuple
     return (ad_group_data, ad_group_changed)
 
 
-def service_principal_strategy(tenant: str, service_principal: str, app_id: str) -> Tuple[az.ServicePrincipal, bool]:
-    if not _az.is_signed_in: return (az.ServicePrincipal(), False)
-    if not (tenant and isinstance(tenant, str)): TypeError("'tenant' parameter expected as string")
-    if not (service_principal and isinstance(service_principal, str)): TypeError("'service_principal' parameter expected as string")
-    if not (app_id and isinstance(app_id, str)): TypeError("'app_id' parameter expected as string")
+def service_principal_strategy(
+    tenant: str, service_principal: str, app_id: str
+) -> Tuple[az.ServicePrincipal, bool]:
+    if not _az.is_signed_in:
+        return (az.ServicePrincipal(), False)
+    if not (tenant and isinstance(tenant, str)):
+        TypeError("'tenant' parameter expected as string")
+    if not (service_principal and isinstance(service_principal, str)):
+        TypeError("'service_principal' parameter expected as string")
+    if not (app_id and isinstance(app_id, str)):
+        TypeError("'app_id' parameter expected as string")
     service_principal_changed: bool = False
     # Full filepath to service principal data
     service_principal = sh.format_resource(service_principal)
     # Ensure service principal exists
-    service_principal_data: az.ServicePrincipal = az.service_principal_get(service_principal, tenant=tenant)
+    service_principal_data: az.ServicePrincipal = az.service_principal_get(
+        service_principal, tenant=tenant
+    )
     if not service_principal_data.appId:
         _log.debug("service principal credentials not found, creating...")
         service_principal_data = az.service_principal_set(service_principal, app_id)
@@ -127,18 +152,31 @@ def service_principal_strategy(tenant: str, service_principal: str, app_id: str)
     return (service_principal_data, service_principal_changed)
 
 
-def login_service_principal_strategy(location: str, resource_group: str, key_vault: str, service_principal: str, auth_dir: str) -> Tuple[az.ServicePrincipal, bool]:
-    if not (location and isinstance(location, str)): TypeError("'location' parameter expected as string")
-    if not (resource_group and isinstance(resource_group, str)): TypeError("'resource_group' parameter expected as string")
-    if not (key_vault and isinstance(key_vault, str)): TypeError("'key_vault' parameter expected as string")
-    if not (service_principal and isinstance(service_principal, str)): TypeError("'service_principal' parameter expected as string")
-    if not (auth_dir and isinstance(auth_dir, str)): TypeError("'auth_dir' parameter expected as string")
+def login_service_principal_strategy(
+    location: str,
+    resource_group: str,
+    key_vault: str,
+    service_principal: str,
+    auth_dir: str,
+) -> Tuple[az.ServicePrincipal, bool]:
+    if not (location and isinstance(location, str)):
+        TypeError("'location' parameter expected as string")
+    if not (resource_group and isinstance(resource_group, str)):
+        TypeError("'resource_group' parameter expected as string")
+    if not (key_vault and isinstance(key_vault, str)):
+        TypeError("'key_vault' parameter expected as string")
+    if not (service_principal and isinstance(service_principal, str)):
+        TypeError("'service_principal' parameter expected as string")
+    if not (auth_dir and isinstance(auth_dir, str)):
+        TypeError("'auth_dir' parameter expected as string")
     service_principal_changed: bool = False
     service_principal_data: az.ServicePrincipal = az.ServicePrincipal()
     key_vault_secret_value = ""
     # Full filepath to service principal data
     service_principal = sh.format_resource(service_principal)
-    service_principal_path: str = sh.path_join(sh.path_expand(auth_dir), "{0}.json".format(service_principal))
+    service_principal_path: str = sh.path_join(
+        sh.path_expand(auth_dir), "{0}.json".format(service_principal)
+    )
 
     # Ensure service principal exists in Azure and local
     if sh.path_exists(service_principal_path, "f"):
@@ -147,46 +185,64 @@ def login_service_principal_strategy(location: str, resource_group: str, key_vau
         service_principal_data = az.service_principal_get(service_principal, auth_dir)
     else:
         _log.debug("service principal file missing, checking Azure...")
-        if not _az.is_signed_in: return (az.ServicePrincipal(), False)
+        if not _az.is_signed_in:
+            return (az.ServicePrincipal(), False)
 
         # Ensure service principal & key vault exists
         service_principal_data = az.service_principal_get(service_principal)
         _log.debug("service_principal_data: {0}".format(service_principal_data))
-        (key_vault_data, kv_changed) = key_vault_strategy(location, resource_group, key_vault)
+        (key_vault_data, kv_changed) = key_vault_strategy(
+            location, resource_group, key_vault
+        )
         _log.debug("key_vault_data: {0}".format(key_vault_data))
         if service_principal_data and key_vault_data:
             # Check for passphrase as key vault secret (to share across systems)
-            key_vault_secret_value = az.key_vault_secret_get(key_vault, service_principal)
+            key_vault_secret_value = az.key_vault_secret_get(
+                key_vault, service_principal
+            )
             # _log.debug("key_vault_secret_value: {0}".format(key_vault_secret_value))
             if key_vault_secret_value:
-                _log.debug("service principal password found in key vault, saving credentials...")
+                _log.debug(
+                    "service principal password found in key vault, saving credentials..."
+                )
                 service_principal_data.password = key_vault_secret_value
             else:
                 # Service principal in Azure but not local file, must reset pass to regain access
-                _log.debug("service principal successfully found, resetting credentials...")
-                service_principal_data = az.service_principal_rbac_set(key_vault, service_principal, True)
+                _log.debug(
+                    "service principal successfully found, resetting credentials..."
+                )
+                service_principal_data = az.service_principal_rbac_set(
+                    key_vault, service_principal, True
+                )
         else:
             _log.debug("service principal credentials not found, creating...")
-            service_principal_data = az.service_principal_rbac_set(key_vault, service_principal)
+            service_principal_data = az.service_principal_rbac_set(
+                key_vault, service_principal
+            )
 
         # Last chance to have service principal
-        if not service_principal_data: return (az.ServicePrincipal(), False)
+        if not service_principal_data:
+            return (az.ServicePrincipal(), False)
 
         # Store password/credentials in JSON file
         az.service_principal_save(service_principal_path, service_principal_data)
         if not key_vault_secret_value:
             # Store password/credentials in key vault
-            az.key_vault_secret_set(key_vault, service_principal, service_principal_data.password)
+            az.key_vault_secret_set(
+                key_vault, service_principal, service_principal_data.password
+            )
 
         service_principal_changed = True
 
         # TODO: manage service principal security groups
         # use 'az role assignment create' on groups, not service principals
         # https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli#manage-service-principal-roles
-        
+
         # Ensure active directory groups/roles exist
         if service_principal_changed:
-            (ad_group_data, ad_group_changed) = ad_group_strategy(service_principal_data.objectId)
+            (ad_group_data, ad_group_changed) = ad_group_strategy(
+                service_principal_data.objectId
+            )
 
         # TODO: manage service principal security access to Key Vault:
         # - manually enabled ARM for template deployment in Portal
@@ -196,19 +252,38 @@ def login_service_principal_strategy(location: str, resource_group: str, key_vau
     return (service_principal_data, service_principal_changed)
 
 
-def login_strategy(tenant, subscription, location, resource_group, key_vault, sp_name, auth_dir, retry=True):
+def login_strategy(
+    tenant,
+    subscription,
+    location,
+    resource_group,
+    key_vault,
+    sp_name,
+    auth_dir,
+    retry=True,
+):
     global _az
-    if not (tenant and isinstance(tenant, str)): TypeError("'tenant' parameter expected as string")
-    if not (subscription and isinstance(subscription, str)): TypeError("'subscription' parameter expected as string")
-    if not (location and isinstance(location, str)): TypeError("'location' parameter expected as string")
-    if not (resource_group and isinstance(resource_group, str)): TypeError("'resource_group' parameter expected as string")
-    if not (key_vault and isinstance(key_vault, str)): TypeError("'key_vault' parameter expected as string")
-    if not (sp_name and isinstance(sp_name, str)): TypeError("'sp_name' parameter expected as string")
-    if not (auth_dir and isinstance(auth_dir, str)): TypeError("'auth_dir' parameter expected as string")
-    if not (retry and isinstance(retry, bool)): TypeError("'retry' parameter expected as boolean")
+    if not (tenant and isinstance(tenant, str)):
+        TypeError("'tenant' parameter expected as string")
+    if not (subscription and isinstance(subscription, str)):
+        TypeError("'subscription' parameter expected as string")
+    if not (location and isinstance(location, str)):
+        TypeError("'location' parameter expected as string")
+    if not (resource_group and isinstance(resource_group, str)):
+        TypeError("'resource_group' parameter expected as string")
+    if not (key_vault and isinstance(key_vault, str)):
+        TypeError("'key_vault' parameter expected as string")
+    if not (sp_name and isinstance(sp_name, str)):
+        TypeError("'sp_name' parameter expected as string")
+    if not (auth_dir and isinstance(auth_dir, str)):
+        TypeError("'auth_dir' parameter expected as string")
+    if not (retry and isinstance(retry, bool)):
+        TypeError("'retry' parameter expected as boolean")
     # Full filepath to service principal data
     sp_name = sh.format_resource(sp_name)
-    service_principal_path = sh.path_join(sh.path_expand(auth_dir), "{0}.json".format(sp_name))
+    service_principal_path = sh.path_join(
+        sh.path_expand(auth_dir), "{0}.json".format(sp_name)
+    )
     # Check if account subscription exists
     _log.info("checking if already signed-in Azure...")
     # First chance to be signed-in
@@ -216,33 +291,56 @@ def login_strategy(tenant, subscription, location, resource_group, key_vault, sp
     # _log.debug("_az: {0}".format(_az))
 
     # Ensure service principal credentials exist
-    (service_principal, service_principal_changed) = login_service_principal_strategy(location, resource_group, key_vault, sp_name, auth_dir)
+    (service_principal, service_principal_changed) = login_service_principal_strategy(
+        location, resource_group, key_vault, sp_name, auth_dir
+    )
 
     if _az.is_signed_in and not service_principal:
-        _log.error("failed to retrieve service principal, likely due to insufficient privileges on account, signing out...")
+        _log.error(
+            "failed to retrieve service principal, likely due to insufficient privileges on account, signing out..."
+        )
         az.account_logout()
         _az.is_signed_in = False
         # Prompt manual 'az login' indirectly
-        _az = login_strategy(tenant, subscription, location, resource_group, key_vault, sp_name, auth_dir)
+        _az = login_strategy(
+            tenant, subscription, location, resource_group, key_vault, sp_name, auth_dir
+        )
 
     if not _az.is_signed_in:
         if service_principal:
             # Attempt login with service principal credentials found, last chance to be signed-in
             _log.debug("attempting login with service principal...")
-            _az = az.account_login(tenant, service_principal.name, service_principal.password)
+            _az = az.account_login(
+                tenant, service_principal.name, service_principal.password
+            )
             if not _az.is_signed_in:
                 if retry:
                     # Will retry recursively only once
-                    _log.warning("Azure login with service principal failed, saving backup and retrying...")
+                    _log.warning(
+                        "Azure login with service principal failed, saving backup and retrying..."
+                    )
                     sh.file_backup(service_principal_path)
-                    _az = login_strategy(tenant, subscription, location, resource_group, key_vault, sp_name, auth_dir, False)
+                    _az = login_strategy(
+                        tenant,
+                        subscription,
+                        location,
+                        resource_group,
+                        key_vault,
+                        sp_name,
+                        auth_dir,
+                        False,
+                    )
                 else:
-                    _log.error("Azure login with service principal failed again, exiting...")
+                    _log.error(
+                        "Azure login with service principal failed again, exiting..."
+                    )
                     sh.process_fail()
         else:
             # Calling 'az login' in script works but the prompt in subprocess causes display issues
             # - this can occur when signed-in with service principal and needing to change own credentials
-            _log.error("not signed-in, enter 'az login' to manually login before repeating your previous command")
+            _log.error(
+                "not signed-in, enter 'az login' to manually login before repeating your previous command"
+            )
             sh.process_fail()
 
     # elif used to limit recursive activity
@@ -250,7 +348,9 @@ def login_strategy(tenant, subscription, location, resource_group, key_vault, sp
         # Confirm updated service principal login connects
         az.account_logout()
         _az.is_signed_in = False
-        _az = login_strategy(tenant, subscription, location, resource_group, key_vault, sp_name, auth_dir)
+        _az = login_strategy(
+            tenant, subscription, location, resource_group, key_vault, sp_name, auth_dir
+        )
         # No need to rename/backup SP credentials here if failed - it'll occur recursively
     elif not _az.subscription_is_default:
         # Ensure subscription is currently active
@@ -264,11 +364,17 @@ def login_strategy(tenant, subscription, location, resource_group, key_vault, sp
     return _az
 
 
-def login_devops_pat_strategy(location: str, resource_group: str, key_vault: str, auth_dir: str) -> Tuple[str, bool]:
-    if not (location and isinstance(location, str)): TypeError("'location' parameter expected as string")
-    if not (resource_group and isinstance(resource_group, str)): TypeError("'resource_group' parameter expected as string")
-    if not (key_vault and isinstance(key_vault, str)): TypeError("'key_vault' parameter expected as string")
-    if not (auth_dir and isinstance(auth_dir, str)): TypeError("'auth_dir' parameter expected as string")
+def login_devops_pat_strategy(
+    location: str, resource_group: str, key_vault: str, auth_dir: str
+) -> Tuple[str, bool]:
+    if not (location and isinstance(location, str)):
+        TypeError("'location' parameter expected as string")
+    if not (resource_group and isinstance(resource_group, str)):
+        TypeError("'resource_group' parameter expected as string")
+    if not (key_vault and isinstance(key_vault, str)):
+        TypeError("'key_vault' parameter expected as string")
+    if not (auth_dir and isinstance(auth_dir, str)):
+        TypeError("'auth_dir' parameter expected as string")
     secret_key: str = "main-devops-pat"
     pat_changed: bool = False
     pat_data: str = ""
@@ -283,7 +389,8 @@ def login_devops_pat_strategy(location: str, resource_group: str, key_vault: str
         pat_data = sh.file_read(pat_path, True)
         # _log.debug("pat_data: {0}".format(pat_data))
     else:
-        if not _az.is_signed_in: return ("", False)
+        if not _az.is_signed_in:
+            return ("", False)
         _log.debug("PAT (personal access token) file missing, checking Azure...")
 
         # Ensure PAT exists in key vault as secret
@@ -296,7 +403,8 @@ def login_devops_pat_strategy(location: str, resource_group: str, key_vault: str
         # TODO: - if invalid/expired: revoke the PAT and delete from local file
 
         # Last chance to have PAT
-        if not pat_data: return ("", False)
+        if not pat_data:
+            return ("", False)
 
         # Store credentials in PAT file
         az_devops.user_save(pat_path, pat_data)
@@ -308,21 +416,36 @@ def login_devops_pat_strategy(location: str, resource_group: str, key_vault: str
 
 # https://docs.microsoft.com/en-us/azure/devops/cli/log-in-via-pat
 # sign-in via 'az login' isn't supported, so a PAT token is required
-def login_devops_strategy(user: str, location: str, resource_group: str, key_vault: str, auth_dir: str, retry: Optional[bool]=True) -> bool:
+def login_devops_strategy(
+    user: str,
+    location: str,
+    resource_group: str,
+    key_vault: str,
+    auth_dir: str,
+    retry: Optional[bool] = True,
+) -> bool:
     global _az
-    if not (user and isinstance(user, str)): TypeError("'user' parameter expected as string")
-    if not (location and isinstance(location, str)): TypeError("'location' parameter expected as string")
-    if not (resource_group and isinstance(resource_group, str)): TypeError("'resource_group' parameter expected as string")
-    if not (key_vault and isinstance(key_vault, str)): TypeError("'key_vault' parameter expected as string")
-    if not (auth_dir and isinstance(auth_dir, str)): TypeError("'auth_dir' parameter expected as string")
-    if not (retry and isinstance(retry, bool)): TypeError("'retry' parameter expected as boolean")
+    if not (user and isinstance(user, str)):
+        TypeError("'user' parameter expected as string")
+    if not (location and isinstance(location, str)):
+        TypeError("'location' parameter expected as string")
+    if not (resource_group and isinstance(resource_group, str)):
+        TypeError("'resource_group' parameter expected as string")
+    if not (key_vault and isinstance(key_vault, str)):
+        TypeError("'key_vault' parameter expected as string")
+    if not (auth_dir and isinstance(auth_dir, str)):
+        TypeError("'auth_dir' parameter expected as string")
+    if not (retry and isinstance(retry, bool)):
+        TypeError("'retry' parameter expected as boolean")
     secret_key = "main-devops-pat"
     key_vault_secret = ""
     # Full filepath to service principal data
     pat_path = sh.path_join(sh.path_expand(auth_dir), "ado.pat")
 
     # Ensure user PAT/credentials exist
-    (pat_data, pat_changed) = login_devops_pat_strategy(location, resource_group, key_vault, auth_dir)
+    (pat_data, pat_changed) = login_devops_pat_strategy(
+        location, resource_group, key_vault, auth_dir
+    )
     _az.devops_pat = pat_data
 
     # Check if user is signed-in DevOps
@@ -338,23 +461,37 @@ def login_devops_strategy(user: str, location: str, resource_group: str, key_vau
             if not user_is_signed_in:
                 if retry:
                     # Will retry recursively only once
-                    _log.warning("Azure DevOps login with PAT failed, saving backup and retrying...")
+                    _log.warning(
+                        "Azure DevOps login with PAT failed, saving backup and retrying..."
+                    )
                     sh.file_backup(pat_path)
-                    user_is_signed_in = login_devops_strategy(user, location, resource_group, key_vault, auth_dir, False)
+                    user_is_signed_in = login_devops_strategy(
+                        user, location, resource_group, key_vault, auth_dir, False
+                    )
                 else:
                     _log.error("Azure DevOps login with PAT failed again, exiting...")
                     sh.process_fail()
         else:
             # - this can occur when signed-in with PAT and needing to change own credentials
-            _log.error("not signed-in DevOps, navigate the following site to manually create a PAT, go to user settings and select 'Personal access tokens'")
-            _log.error("https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate")
-            _log.error("this PAT must be in '{0}' as '{1}' before repeating your previous command".format(key_vault, secret_key))
+            _log.error(
+                "not signed-in DevOps, navigate the following site to manually create a PAT, go to user settings and select 'Personal access tokens'"
+            )
+            _log.error(
+                "https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate"
+            )
+            _log.error(
+                "this PAT must be in '{0}' as '{1}' before repeating your previous command".format(
+                    key_vault, secret_key
+                )
+            )
             sh.process_fail()
 
     if pat_changed:
         # Confirm updated PAT login connects
         az_devops.user_logout()
-        user_is_signed_in = login_devops_strategy(user, location, resource_group, key_vault, auth_dir)
+        user_is_signed_in = login_devops_strategy(
+            user, location, resource_group, key_vault, auth_dir
+        )
         # No need to rename/backup SP credentials here if failed - it'll occur recursively
 
     _log.info("you are successfully signed-in Azure DevOps!")
@@ -363,85 +500,117 @@ def login_devops_strategy(user: str, location: str, resource_group: str, key_vau
 
 # ASP.NET Core NuGet Packages (https://www.nuget.org/packages/*)
 def _project_packages(strat: str, framework: str) -> List[str]:
-    if not (strat and isinstance(strat, str)): TypeError("'strat' parameter expected as string")
-    if not (framework and isinstance(framework, str)): TypeError("'framework' parameter expected as string")
+    if not (strat and isinstance(strat, str)):
+        TypeError("'strat' parameter expected as string")
+    if not (framework and isinstance(framework, str)):
+        TypeError("'framework' parameter expected as string")
     dotnet_packages = []
 
     # --- Common Development Packages ---
     if framework == "net6.0":
-        dotnet_packages.extend([
-            "Microsoft.CodeAnalysis.NetAnalyzers"
-        ])
+        dotnet_packages.extend(["Microsoft.CodeAnalysis.NetAnalyzers"])
     elif framework == "net5.0":
-        dotnet_packages.extend([
-            # https://github.com/dotnet/roslyn-analyzers
-            # https://docs.microsoft.com/en-us/visualstudio/code-quality/migrate-from-fxcop-analyzers-to-net-analyzers
-            "Microsoft.CodeAnalysis.NetAnalyzers", # 5.x+
-            "Microsoft.VisualStudio.Web.BrowserLink"
-        ])
+        dotnet_packages.extend(
+            [
+                # https://github.com/dotnet/roslyn-analyzers
+                # https://docs.microsoft.com/en-us/visualstudio/code-quality/migrate-from-fxcop-analyzers-to-net-analyzers
+                "Microsoft.CodeAnalysis.NetAnalyzers",  # 5.x+
+                "Microsoft.VisualStudio.Web.BrowserLink",
+            ]
+        )
     elif framework == "netcoreapp3.1":
-        dotnet_packages.extend([
-            "Microsoft.CodeAnalysis.FxCopAnalyzers", # 3.x
-            # "Microsoft.Extensions.Logging.Debug", # No longer required; included in 'Microsoft.AspNetCore.App'
-            "Microsoft.VisualStudio.Web.BrowserLink"
-        ])
-    
+        dotnet_packages.extend(
+            [
+                "Microsoft.CodeAnalysis.FxCopAnalyzers",  # 3.x
+                # "Microsoft.Extensions.Logging.Debug", # No longer required; included in 'Microsoft.AspNetCore.App'
+                "Microsoft.VisualStudio.Web.BrowserLink",
+            ]
+        )
+
     # --- Database Packages ---
     # Packages needed for scaffolding: [Microsoft.VisualStudio.Web.CodeGeneration.Design, Microsoft.EntityFrameworkCore.SqlServer]
     if strat == "database" or strat == "identity" or strat == "api":
         if framework in ["netcoreapp3.1", "net5.0", "net6.0"]:
-            dotnet_packages.extend([
-                "Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore",
-                "Microsoft.EntityFrameworkCore.Tools",
-                "Microsoft.EntityFrameworkCore.Design",     # Install EF Core design package
-                "Microsoft.VisualStudio.Web.CodeGeneration.Design",
-                # Database provider automatically includes Microsoft.EntityFrameworkCore
-                "Microsoft.EntityFrameworkCore.SqlServer"   # Install SQL Server database provider
-                # "Microsoft.EntityFrameworkCore.Sqlite"      # Install SQLite database provider
-            ])
-    
+            dotnet_packages.extend(
+                [
+                    "Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore",
+                    "Microsoft.EntityFrameworkCore.Tools",
+                    "Microsoft.EntityFrameworkCore.Design",  # Install EF Core design package
+                    "Microsoft.VisualStudio.Web.CodeGeneration.Design",
+                    # Database provider automatically includes Microsoft.EntityFrameworkCore
+                    "Microsoft.EntityFrameworkCore.SqlServer",  # Install SQL Server database provider
+                    # "Microsoft.EntityFrameworkCore.Sqlite"      # Install SQLite database provider
+                ]
+            )
+
     # --- Authentication Packages ---
     if strat == "identity":
         # "Microsoft.Owin.Security.OpenIdConnect",
         # "Microsoft.Owin.Security.Cookies",
         # "Microsoft.Owin.Host.SystemWeb"
         if framework in ["net5.0", "net6.0"]:
-            dotnet_packages.extend([
-                "Microsoft.AspNetCore.Identity.EntityFrameworkCore",
-                "Microsoft.AspNetCore.Identity.UI"
-            ])
+            dotnet_packages.extend(
+                [
+                    "Microsoft.AspNetCore.Identity.EntityFrameworkCore",
+                    "Microsoft.AspNetCore.Identity.UI",
+                ]
+            )
         elif framework == "netcoreapp3.1":
-            dotnet_packages.extend([
-                "Microsoft.AspNetCore.Authentication.AzureAD.UI" # 3.x
-            ])
-    
+            dotnet_packages.extend(
+                [
+                    "Microsoft.AspNetCore.Authentication.AzureAD.UI"  # 3.x
+                ]
+            )
+
     # --- API Packages ---
     if strat == "api":
         if framework in ["netcoreapp3.1", "net5.0", "net6.0"]:
-            dotnet_packages.extend([
-                # "NSwag.AspNetCore" # Swagger / OpenAPI
-                "Swashbuckle.AspNetCore"
-            ])
-    
+            dotnet_packages.extend(
+                [
+                    # "NSwag.AspNetCore" # Swagger / OpenAPI
+                    "Swashbuckle.AspNetCore"
+                ]
+            )
+
     dotnet_packages.sort()
     return dotnet_packages
 
 
-def application_strategy(tenant: str, root_dir: str, solution: str, project: str, strat: str, environment: str,
-framework: str, secret_key: Optional[str]="", secret_value: Optional[str]="") -> Tuple[bool, bool]:
-    if not _az.is_signed_in: return (False, False)
-    if not (tenant and isinstance(tenant, str)): TypeError("'tenant' parameter expected as string")
-    if not (root_dir and isinstance(root_dir, str)): TypeError("'root_dir' parameter expected as string")
+def application_strategy(
+    tenant: str,
+    root_dir: str,
+    solution: str,
+    project: str,
+    strat: str,
+    environment: str,
+    framework: str,
+    secret_key: Optional[str] = "",
+    secret_value: Optional[str] = "",
+) -> Tuple[bool, bool]:
+    if not _az.is_signed_in:
+        return (False, False)
+    if not (tenant and isinstance(tenant, str)):
+        TypeError("'tenant' parameter expected as string")
+    if not (root_dir and isinstance(root_dir, str)):
+        TypeError("'root_dir' parameter expected as string")
     # if not (solution and isinstance(solution, str)): TypeError("'solution' parameter expected as string")
     # if not isinstance(project, list): TypeError("'project' parameter expected as list")
-    if not (project and isinstance(project, str)): TypeError("'project' parameter expected as string")
-    if not (strat and isinstance(strat, str)): TypeError("'strat' parameter expected as string")
-    if not (environment and isinstance(environment, str)): TypeError("'environment' parameter expected as string")
-    if not (framework and isinstance(framework, str)): TypeError("'framework' parameter expected as string")
+    if not (project and isinstance(project, str)):
+        TypeError("'project' parameter expected as string")
+    if not (strat and isinstance(strat, str)):
+        TypeError("'strat' parameter expected as string")
+    if not (environment and isinstance(environment, str)):
+        TypeError("'environment' parameter expected as string")
+    if not (framework and isinstance(framework, str)):
+        TypeError("'framework' parameter expected as string")
     app_changed = False
     # Determine solution scenario (if a solution directory should exist)
     use_solution_dir = bool(solution and isinstance(solution, str))
-    app_dir = sh.path_join(root_dir, solution) if use_solution_dir else sh.path_join(root_dir, project)
+    app_dir = (
+        sh.path_join(root_dir, solution)
+        if use_solution_dir
+        else sh.path_join(root_dir, project)
+    )
 
     # _log.info("secret_key: {0}".format(secret_key))
     # _log.info("secret_value: {0}".format(secret_value))
@@ -463,7 +632,9 @@ framework: str, secret_key: Optional[str]="", secret_value: Optional[str]="") ->
                 sh.process_fail()
 
         # Ensure service principal credentials exist for AD application object registration
-        (service_principal, service_principal_changed) = service_principal_strategy(tenant, app_name, ad_app.appId)
+        (service_principal, service_principal_changed) = service_principal_strategy(
+            tenant, app_name, ad_app.appId
+        )
         # _log.debug("service_principal: {0}".format(service_principal))
         # TODO: might need additional test iterations linking AD app to SP with CLI instead of portal
 
@@ -499,12 +670,20 @@ framework: str, secret_key: Optional[str]="", secret_value: Optional[str]="") ->
             sh.process_fail()
 
     # Create ASP.NET Core solution
-    solution_file: str = sh.path_join(app_dir, "{0}.sln".format(solution)) if use_solution_dir else sh.path_join(app_dir, "{0}.sln".format(project))
+    solution_file: str = (
+        sh.path_join(app_dir, "{0}.sln".format(solution))
+        if use_solution_dir
+        else sh.path_join(app_dir, "{0}.sln".format(project))
+    )
     _log.debug("checking for solution ({0})...".format(solution_file))
     solution_exists: bool = sh.path_exists(solution_file, "f")
     if not solution_exists:
         _log.warning("could not locate solution, creating...")
-        sln_succeeded = net.solution_new(app_dir, solution) if use_solution_dir else net.solution_new(app_dir, project)
+        sln_succeeded = (
+            net.solution_new(app_dir, solution)
+            if use_solution_dir
+            else net.solution_new(app_dir, project)
+        )
         _log.info("successfully created solution: {0}".format(sln_succeeded))
         if not sln_succeeded:
             _log.error("solution failed to be created, exiting...")
@@ -521,7 +700,9 @@ framework: str, secret_key: Optional[str]="", secret_value: Optional[str]="") ->
     # _log.debug("NuGet packages_expected: {0}".format(packages_expected))
     packages_installed: List[str] = net.project_package_list(project_dir)
     # _log.debug("NuGet packages_installed: {0}".format(packages_installed))
-    packages_to_install: List[str] = sh.list_differences(packages_expected, packages_installed)
+    packages_to_install: List[str] = sh.list_differences(
+        packages_expected, packages_installed
+    )
     _log.debug("NuGet packages_to_install: {0}".format(packages_to_install))
     for package in packages_to_install:
         package_succeeded: bool = net.project_package_add(project_dir, package)
@@ -536,13 +717,26 @@ framework: str, secret_key: Optional[str]="", secret_value: Optional[str]="") ->
     return (True, app_changed)
 
 
-def repository_strategy(organization: str, root_dir: str, app_name: str, source="", gitignore_path="", remote_alias="origin") -> bool:
-    if not (organization and isinstance(organization, str)): TypeError("'organization' parameter expected as string")
-    if not (root_dir and isinstance(root_dir, str)): TypeError("'root_dir' parameter expected as string")
-    if not (app_name and isinstance(app_name, str)): TypeError("'app_name' parameter expected as string")
-    if not isinstance(source, str): TypeError("'source' parameter expected as string")
-    if not isinstance(gitignore_path, str): TypeError("'gitignore_path' parameter expected as string")
-    if not (remote_alias and isinstance(remote_alias, str)): TypeError("'remote_alias' parameter expected as string")
+def repository_strategy(
+    organization: str,
+    root_dir: str,
+    app_name: str,
+    source="",
+    gitignore_path="",
+    remote_alias="origin",
+) -> bool:
+    if not (organization and isinstance(organization, str)):
+        TypeError("'organization' parameter expected as string")
+    if not (root_dir and isinstance(root_dir, str)):
+        TypeError("'root_dir' parameter expected as string")
+    if not (app_name and isinstance(app_name, str)):
+        TypeError("'app_name' parameter expected as string")
+    if not isinstance(source, str):
+        TypeError("'source' parameter expected as string")
+    if not isinstance(gitignore_path, str):
+        TypeError("'gitignore_path' parameter expected as string")
+    if not (remote_alias and isinstance(remote_alias, str)):
+        TypeError("'remote_alias' parameter expected as string")
 
     if source == "github":
         remote_path = "https://github.com/{0}/{1}".format(organization, app_name)
@@ -628,45 +822,62 @@ def _json_to_parameters(parameters: Dict[str, Dict[str, Any]]) -> List[str]:
     # if not (parameters and isinstance(parameters, list)): TypeError("'parameters' parameter expected as a list")
     # if not isinstance(parameters, list): TypeError("'parameters' parameter expected as a list")
     out_parameters: List[str] = []
-    if not parameters: return out_parameters
+    if not parameters:
+        return out_parameters
     # Convert parameters JSON to CLI-ready parameters
     for item in parameters.items():
         # _log.debug("parameters item: {0}".format(item))
         # _log.debug("parameters key: {0}".format(item[0]))
-        if ("value" in item[1]):
+        if "value" in item[1]:
             # _log.debug("parameters value: {0}".format(item[1]["value"]))
             out_parameters.append("{0}={1}".format(item[0], item[1]["value"]))
     return out_parameters
 
 
-def deployment_group_strategy(tenant: str, sp_name: str, project: str, environment: str, location: str, arm: str) -> Tuple[bool, bool]:
+def deployment_group_strategy(
+    tenant: str, sp_name: str, project: str, environment: str, location: str, arm: str
+) -> Tuple[bool, bool]:
     # if not _az.is_signed_in: return (az.ResourceGroup(), False)
-    if not (tenant and isinstance(tenant, str)): TypeError("'tenant' parameter expected as string")
-    if not (sp_name and isinstance(sp_name, str)): TypeError("'sp_name' parameter expected as string")
-    if not (project and isinstance(project, str)): TypeError("'project' parameter expected as string")
-    if not (environment and isinstance(environment, str)): TypeError("'environment' parameter expected as string")
-    if not (location and isinstance(location, str)): TypeError("'location' parameter expected as string")
-    if not (arm and isinstance(arm, str)): TypeError("'arm' parameter expected as string")
+    if not (tenant and isinstance(tenant, str)):
+        TypeError("'tenant' parameter expected as string")
+    if not (sp_name and isinstance(sp_name, str)):
+        TypeError("'sp_name' parameter expected as string")
+    if not (project and isinstance(project, str)):
+        TypeError("'project' parameter expected as string")
+    if not (environment and isinstance(environment, str)):
+        TypeError("'environment' parameter expected as string")
+    if not (location and isinstance(location, str)):
+        TypeError("'location' parameter expected as string")
+    if not (arm and isinstance(arm, str)):
+        TypeError("'arm' parameter expected as string")
     deployment_succeeded: bool = False
     deployment_changed: bool = False
     rg_name: str = sh.format_resource("{0}-{1}".format(project, environment))
     _log.debug("rg_name: {0}".format(rg_name))
 
     # Ensure resource group exists
-    (resource_group, resource_group_changed) = resource_group_strategy(rg_name, location)
+    (resource_group, resource_group_changed) = resource_group_strategy(
+        rg_name, location
+    )
     if not resource_group.is_valid:
         _log.error("failed to create resource group")
         sh.process_fail()
 
     # Azure Resource Manager steps
-    rm_root_path: str = "~/pc-env/ansible_playbooks/roles/azure/resource_manager/deploy/templates"
+    rm_root_path: str = (
+        "~/pc-env/ansible_playbooks/roles/azure/resource_manager/deploy/templates"
+    )
     template_path: str = sh.path_join(rm_root_path, arm, "azuredeploy.json")
-    parameters_path: str = sh.path_join(rm_root_path, arm, "azuredeploy.parameters.json")
+    parameters_path: str = sh.path_join(
+        rm_root_path, arm, "azuredeploy.parameters.json"
+    )
     parameters_file: str = sh.file_read(parameters_path)
-    parameters_json: Dict[str, Dict[str, Any]] = az.ArmParameters(parameters_file).content
+    parameters_json: Dict[str, Dict[str, Any]] = az.ArmParameters(
+        parameters_file
+    ).content
 
     # When 'objectId' is in parameters, replace its value with service principal's objectId
-    if ("objectId" in parameters_json and "value" in parameters_json["objectId"]):
+    if "objectId" in parameters_json and "value" in parameters_json["objectId"]:
         # _log.debug("parameters_json objectId: {0}".format(parameters_json["objectId"]["value"]))
         service_principal = az.service_principal_get(sp_name)
         # _log.debug("service_principal: {0}".format(service_principal))
@@ -681,10 +892,14 @@ def deployment_group_strategy(tenant: str, sp_name: str, project: str, environme
     _log.debug("parameters: {0}".format(parameters))
 
     # Ensure deployment group template is valid
-    deploy_valid: bool = az.deployment_group_valid(resource_group.name, template_path, parameters)
+    deploy_valid: bool = az.deployment_group_valid(
+        resource_group.name, template_path, parameters
+    )
     if deploy_valid:
         _log.info("deployment validation has succeeded!")
-        deployment_succeeded = az.deployment_group_set(resource_group.name, template_path, parameters)
+        deployment_succeeded = az.deployment_group_set(
+            resource_group.name, template_path, parameters
+        )
         if deployment_succeeded:
             _log.info("deployment to resource group has succeeded!")
             deployment_changed = True
@@ -695,14 +910,28 @@ def deployment_group_strategy(tenant: str, sp_name: str, project: str, environme
     return (deployment_succeeded, deployment_changed)
 
 
-
 # --- Commands ---
+
 
 # Login Azure Active Directory subscription
 def login():
-    login_strategy(args.tenant, args.subscription, args.location, args.login_resource_group, args.login_key_vault, args.login_service_principal, args.login_service_principal_dir)
+    login_strategy(
+        args.tenant,
+        args.subscription,
+        args.location,
+        args.login_resource_group,
+        args.login_key_vault,
+        args.login_service_principal,
+        args.login_service_principal_dir,
+    )
     # Sign into Azure DevOps using PAT; TODO: automatically refresh upon expire
-    login_devops_strategy(args.login_devops_user, args.location, args.login_resource_group, args.login_key_vault, args.login_service_principal_dir)
+    login_devops_strategy(
+        args.login_devops_user,
+        args.location,
+        args.login_resource_group,
+        args.login_key_vault,
+        args.login_service_principal_dir,
+    )
 
 
 def secret():
@@ -715,18 +944,44 @@ def secret():
 
 def app_create():
     login()
-    application_strategy(args.tenant, args.dotnet_dir, args.solution, args.project, args.strat, args.environment, args.framework, args.secret_key, args.secret_value)
-    gitignore_path = "~/pc-env/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore"
+    application_strategy(
+        args.tenant,
+        args.dotnet_dir,
+        args.solution,
+        args.project,
+        args.strat,
+        args.environment,
+        args.framework,
+        args.secret_key,
+        args.secret_value,
+    )
+    gitignore_path = (
+        "~/pc-env/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore"
+    )
     # Determine scenario (if repo is inside solution or project directory)
     use_solution_dir = bool(args.solution and isinstance(args.solution, str))
     app_name = args.solution if use_solution_dir else args.project
-    repository_strategy(args.organization, args.dotnet_dir, app_name, args.source, gitignore_path, args.remote_alias)
+    repository_strategy(
+        args.organization,
+        args.dotnet_dir,
+        app_name,
+        args.source,
+        gitignore_path,
+        args.remote_alias,
+    )
 
 
 def deploy():
     login()
     # Deploy ARM templates to resource group
-    deployment_group_strategy(args.tenant, args.login_service_principal, args.project, args.environment, args.location, args.arm)
+    deployment_group_strategy(
+        args.tenant,
+        args.login_service_principal,
+        args.project,
+        args.environment,
+        args.location,
+        args.arm,
+    )
     # Example deployment resource scenarios:
     # - resource group, app service plan, web app service
     # - resource group, app service plan, web app service, sql server, sql database, connection
@@ -734,14 +989,15 @@ def deploy():
 
 def pipeline():
     login()
-    _log.debug("<mock 'pipeline' action> -- to be added later if az command gains more pipelines methods")
+    _log.debug(
+        "<mock 'pipeline' action> -- to be added later if az command gains more pipelines methods"
+    )
     # Project pipeline example scenarios:
     # - build csproj, deploy Python (pip) packages
     # - build csproj, deploy NuGet packages
     # - build csproj, deploy ARM templates
     # - build csproj, deploy .zip file to web app service
     # - build csproj, deploy .sql file to sql database
-
 
 
 # ------------------------ Main program ------------------------
@@ -751,7 +1007,7 @@ basename: str = "app"
 # args = log.LogArgs() # for external modules
 import argparse
 
-args: argparse.Namespace = argparse.Namespace() # for external modules
+args: argparse.Namespace = argparse.Namespace()  # for external modules
 # log_file = "/var/log/{0}.log".format(basename)
 _log: log._logger_type = log.get_logger(basename)
 
@@ -759,6 +1015,7 @@ if __name__ == "__main__":
     # When 'default' doesn't work, add nargs="?" and const=(same value as default)
     def parse_arguments():
         import argparse
+
         parser = argparse.ArgumentParser()
         # --- Subcommands of 'group' ---
         # group_subparser = parser.add_subparsers(dest="group")
@@ -768,8 +1025,20 @@ if __name__ == "__main__":
         # group_subparser.add_parser("deploy")
         # group_subparser.add_parser("pipeline")
         # --- Global defaults ---
-        parser.add_argument("group", default="login", const="login", nargs="?", choices=["login", "secret", "client", "deploy", "pipeline"])
-        parser.add_argument("action", default="get", const="get", nargs="?", choices=["get", "set", "remove"])
+        parser.add_argument(
+            "group",
+            default="login",
+            const="login",
+            nargs="?",
+            choices=["login", "secret", "client", "deploy", "pipeline"],
+        )
+        parser.add_argument(
+            "action",
+            default="get",
+            const="get",
+            nargs="?",
+            choices=["get", "set", "remove"],
+        )
         parser.add_argument("--debug", action="store_true")
         parser.add_argument("--log-path", default="")
         # --- Account defaults ---
@@ -782,14 +1051,20 @@ if __name__ == "__main__":
         parser.add_argument("--service-principal-dir", default=service_principal_dir)
         parser.add_argument("--service-principal", default="")
         # --- Login defaults ---
-        parser.add_argument("--login-service-principal-dir", default=service_principal_dir)
+        parser.add_argument(
+            "--login-service-principal-dir", default=service_principal_dir
+        )
         parser.add_argument("--login-service-principal", default="main-rbac-sp")
         parser.add_argument("--login-resource-group", "-G", default="Main")
         parser.add_argument("--login-key-vault", "-V", default="main-keyvault")
-        parser.add_argument("--login-devops-user", "-U", default="david-rachwalik@outlook.com")
+        parser.add_argument(
+            "--login-devops-user", "-U", default="david-rachwalik@outlook.com"
+        )
         # --- Azure Resource defaults ---
         parser.add_argument("--environment", "-e", default="Dev")
-        parser.add_argument("--location", "-l", default="southcentralus") # az account list-locations
+        parser.add_argument(
+            "--location", "-l", default="southcentralus"
+        )  # az account list-locations
         parser.add_argument("--resource-group", "-g", default="")
         parser.add_argument("--key-vault", "-v", default="")
         parser.add_argument("--secret-key")
@@ -799,16 +1074,27 @@ if __name__ == "__main__":
         parser.add_argument("--dotnet-dir", default="/mnt/e/Repos")
         parser.add_argument("--solution", "-a", default="")
         parser.add_argument("--project", "-p", default="")
-        parser.add_argument("--framework", "-f", default="net6.0") # "netcoreapp3.1", "net5.0", "net6.0"
-        parser.add_argument("--strat", default="basic", const="basic", nargs="?", choices=["basic", "database", "identity", "api"])
+        parser.add_argument(
+            "--framework", "-f", default="net6.0"
+        )  # "netcoreapp3.1", "net5.0", "net6.0"
+        parser.add_argument(
+            "--strat",
+            default="basic",
+            const="basic",
+            nargs="?",
+            choices=["basic", "database", "identity", "api"],
+        )
         # parser.add_argument("--template", default="console", const="console", nargs="?", choices=, ["console", "webapp", "webapi", "xunit"])
         # parser.add_argument("--identity", default="None", const="None", nargs="?", choices=, ["None", "SingleOrg", "MultiOrg"])
         # --- Git Repository defaults ---
-        parser.add_argument('--source', default="", const="", nargs="?", choices=["github", "tfsgit"]) # tfsgit=Azure
+        parser.add_argument(
+            "--source", default="", const="", nargs="?", choices=["github", "tfsgit"]
+        )  # tfsgit=Azure
         parser.add_argument("--remote-alias", default="origin")
         parser.add_argument("--remote-path", default="~/my_origin_repo.git")
         parser.add_argument("--gitignore-path", default="")
         return parser.parse_args()
+
     args = parse_arguments()
 
     #  Configure the main logger
@@ -832,7 +1118,6 @@ if __name__ == "__main__":
         log.set_handlers(_az_devops_log, log_handlers)
         az_devops.args.debug = args.debug
 
-
     # ------------------------ Business Logic (group/action) ------------------------
 
     _log.debug("args: {0}".format(args))
@@ -845,19 +1130,18 @@ if __name__ == "__main__":
 
     if args.group == "login":
         login()
-    
+
     elif args.group == "secret":
         secret()
-    
+
     elif args.group == "client":
         app_create()
 
     elif args.group == "deploy":
         deploy()
-    
+
     elif args.group == "pipeline":
         pipeline()
-
 
     # If we get to this point, assume all went well
     _log.debug("--------------------------------------------------------")

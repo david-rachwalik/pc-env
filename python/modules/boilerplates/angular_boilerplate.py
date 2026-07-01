@@ -2,7 +2,6 @@
 """Common logic for Angular commands"""
 
 import argparse
-from typing import List
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
@@ -17,7 +16,7 @@ import shell_boilerplate as sh
 
 def project_new(name: str) -> bool:
     """Method that creates an Angular project"""
-    command: List[str] = ["ng", "new", name, "--routing", "--style=css"]
+    command: list[str] = ["ng", "new", name, "--routing", "--style=css"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -43,7 +42,9 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: list[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

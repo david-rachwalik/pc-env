@@ -13,7 +13,6 @@
 # repos:                        repo_set, repo_get
 
 import argparse
-from typing import List, Tuple
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
@@ -35,7 +34,7 @@ def account_pat() -> str:
     # https://learn.microsoft.com/en-us/azure/healthcare-apis/get-access-token
     azureDevopsResourceId = "499b84ac-1321-427f-aa17-267ca6975798"
     # https://learn.microsoft.com/en-us/cli/azure/account?view=azure-cli-latest#az-account-get-access-token
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "account",
         "get-access-token",
@@ -70,7 +69,7 @@ def save_pat(path: str, content: str):
 
 def logout() -> bool:
     """Method that signs out Azure DevOps"""
-    command: List[str] = ["az", "devops", "logout"]
+    command: list[str] = ["az", "devops", "logout"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -80,7 +79,7 @@ def logout() -> bool:
 # Login with credential (PAT)
 def login(pat: str) -> bool:
     """Method that signs into Azure DevOps"""
-    command: List[str] = ["echo", pat, "|", "az", "devops", "login"]
+    command: list[str] = ["echo", pat, "|", "az", "devops", "login"]
     sh.print_command(command)
     # https://learn.microsoft.com/en-us/azure/devops/cli/log-in-via-pat
     # environment_vars = {'AZURE_DEVOPS_EXT_PAT': pat_data}
@@ -102,7 +101,7 @@ def login(pat: str) -> bool:
 
 def user_get(pat_data: str, user: str) -> bool:
     """Method that fetches Azure DevOps user profile"""
-    command: List[str] = ["az", "devops", "user", "show", f"--user={user}"]
+    command: list[str] = ["az", "devops", "user", "show", f"--user={user}"]
     environment_vars = {"AZURE_DEVOPS_EXT_PAT": pat_data}
     sh.print_command(command)
     # process = sh.run_subprocess(command)
@@ -116,14 +115,16 @@ def user_get(pat_data: str, user: str) -> bool:
 # https://docs.microsoft.com/en-us/cli/azure/ext/azure-devops/devops/project
 
 
-def devops_project_list() -> Tuple[bool, bool]:
+def devops_project_list() -> tuple[bool, bool]:
     """Method that lists Azure DevOps projects"""
-    command: List[str] = ["az", "devops", "project", "list"]
+    command: list[str] = ["az", "devops", "project", "list"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
     failed = process.returncode != 0
-    changed = not failed and "is not authorized to access this resource" not in process.stderr
+    changed = (
+        not failed and "is not authorized to access this resource" not in process.stderr
+    )
     return (not failed, changed)
 
 
@@ -145,7 +146,9 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: list[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

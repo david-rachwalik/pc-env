@@ -91,6 +91,18 @@ def backup_system(tasks: list[str], run_ids: list[str]):
         for game in game_backups:
             if game.id not in run_ids:
                 continue
+
+            # Automatically inject the screenshot path into sync inclusion rules
+            if game.screenshot:
+                ss_pattern = f"{game.screenshot}/*"
+                if not game.options:
+                    game.options = {"only": []}
+                if "only" not in game.options:
+                    game.options["only"] = []
+
+                if ss_pattern not in game.options["only"]:
+                    game.options["only"].append(ss_pattern)
+
             if not game.options:
                 continue
             LOG.info(f"--- Backing up game: {game.name} ---")
@@ -108,10 +120,10 @@ def backup_system(tasks: list[str], run_ids: list[str]):
                 if dirs_removed:
                     LOG.debug(f"empty directories removed: {dirs_removed}")
 
-            # Clear source screenshot directory
-            if game.screenshot:
-                ss_path = sh.join_path(src, game.screenshot)
-                sh.delete_directory(ss_path)
+            # # Clear source screenshot directory
+            # if game.screenshot:
+            #     ss_path = sh.join_path(src, game.screenshot)
+            #     sh.delete_directory(ss_path)
 
 
 # ------------------------ Main program ------------------------
@@ -174,3 +186,6 @@ if __name__ == "__main__":
 # pc_clean --debug
 # pc_clean --only-apps
 # pc_clean --id-filter=elite_dangerous --id-filter=terraria
+
+# export PYTHONPATH="$HOME/Repos/pc-env/python/modules:$HOME/Repos/pc-env/python/modules/boilerplates"
+# python3 ~/Repos/pc-env/python/commands/pc_clean.py --test-run --debug

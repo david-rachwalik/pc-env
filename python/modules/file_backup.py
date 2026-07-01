@@ -29,7 +29,7 @@ class FileBackup(ShellManager):
             logLevel = 10  # logging.DEBUG
         # Initialize the inherited class constructor
         ShellManager.__init__(self, logLevel)
-        self.log.debug("(FileBackup:__init__) Init")
+        self.LOG.debug("(FileBackup:__init__) Init")
         # Initial values
         self.args.src = self.ExpandPath(self.args.src)
         # self.args.dest = os.path.join(self.ExpandPath(self.args.dest), self.args.suffix)
@@ -38,19 +38,21 @@ class FileBackup(ShellManager):
         dest_basepath = os.path.basename(self.args.dest)
         # Add suffix to path when the top directory name doesn't match
         if self.args.dest != os.path.join(dest_basepath, self.args.suffix):
-            self.log.info(dest_basepath)
-            self.log.info(self.args.suffix)
-            self.args.dest = os.path.join(self.ExpandPath(self.args.dest), self.args.suffix)
+            self.LOG.info(dest_basepath)
+            self.LOG.info(self.args.suffix)
+            self.args.dest = os.path.join(
+                self.ExpandPath(self.args.dest), self.args.suffix
+            )
         else:
-            self.log.info(self.args.dest)
+            self.LOG.info(self.args.dest)
 
         # ---------------- Primary business logic area ----------------
-        self.log.debug(f"source: {self.args.src}")
-        self.log.debug(f"destination: {self.args.dest}")
+        self.LOG.debug(f"source: {self.args.src}")
+        self.LOG.debug(f"destination: {self.args.dest}")
 
         # Ensure source directory exists
         if not os.path.isdir(self.args.src):
-            self.log.error("Source directory does not exist")
+            self.LOG.error("Source directory does not exist")
             self.Fail()
         # Ensure backup directory exists; will create if absent
         self.DirectoryCreate(self.args.dest)

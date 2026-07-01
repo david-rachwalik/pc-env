@@ -11,7 +11,6 @@
 
 # import json, time
 import argparse
-from typing import List
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
@@ -25,7 +24,7 @@ def solution_new(solution_dir: str, solution: str) -> bool:
     """Method that creates a new solution"""
     # https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-new
     template: str = "sln"
-    command: List[str] = [
+    command: list[str] = [
         "dotnet",
         "new",
         template,
@@ -42,7 +41,7 @@ def solution_new(solution_dir: str, solution: str) -> bool:
 def solution_project_add(solution_file: str, project_file: str) -> bool:
     """Method that adds a project to a solution"""
     # https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-sln
-    command: List[str] = ["dotnet", "sln", solution_file, "add", project_file]
+    command: list[str] = ["dotnet", "sln", solution_file, "add", project_file]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -60,7 +59,7 @@ def project_new(tenant: str, project_dir: str, strat: str, framework: str) -> bo
     client_id: str = ""
     domain: str = "https://localhost:5001"
 
-    command: List[str] = ["dotnet", "new", template]
+    command: list[str] = ["dotnet", "new", template]
     command.append(f"--framework={framework}")
     command.append(f"--output={project_dir}")
     if strat == "identity":
@@ -85,10 +84,10 @@ def project_new(tenant: str, project_dir: str, strat: str, framework: str) -> bo
 
 # Currently difficult to parse - will eventually have --json option: https://github.com/NuGet/Home/issues/7752
 # - TODO: skip attempting to add packages each run when this change occurs
-def project_package_list(project_dir: str) -> List[str]:
+def project_package_list(project_dir: str) -> list[str]:
     """Method that lists the packages in a project"""
-    results: List[str] = []
-    command: List[str] = ["dotnet", "list", project_dir, "package"]
+    results: list[str] = []
+    command: list[str] = ["dotnet", "list", project_dir, "package"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -108,7 +107,7 @@ def project_package_list(project_dir: str) -> List[str]:
 # https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-add
 def project_package_add(project_dir: str, package: str) -> bool:
     """Method that adds a package to a project"""
-    command: List[str] = ["dotnet", "add", project_dir, "package", package]
+    command: list[str] = ["dotnet", "add", project_dir, "package", package]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     # sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -123,7 +122,7 @@ def secrets_init(dotnet_dir: str, application: str, project: str) -> bool:
     """Method that initializes user secrets in a project"""
     app_dir: str = sh.join_path(dotnet_dir, application)
     project_path: str = sh.join_path(app_dir, project)
-    command: List[str] = ["dotnet", "user-secrets", "init", f"--project={project_path}"]
+    command: list[str] = ["dotnet", "user-secrets", "init", f"--project={project_path}"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
@@ -134,18 +133,20 @@ def secrets_list(dotnet_dir: str, application: str, project: str) -> bool:
     """Method that lists the user secrets in a project"""
     app_dir: str = sh.join_path(dotnet_dir, application)
     project_path: str = sh.join_path(app_dir, project)
-    command: List[str] = ["dotnet", "user-secrets", "list", f"--project={project_path}"]
+    command: list[str] = ["dotnet", "user-secrets", "list", f"--project={project_path}"]
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, debug=ARGS.debug)
     return process.returncode == 0
 
 
-def secrets_set(dotnet_dir: str, application: str, project: str, secret_key: str, secret_value: str) -> bool:
+def secrets_set(
+    dotnet_dir: str, application: str, project: str, secret_key: str, secret_value: str
+) -> bool:
     """Method that creates a user secret in a project"""
     app_dir: str = sh.join_path(dotnet_dir, application)
     project_path: str = sh.join_path(app_dir, project)
-    command: List[str] = [
+    command: list[str] = [
         "dotnet",
         "user-secrets",
         "set",
@@ -165,7 +166,7 @@ def secrets_set(dotnet_dir: str, application: str, project: str, secret_key: str
 # https://docs.microsoft.com/en-us/aspnet/core/fundamentals/tools/dotnet-aspnet-codegenerator
 def project_identity_scaffold(project_dir: str) -> bool:
     """Method that scaffolds an identity in a project"""
-    command: List[str] = [
+    command: list[str] = [
         "dotnet",
         "aspnet-codegenerator",
         "identity",
@@ -196,7 +197,9 @@ if __name__ == "__main__":
     ARGS = parse_arguments()
 
     #  Configure the main logger
-    LOG_HANDLERS: List[log.LogHandlerOptions] = log.default_handlers(ARGS.debug, ARGS.log_path)
+    LOG_HANDLERS: list[log.LogHandlerOptions] = log.default_handlers(
+        ARGS.debug, ARGS.log_path
+    )
     log.set_handlers(LOG, LOG_HANDLERS)
     if ARGS.debug:
         # Configure the shell_boilerplate logger

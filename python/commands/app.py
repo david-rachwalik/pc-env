@@ -32,9 +32,7 @@
 # app --debug --secret-key="AutoTestKey" --secret-value="007" secret
 # app --debug --project="test" --arm="test-deploy" deploy
 
-
 import argparse
-from typing import Any, Dict, List, Tuple
 
 import azure_boilerplate as az
 import azure_devops_boilerplate as az_devops
@@ -48,7 +46,9 @@ import shell_boilerplate as sh
 # --- Strategies ---
 
 
-def resource_group_strategy(resource_group_name: str, location: str) -> az.ResourceGroup:
+def resource_group_strategy(
+    resource_group_name: str, location: str
+) -> az.ResourceGroup:
     """Method to setup an Azure resource group"""
     if not ACCOUNT.isSignedIn:
         LOG.debug("account is not signed in")
@@ -62,7 +62,9 @@ def resource_group_strategy(resource_group_name: str, location: str) -> az.Resou
     return resource_group
 
 
-def key_vault_strategy(location: str, resource_group_name: str, key_vault_name: str) -> az.KeyVault:
+def key_vault_strategy(
+    location: str, resource_group_name: str, key_vault_name: str
+) -> az.KeyVault:
     """Method to setup an Azure key vault"""
     if not ACCOUNT.isSignedIn:
         LOG.debug("account is not signed in")
@@ -84,7 +86,9 @@ def key_vault_strategy(location: str, resource_group_name: str, key_vault_name: 
     return key_vault
 
 
-def ad_group_strategy(ad_member_id: str, ad_group_name: str = "main-ad-group") -> az.AdGroup:
+def ad_group_strategy(
+    ad_member_id: str, ad_group_name: str = "main-ad-group"
+) -> az.AdGroup:
     """Method to setup an Azure Active Directory group"""
     ad_group = az.AdGroup()
     if not ACCOUNT.isSignedIn:
@@ -116,7 +120,9 @@ def ad_group_strategy(ad_member_id: str, ad_group_name: str = "main-ad-group") -
 
 
 # TODO: figure out whether still needed
-def service_principal_strategy(tenant: str, service_principal_name: str, app_id: str) -> az.ServicePrincipal:
+def service_principal_strategy(
+    tenant: str, service_principal_name: str, app_id: str
+) -> az.ServicePrincipal:
     """Method to setup an Azure service principal"""
     if not ACCOUNT.isSignedIn:
         LOG.debug("account is not signed in")
@@ -124,7 +130,9 @@ def service_principal_strategy(tenant: str, service_principal_name: str, app_id:
     # Full filepath to service principal data
     service_principal_name = az.format_resource_name(service_principal_name)
     # Ensure service principal exists
-    service_principal: az.ServicePrincipal = az.service_principal_get(service_principal_name, tenant=tenant)
+    service_principal: az.ServicePrincipal = az.service_principal_get(
+        service_principal_name, tenant=tenant
+    )
     if not service_principal.isValid:
         LOG.debug("service principal credentials not found, creating...")
         service_principal = az.service_principal_set(service_principal_name, app_id)
@@ -154,7 +162,9 @@ def login_service_principal_strategy() -> az.ServicePrincipal:
         return service_principal
 
     # Ensure key vault exists
-    key_vault = key_vault_strategy(ARGS.location, ARGS.login_resource_group, ARGS.login_key_vault)
+    key_vault = key_vault_strategy(
+        ARGS.location, ARGS.login_resource_group, ARGS.login_key_vault
+    )
     if not key_vault.isValid:
         LOG.error("failed to retrieve valid key vault details")
         return service_principal
@@ -172,7 +182,9 @@ def login_service_principal_strategy() -> az.ServicePrincipal:
             service_principal.password = key_vault_secret
         else:
             # Service principal in Azure but not local file, must reset pass to regain access
-            LOG.info("service principal found in Azure but not local, resetting credentials...")
+            LOG.info(
+                "service principal found in Azure but not local, resetting credentials..."
+            )
             service_principal_reset = az.service_principal_rbac_set(sp_name, True)
             # LOG.debug(f'service principal reset: {service_principal_reset}')
             # Grab service principal credential/password
@@ -208,15 +220,23 @@ def login_service_principal_strategy() -> az.ServicePrincipal:
         LOG.error("failed to save service principal credentials to local JSON")
 
     # Store credential/password (from "service_principal_rbac_set") in Azure key vault
-    do_secret_save: bool = bool(service_principal.password) and bool(service_principal.password != key_vault_secret)
+    do_secret_save: bool = bool(service_principal.password) and bool(
+        service_principal.password != key_vault_secret
+    )
     # if service_principal.password and not key_vault_secret:
     if do_secret_save:
         LOG.info("service principal credential not in Azure key vault, saving...")
-        secret_save_result = az.key_vault_secret_set(ARGS.login_key_vault, sp_name, service_principal.password)
+        secret_save_result = az.key_vault_secret_set(
+            ARGS.login_key_vault, sp_name, service_principal.password
+        )
         if secret_save_result:
-            LOG.info("successfully saved service principal credential as Azure key vault secret")
+            LOG.info(
+                "successfully saved service principal credential as Azure key vault secret"
+            )
         else:
-            LOG.error("failed to store service principal credential as Azure key vault secret")
+            LOG.error(
+                "failed to store service principal credential as Azure key vault secret"
+            )
 
     # TODO: manage service principal security groups
     # use 'az role assignment create' on groups, not service principals
@@ -257,7 +277,9 @@ def login_strategy(retry: bool = True) -> az.Account:
 
     if service_principal.changed:
         # Confirm updated service principal login connects
-        LOG.info("detected service principal change, preparing to use new credentials...")
+        LOG.info(
+            "detected service principal change, preparing to use new credentials..."
+        )
         az.account_logout()
         # Do not backup/rename SP credentials here if failed (it'll occur recursively)
         ACCOUNT = login_strategy()
@@ -281,18 +303,24 @@ def login_strategy(retry: bool = True) -> az.Account:
             if not ACCOUNT.isSignedIn:
                 if retry:
                     # Will retry recursively only once
-                    LOG.warning("Azure login with service principal failed, saving backup and retrying...")
+                    LOG.warning(
+                        "Azure login with service principal failed, saving backup and retrying..."
+                    )
                     sh.backup_file(service_principal_path)
                     ACCOUNT = login_strategy(False)
                 else:
                     # This should never occur (theoretically)
-                    LOG.error("Azure login with service principal failed again, exiting...")
+                    LOG.error(
+                        "Azure login with service principal failed again, exiting..."
+                    )
                     sh.fail_process()
             else:
                 LOG.info("you are successfully signed-in Azure!  (on repeat attempt)")
         else:
             # This can occur when signed-in with service principal but needing credentials changed
-            LOG.error('not signed-in, enter "az login" to manually login before repeating your previous command')
+            LOG.error(
+                'not signed-in, enter "az login" to manually login before repeating your previous command'
+            )
             # Calling 'az login' in script "works" but the prompt in subprocess causes display issues
             sh.fail_process()
 
@@ -327,7 +355,9 @@ def login_devops_pat_strategy() -> str:
         return pat_data
 
     # Ensure key vault exists
-    key_vault = key_vault_strategy(ARGS.location, ARGS.login_resource_group, key_vault_name)
+    key_vault = key_vault_strategy(
+        ARGS.location, ARGS.login_resource_group, key_vault_name
+    )
     if not key_vault.isValid:
         LOG.error("failed to retrieve valid key vault details")
         return pat_data
@@ -360,8 +390,12 @@ def login_devops_strategy():
         LOG.error(
             'failed to retrieve valid PAT, navigate Azure DevOps to manually create a PAT - open "User settings" (2nd icon from right) dropdown and select "Personal access tokens": https://dev.azure.com/david-rachwalik/_usersSettings/tokens'
         )
-        LOG.error(f'this PAT should be stored in vault "{key_vault}" as secret "{secret_key}"')
-        LOG.error("https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate")
+        LOG.error(
+            f'this PAT should be stored in vault "{key_vault}" as secret "{secret_key}"'
+        )
+        LOG.error(
+            "https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate"
+        )
         sh.fail_process()
 
     LOG.debug("assigning DevOps PAT (personal access token) to environment...")
@@ -466,7 +500,7 @@ def login_devops_strategy():
 
 
 # ASP.NET Core NuGet Packages (https://www.nuget.org/packages/*)
-def _project_packages(strat: str, framework: str) -> List[str]:
+def _project_packages(strat: str, framework: str) -> list[str]:
     dotnet_packages = []
 
     # --- Common Development Packages ---
@@ -520,7 +554,9 @@ def _project_packages(strat: str, framework: str) -> List[str]:
                 ]
             )
         elif framework == "netcoreapp3.1":
-            dotnet_packages.extend(["Microsoft.AspNetCore.Authentication.AzureAD.UI"])  # 3.x
+            dotnet_packages.extend(
+                ["Microsoft.AspNetCore.Authentication.AzureAD.UI"]
+            )  # 3.x
 
     # --- API Packages ---
     if strat == "api":
@@ -537,7 +573,7 @@ def _project_packages(strat: str, framework: str) -> List[str]:
 
 
 # def application_strategy(tenant: str, root_dir: str, solution: str, project: str, strat: str, environment: str,
-#                          framework: str, secret_key: str = '', secret_value: str = '') -> Tuple[bool, bool]:
+#                          framework: str, secret_key: str = '', secret_value: str = '') -> tuple[bool, bool]:
 def application_strategy(
     root_dir: str,
     solution: str,
@@ -545,7 +581,7 @@ def application_strategy(
     strat: str,
     environment: str,
     framework: str,
-) -> Tuple[bool, bool]:
+) -> tuple[bool, bool]:
     """Method to setup an Azure application"""
     if not ACCOUNT.isSignedIn:
         LOG.debug("account is not signed in")
@@ -553,7 +589,11 @@ def application_strategy(
     app_changed = False
     # Determine solution scenario (if a solution directory should exist)
     use_solution_dir = bool(solution and isinstance(solution, str))
-    app_dir = sh.join_path(root_dir, solution) if use_solution_dir else sh.join_path(root_dir, project)
+    app_dir = (
+        sh.join_path(root_dir, solution)
+        if use_solution_dir
+        else sh.join_path(root_dir, project)
+    )
 
     # LOG.info(f"secret_key: {secret_key}")
     # LOG.info(f"secret_value: {secret_value}")
@@ -575,7 +615,9 @@ def application_strategy(
                 sh.fail_process()
 
         # Ensure service principal credentials exist for AD application object registration
-        service_principal = service_principal_strategy(ACCOUNT.tenantId, app_name, ad_app.appId)
+        service_principal = service_principal_strategy(
+            ACCOUNT.tenantId, app_name, ad_app.appId
+        )
         # LOG.debug(f'service_principal: {service_principal}')
         # TODO: might need additional test iterations linking AD app to SP with CLI instead of portal
 
@@ -604,19 +646,29 @@ def application_strategy(
     project_exists: bool = sh.path_exists(project_file, "f")
     if not project_exists:
         LOG.warning("could not locate project, creating...")
-        project_succeeded: bool = net.project_new(ACCOUNT.tenantId, project_dir, strat, framework)
+        project_succeeded: bool = net.project_new(
+            ACCOUNT.tenantId, project_dir, strat, framework
+        )
         LOG.info(f"successfully created project: {project_succeeded}")
         if not project_succeeded:
             LOG.error("project failed to be created, exiting...")
             sh.fail_process()
 
     # Create ASP.NET Core solution
-    solution_file: str = sh.join_path(app_dir, f"{solution}.sln") if use_solution_dir else sh.join_path(app_dir, f"{project}.sln")
+    solution_file: str = (
+        sh.join_path(app_dir, f"{solution}.sln")
+        if use_solution_dir
+        else sh.join_path(app_dir, f"{project}.sln")
+    )
     LOG.debug(f"checking for solution ({solution_file})...")
     solution_exists: bool = sh.path_exists(solution_file, "f")
     if not solution_exists:
         LOG.warning("could not locate solution, creating...")
-        sln_succeeded = net.solution_new(app_dir, solution) if use_solution_dir else net.solution_new(app_dir, project)
+        sln_succeeded = (
+            net.solution_new(app_dir, solution)
+            if use_solution_dir
+            else net.solution_new(app_dir, project)
+        )
         LOG.info(f"successfully created solution: {sln_succeeded}")
         if not sln_succeeded:
             LOG.error("solution failed to be created, exiting...")
@@ -629,11 +681,13 @@ def application_strategy(
         sh.fail_process()
 
     # Add NuGet packages to ASP.NET Core project
-    packages_expected: List[str] = _project_packages(strat, framework)
+    packages_expected: list[str] = _project_packages(strat, framework)
     # LOG.debug(f'NuGet packages_expected: {packages_expected}')
-    packages_installed: List[str] = net.project_package_list(project_dir)
+    packages_installed: list[str] = net.project_package_list(project_dir)
     # LOG.debug(f'NuGet packages_installed: {packages_installed}')
-    packages_to_install: List[str] = sh.list_differences(packages_expected, packages_installed)
+    packages_to_install: list[str] = sh.list_differences(
+        packages_expected, packages_installed
+    )
     LOG.debug(f"NuGet packages_to_install: {packages_to_install}")
     for package in packages_to_install:
         package_succeeded: bool = net.project_package_add(project_dir, package)
@@ -737,8 +791,8 @@ def repository_strategy(
 
 
 # https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-cli#parameters
-def _json_to_parameters(parameters: Dict[str, Dict[str, Any]]) -> List[str]:
-    out_parameters: List[str] = []
+def _json_to_parameters(parameters: dict[str, dict[str, object]]) -> list[str]:
+    out_parameters: list[str] = []
     if not parameters:
         return out_parameters
     # Convert parameters JSON to CLI-ready parameters
@@ -747,12 +801,14 @@ def _json_to_parameters(parameters: Dict[str, Dict[str, Any]]) -> List[str]:
         # LOG.debug(f'parameters key: {item[0]}')
         if "value" in item[1]:
             # LOG.debug(f'parameters value: {item[1]["value"]}')
-            out_parameters.append(f'{item[0]}={item[1]["value"]}')
+            out_parameters.append(f"{item[0]}={item[1]['value']}")
     return out_parameters
 
 
 # deployment_group_strategy(account, ARGS.login_service_principal, ARGS.project, ARGS.environment, ARGS.location, ARGS.arm)
-def deployment_group_strategy(sp_name: str, project: str, environment: str, location: str, arm: str) -> Tuple[bool, bool]:
+def deployment_group_strategy(
+    sp_name: str, project: str, environment: str, location: str, arm: str
+) -> tuple[bool, bool]:
     """Method to setup an Azure deployment group"""
     # if not account.isSignedIn: return (az.ResourceGroup(), False)
     deployment_succeeded: bool = False
@@ -767,11 +823,17 @@ def deployment_group_strategy(sp_name: str, project: str, environment: str, loca
         sh.fail_process()
 
     # Azure Resource Manager steps
-    rm_root_path: str = "~/pc-env/ansible_playbooks/roles/azure/resource_manager/deploy/templates"
+    rm_root_path: str = (
+        "~/pc-env/ansible_playbooks/roles/azure/resource_manager/deploy/templates"
+    )
     template_path: str = sh.join_path(rm_root_path, arm, "azuredeploy.json")
-    parameters_path: str = sh.join_path(rm_root_path, arm, "azuredeploy.parameters.json")
+    parameters_path: str = sh.join_path(
+        rm_root_path, arm, "azuredeploy.parameters.json"
+    )
     parameters_file: str = sh.read_file(parameters_path)
-    parameters_json: Dict[str, Dict[str, Any]] = az.ArmParameters(parameters_file).content
+    parameters_json: dict[str, dict[str, object]] = az.ArmParameters(
+        parameters_file
+    ).content
 
     # When 'objectId' is in parameters, replace its value with service principal's objectId
     if "objectId" in parameters_json and "value" in parameters_json["objectId"]:
@@ -785,14 +847,18 @@ def deployment_group_strategy(sp_name: str, project: str, environment: str, loca
 
     # Convert parameters JSON to CLI-ready parameters
     LOG.debug(f"parameters_json: {parameters_json}")
-    parameters: List[str] = _json_to_parameters(parameters_json)
+    parameters: list[str] = _json_to_parameters(parameters_json)
     LOG.debug(f"parameters: {parameters}")
 
     # Ensure deployment group template is valid
-    deploy_valid: bool = az.deployment_group_valid(resource_group.name, template_path, parameters)
+    deploy_valid: bool = az.deployment_group_valid(
+        resource_group.name, template_path, parameters
+    )
     if deploy_valid:
         LOG.info("deployment validation has succeeded!")
-        deployment_succeeded = az.deployment_group_set(resource_group.name, template_path, parameters)
+        deployment_succeeded = az.deployment_group_set(
+            resource_group.name, template_path, parameters
+        )
         if deployment_succeeded:
             LOG.info("deployment to resource group has succeeded!")
             deployment_changed = True
@@ -833,7 +899,9 @@ def sdk_secret():
     main_vault_name = "main-keyvault"
     main_secret_key = "main-devops-pat"
     if ACCOUNT.auth:
-        secret_value = az.key_vault_secret_get_new(ACCOUNT.auth, main_vault_name, main_secret_key)
+        secret_value = az.key_vault_secret_get_new(
+            ACCOUNT.auth, main_vault_name, main_secret_key
+        )
         LOG.debug(f"secret_value: {secret_value}")
     else:
         LOG.debug("Cannot continue without valid credentials, exiting...")
@@ -852,7 +920,9 @@ def app_create():
         ARGS.environment,
         ARGS.framework,
     )
-    gitignore_path = "~/pc-env/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore"
+    gitignore_path = (
+        "~/pc-env/ansible_playbooks/roles/linux/apps/git/init/files/.gitignore"
+    )
     # Determine scenario (if repo is inside solution or project directory)
     use_solution_dir = bool(ARGS.solution and isinstance(ARGS.solution, str))
     app_name = ARGS.solution if use_solution_dir else ARGS.project
@@ -890,7 +960,9 @@ def deploy():
 
 def pipeline():
     """Method to perform actions for creating an Azure pipeline"""
-    LOG.debug('<mock "pipeline" action> -- to be added later if az command gains more pipelines methods')
+    LOG.debug(
+        '<mock "pipeline" action> -- to be added later if az command gains more pipelines methods'
+    )
     # Project pipeline example scenarios:
     # - build csproj, deploy Python (pip) packages
     # - build csproj, deploy NuGet packages
@@ -952,11 +1024,15 @@ if __name__ == "__main__":
         parser.add_argument("--service-principal-dir", default=service_principal_dir)
         parser.add_argument("--service-principal", default="")
         # --- Login defaults ---
-        parser.add_argument("--login-service-principal-dir", default=service_principal_dir)
+        parser.add_argument(
+            "--login-service-principal-dir", default=service_principal_dir
+        )
         parser.add_argument("--login-service-principal", default="main-rbac-sp")
         parser.add_argument("--login-resource-group", "-G", default="Main")
         parser.add_argument("--login-key-vault", "-V", default="main-keyvault")
-        parser.add_argument("--login-devops-user", "-U", default="david-rachwalik@outlook.com")
+        parser.add_argument(
+            "--login-devops-user", "-U", default="david-rachwalik@outlook.com"
+        )
         # --- Azure Resource defaults ---
         parser.add_argument("--environment", "-e", default="Dev")
         # az account list-locations
@@ -982,7 +1058,9 @@ if __name__ == "__main__":
         # parser.add_argument('--template', default='console', const='console', nargs='?', choices=, ['console', 'webapp', 'webapi', 'xunit'])
         # parser.add_argument('--identity', default='None', const='None', nargs='?', choices=, ['None', 'SingleOrg', 'MultiOrg'])
         # --- Git Repository defaults ---
-        parser.add_argument("--source", default="", const="", nargs="?", choices=["github", "tfsgit"])  # tfsgit=Azure
+        parser.add_argument(
+            "--source", default="", const="", nargs="?", choices=["github", "tfsgit"]
+        )  # tfsgit=Azure
         parser.add_argument("--remote-alias", default="origin")
         parser.add_argument("--remote-path", default="~/my_origin_repo.git")
         parser.add_argument("--gitignore-path", default="")

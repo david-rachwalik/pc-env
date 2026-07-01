@@ -5,7 +5,6 @@ import multiprocessing
 import queue  # imported for using queue.Empty exception
 import random
 import time
-from typing import Tuple
 
 # ------------------------ Classes ------------------------
 
@@ -20,7 +19,6 @@ def do_job(tasks_to_accomplish, tasks_that_are_done):
             """
             task = tasks_to_accomplish.get_nowait()
         except queue.Empty:
-
             break
         else:
             """
@@ -46,7 +44,9 @@ def main():
 
     # creating processes
     for w in range(number_of_processes):
-        p = multiprocessing.Process(target=do_job, args=(tasks_to_accomplish, tasks_that_are_done))
+        p = multiprocessing.Process(
+            target=do_job, args=(tasks_to_accomplish, tasks_that_are_done)
+        )
         processes.append(p)
         p.start()
 
@@ -61,7 +61,7 @@ def main():
     return True
 
 
-def rando(args: Tuple):
+def rando(args: tuple):
     print("rando init")
     (num, tester) = args
     proc_name = multiprocessing.current_process().name

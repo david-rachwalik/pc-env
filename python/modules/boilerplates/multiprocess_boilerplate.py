@@ -10,10 +10,14 @@
 import argparse
 import multiprocessing
 import random
+import socket
+import sys
+import threading
 import time
-from typing import Any, Callable, Optional, Tuple
+from collections.abc import Callable
 
 import logging_boilerplate as log
+from socket_boilerplate import SocketContext
 
 # ------------------------ Classes ------------------------
 
@@ -22,17 +26,17 @@ class ProcessEvent(object):
     def __init__(self):
         LOG.debug("(ProcessEvent:__init__): Init")
         # Initial values
-        self.running = bool()
+        self.running: bool = False
         self.event = multiprocessing.Event()
 
-    def Run(self):
+    def Run(self) -> bool:
         try:
             self.event.set()
         except Exception:
             return False
         return True
 
-    def IsRunning(self):
+    def IsRunning(self) -> bool:
         return self.event.is_set()
 
 
@@ -40,20 +44,21 @@ class ProcessPool(object):
     def __init__(self):
         LOG.debug("(ProcessPool:__init__): Init")
         # Initial values
-        self.running = bool()
+        self.running: bool = False
         self.pool = multiprocessing.Pool()
+        self.processes = None
 
     def Close(self):
         self.pool.close()
         self.pool.join()
 
-    def RunAsync(self, func, args_list):
+    def RunAsync(self, func: Callable, args_list: list) -> bool:
         if not callable(func):
             self.running = False
-            return
+            return False
         try:
-            # map_async recommended over apply_async (not used in Python3)
-            self.processes = pool.map_async(func, args_list)
+            # map_async recommended over apply_async (not used in Python 3)
+            self.processes = self.pool.map_async(func, args_list)
             self.running = True
         except Exception:
             self.running = False
@@ -61,8 +66,7 @@ class ProcessPool(object):
 
     def await_results(self):
         self.Close()
-        if running:
-            # results = [p.get() for p in self.processes]
+        if self.running and self.processes:
             results = self.processes.get()
             return results
         else:
@@ -71,10 +75,10 @@ class ProcessPool(object):
 
 # Supports either a single function with list of args
 # OR takes a list of functions with a list of list of args (lengths must match)
-def ProcessPoolAwait(func, args_list, callback=None, log=None):
+def ProcessPoolAwait(func: Callable, args_list: list):
     if not (callable(func) and isinstance(args_list, list)):
-        return
-    pool = ProcessPool(log=log)
+        return None
+    pool = ProcessPool()
     pool.RunAsync(func, args_list)
     results = pool.await_results()
     return results
@@ -82,22 +86,20 @@ def ProcessPoolAwait(func, args_list, callback=None, log=None):
 
 # Supports either a single function with list of args
 # OR takes a list of functions with a list of list of args (lengths must match)
-def ProcessPoolAsync(func, args_list, callback=None):
+def ProcessPoolAsync(func: Callable, args_list: list):
     if not callable(func):
-        return
+        return None
     # Create pool and args enumerable
     pool = multiprocessing.Pool()
     # Run async processes, close pool, await (join), gather results
-    # recommended over apply_async, which isn't used anymore in Python3
     processes = pool.map_async(func, args_list)
     pool.close()
     pool.join()
-    # results = [p.get() for p in processes]
     results = processes.get()
     return results
 
 
-def rando(args: Tuple):
+def rando(args: tuple):
     (in_num, tester) = args
     num = random.random()
     print(f"{in_num} '{tester}' in with rando: {num}")
@@ -113,7 +115,6 @@ def rando(args: Tuple):
 
 
 def rng_generate(in_num, tester):
-    # print("rng_generate): Init")
     num = random.random()
     print(f"{in_num} '{tester}' in with rng_generate: {num}")
     try:
@@ -135,16 +136,12 @@ def end_print(start_time):
     print("")
 
 
-def data_callback(pack):
-    # print("data_callback): Init")
-    for (key, val) in pack.items():
-        # print(f"key: {key}")
-        # print(f"val: {val}")
+def data_callback(pack: dict):
+    for key, val in pack.items():
         data[key] = val
 
 
-# def timer((func, *args, **kwargs)):
-def timer(args: Tuple[Callable, Any]):
+def timer(args: tuple[Callable, object]):
     (func, val) = args
 
     start_time = time.time()
@@ -162,11 +159,6 @@ def random_num():
 
 
 def worker():
-    # """worker function"""
-    # pid = os.getpid()
-    # print("Worker pid: {pid}")
-    # process_name = multiprocessing.current_process().name
-    # print("Worker process name: {process_name}")
     name = multiprocessing.current_process().name
     print(f"{name}, starting...")
     time.sleep(2)
@@ -176,97 +168,102 @@ def worker():
 def my_service():
     name = multiprocessing.current_process().name
     print(f"{name}, starting...")
-    # pid = os.getpid()
-    # print("Worker pid: {pid}")
-    # process_name = multiprocessing.current_process().name
-    # print("Worker process name: {process_name}")
     time.sleep(3)
     print(f"{name}, exiting...")
 
 
 # ------------------------ Test Program ------------------------
 
-# socket_listener()
-def MultiprocessSocketTester(hostName, hostPort, logger: Optional[log.Logger] = None):
-    # Initialize the logger
-    LOG = log.get_logger(logger)
-    LOG.debug("(MultiprocessSocketTester): Init")
 
-    # Create server socket to communicate with clients
-    serverSocket = SocketContext(log=logger)
-    connected = serverSocket.ConnectAsServer(hostName, hostPort)
-    if not connected:
-        LOG.debug("(MultiprocessSocketTester): not connected")
-        Fail()
+class MultiprocessSocketTester:
+    def __init__(
+        self, host_name: str, host_port: int, logger: log.Logger | None = None
+    ):
+        self.host_name = host_name
+        self.host_port = host_port
+        self.logger = logger or LOG
+        self.kill_socket_event = threading.Event()
 
-    # Signal the main thread that we are up and listening
-    LOG.info(f"Socket listener started and listening on {hostName}:{hostPort}")
+    def fail(self):
+        self.logger.error("MultiprocessSocketTester failed to initialize properly.")
+        sys.exit(1)
 
-    LOG.debug("(MultiprocessSocketTester): ACTION METHOD")
+    def socket_client(self, args: tuple):
+        # Stub for processing client connections socket testing
+        (conn, addr) = args
+        self.logger.info(f"Socket client started for: {addr}")
 
-    # Create server socket to communicate with clients
-    serverSocket = SocketContext(log=self.loggerOptions)
-    connected = serverSocket.ConnectAsServer(self.hostName, self.config.hostPort)
-    if not connected:
-        self.Fail()
+    def run(self):
+        self.logger.debug("(MultiprocessSocketTester): Init")
 
-    # Signal the main thread that we are up and listening
-    bindString = f"{self.hostName}:{self.config.hostPort}"
-    LOG.info(f"Socket listener started and listening on {bindString}")
+        # Create server socket to communicate with clients
+        server_socket = SocketContext()
+        connected = server_socket.ConnectAsServer(self.host_name, self.host_port)
+        if not connected:
+            self.logger.debug("(MultiprocessSocketTester): not connected")
+            self.fail()
 
-    # Create a holder for our client threads
-    clients = {}
-    # Accept connections until told to stop
-    newConn = False
-    while True:
-        # Wrap the blocking accept in a try because it will raise
-        # an error when the timeout set by 'settimeout' is reached
-        # This allows us to break out and periodically check if we
-        # need to exit or not.
-        try:
-            (conn, addr) = serverSocket.accept()
-            newConn = True
-        except socket.timeout:
-            LOG.debug("Socket timed out waiting for a client.")
+        # Signal the main thread that we are up and listening
+        bind_string = f"{self.host_name}:{self.host_port}"
+        self.logger.info(f"Socket listener started and listening on {bind_string}")
 
-        if newConn:
-            # Create args enumerable and run against process pool
-            args_list = [(conn, addr)]
-            results = ProcessPoolAsync(self.socket_client, args_list)
-            # Print results
-            print(f"results: {results}")
+        # Create a holder for our client threads
+        clients = {}
+        # Accept connections until told to stop
+        new_conn = False
 
-            # Launch a new thread to service the client
-            clThread = threading.Thread(target=self.socket_client, args=(conn, addr))
-            clThread.start()
-            addrString = ':'.join([str(x) for x in addr])
-            clients[clThread] = addrString
-            newConn = False
-        # If we are requested to die, break out of the while loop
-        if self.killSocketEvent.is_set():
-            LOG.warning(f"Socket listener ("{bindString}") detected exit request, exiting.")
-            break
-        else:
-            continue
+        while True:
+            # Wrap the blocking accept in a try because it will raise an error
+            # when the timeout is reached. This allows us to break out and periodically check.
+            try:
+                (conn, addr) = server_socket.accept()
+                new_conn = True
+            except socket.timeout:
+                self.logger.debug("Socket timed out waiting for a client.")
 
-    # After the socket server/listener exits wait for clients to finish
-    while len(clients) > 0:
-        for thrd in clients.keys():
-            if thrd.is_alive():
-                LOG.debug("Waiting for client to disconnect: " + clients[thrd])
-            else:
-                clients.pop(thrd)
-        sleep(1)
+            if new_conn:
+                # Create args enumerable and run against process pool
+                args_list = [(conn, addr)]
+                results = ProcessPoolAsync(self.socket_client, args_list)
+                print(f"results: {results}")
 
-    # When finished accepting connections clean up the socket
-    serverSocket.Close()
-    LOG.info("Socket listener shutdown (" + bindString + ")")
+                # Launch a new thread to service the client
+                cl_thread = threading.Thread(
+                    target=self.socket_client, args=((conn, addr),)
+                )
+                cl_thread.start()
+                addr_string = ":".join([str(x) for x in addr])
+                clients[cl_thread] = addr_string
+                new_conn = False
+
+            # If we are requested to die, break out of the while loop
+            if self.kill_socket_event.is_set():
+                self.logger.warning(
+                    f'Socket listener ("{bind_string}") detected exit request, exiting.'
+                )
+                break
+
+        # After the socket server/listener exits wait for clients to finish
+        # list() wrapper avoids 'dictionary changed size during iteration' exception
+        while len(clients) > 0:
+            for thrd in list(clients.keys()):
+                if thrd.is_alive():
+                    self.logger.debug(
+                        "Waiting for client to disconnect: " + clients[thrd]
+                    )
+                else:
+                    clients.pop(thrd)
+            time.sleep(1)
+
+        # When finished accepting connections clean up the socket
+        server_socket.Close()
+        self.logger.info(f"Socket listener shutdown ({bind_string})")
 
 
 # ------------------------ Main Program ------------------------
 
 # Initialize the logger
-BASENAME = "shell_boilerplate"
+BASENAME = "multiprocess_boilerplate"
 ARGS: argparse.Namespace = argparse.Namespace()  # for external modules
 LOG: log.Logger = log.get_logger(BASENAME)
 
@@ -277,24 +274,24 @@ if __name__ == "__main__":
 
     start_time = time.time()
     # Create args enumerable and run against process pool
-    args_list = []
+    test_args_list = []
     for i in iterations:
-        args_list.append((i, "test"))
-    results = ProcessPoolAsync(rando, args_list)
+        test_args_list.append((i, "test"))
+    results_async = ProcessPoolAsync(rando, test_args_list)
     # Print results
-    print(f"results: {results}")
+    print(f"results: {results_async}")
     end_print(start_time)
 
     # --- MAP ASYNC (class) ---
 
     start_time = time.time()
     # Create args enumerable and run against process pool
-    args_list = []
+    test_args_list = []
     for i in iterations:
-        args_list.append((i, "test"))
-    results = ProcessPoolAwait(rando, args_list)
+        test_args_list.append((i, "test"))
+    results_await = ProcessPoolAwait(rando, test_args_list)
     # Print results
-    print(f"results: {results}")
+    print(f"results: {results_await}")
     end_print(start_time)
 
 

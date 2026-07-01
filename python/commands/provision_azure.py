@@ -5,7 +5,6 @@
 # https://docs.microsoft.com/en-us/cli/azure/authenticate-azure-cli
 
 import argparse
-from typing import List
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
@@ -19,7 +18,7 @@ import shell_boilerplate as sh
 def default_subscription(subscription: str):
     """Method that sets the currently active Azure subscription"""
     # https://docs.microsoft.com/en-us/cli/azure/account#az-account-set
-    command: List[str] = ["az", "account", "set", f'--subscription="{subscription}"']
+    command: list[str] = ["az", "account", "set", f'--subscription="{subscription}"']
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, ARGS.debug)
@@ -30,7 +29,7 @@ def default_devops_organization(organization: str):
     """Method that sets the default Azure organization"""
     az_repo = f"https://dev.azure.com/{organization}"
     # https://docs.microsoft.com/en-us/cli/azure/devops#az-devops-configure
-    command: List[str] = [
+    command: list[str] = [
         "az",
         "devops",
         "configure",
@@ -45,7 +44,7 @@ def default_devops_organization(organization: str):
 def default_location(location: str):
     """Method that sets the default Azure location"""
     # https://docs.microsoft.com/en-us/cli/azure/reference-index#az-configure
-    command: List[str] = ["az", "configure", "--defaults", f'location="{location}"']
+    command: list[str] = ["az", "configure", "--defaults", f'location="{location}"']
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, ARGS.debug)
@@ -53,7 +52,7 @@ def default_location(location: str):
 
 def default_resource_group(resource_group: str):
     """Method that sets the default Azure resource group"""
-    command: List[str] = ["az", "configure", "--defaults", f'group="{resource_group}"']
+    command: list[str] = ["az", "configure", "--defaults", f'group="{resource_group}"']
     sh.print_command(command)
     process = sh.run_subprocess(command)
     sh.log_subprocess(LOG, process, ARGS.debug)
