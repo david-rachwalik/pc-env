@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY pip-requirements.txt /tmp/
+COPY docker/pc-ops/pip-requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/pip-requirements.txt
 
 WORKDIR /app
