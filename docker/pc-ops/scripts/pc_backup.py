@@ -28,6 +28,18 @@ def what_to_run() -> list[str]:
 def backup_system(tasks: list[str], run_ids: list[str]):
     """Method that backs up important application and game files"""
 
+    # Ensure cloud drive is actually mounted/accessible
+    if not sh.path_exists(PATHS.cloud, "d"):
+        LOG.error(f"Cloud drive root not found: {PATHS.cloud}")
+        LOG.error(
+            "Please ensure your external drive or cloud provider is mounted before backing up."
+        )
+        return
+
+    # Create the Backups container if missing (bypassed during dry run)
+    if not ARGS.dry_run and not sh.path_exists(PATHS.backups, "d"):
+        sh.create_directory(PATHS.backups)
+
     # --- Backup important application files (settings) ---
     if "apps" in tasks:
         for app in app_backups:

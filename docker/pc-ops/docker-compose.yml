@@ -7,6 +7,7 @@ services:
       dockerfile: docker/pc-ops/Dockerfile
     image: pc-ops-runner
     container_name: pc-ops-container
+    user: '${UID:-1000}:${GID:-1000}'
     environment:
       - PYTHONPATH=/app/python/modules:/app/python/modules/boilerplates
       - HOST_USER_HOME=/home/${USER:-rhodair}

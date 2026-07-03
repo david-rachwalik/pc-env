@@ -19,10 +19,8 @@ COPY python /app/python
 # Copy the pc-ops scripts directly into working directory
 COPY docker/pc-ops/scripts/ /app/
 
-# Setup entrypoint
-COPY docker/pc-ops/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Bake aliases system-wide so any runtime user can access them
+COPY docker/pc-ops/aliases.sh /etc/profile.d/aliases.sh
+ENV ENV="/etc/profile.d/aliases.sh"
 
-# Use ENTRYPOINT for shell setup, CMD for default behavior
-ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sh", "-l"]

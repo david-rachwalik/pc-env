@@ -379,7 +379,7 @@ def sync_directory(
     default_options: dict[str, object] = {
         "logger": LOG,  # custom logger to send output somewhere other than stdout
         "verbose": True,
-        "create": True,  # create target directory if it does not exist
+        "create": action != "diff",  # skip creating target directory on dry runs
         "ctime": True,  # takes into account the creation time or last metadata change
         "content": True,  # synchronize only different files (e.g. hash check)
         # use raw string notation for regex (https://docs.python.org/3/howto/regex.html)
