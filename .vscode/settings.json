@@ -4,6 +4,7 @@
   "explorer.fileNesting.enabled": true,
   "files.associations": {
     "hosts": "ini",
+    "config": "ini",
     // "ansible_playbooks/**/*.yml": "ansible",
     "*.json": "jsonc"
   },
@@ -22,18 +23,17 @@
   "editor.fontLigatures": false,
   "editor.linkedEditing": true,
   "editor.wordWrapColumn": 160,
+  "editor.inlayHints.enabled": "offUnlessPressed",
 
   // --- Formatting ---
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "explicit"
-  },
+  "editor.codeActionsOnSave": {},
   // :: Prettier Supported Language Targets ::
-  // [javascript, typescript, javascriptreact, typescriptreact]
-  // [html, css, scss, less, vue]
-  // [json, yaml, markdown]
-  // [graphql, handlebars, toml, ruby]
+  // [javascript][typescript][javascriptreact][typescriptreact]
+  // [html][css][scss][less][vue]
+  // [json][yaml][markdown]
+  // [graphql][handlebars][toml][ruby]
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "prettier.printWidth": 160,
   "prettier.tabWidth": 2,
@@ -41,9 +41,19 @@
 
   // --- Formatting (Shell) ---
   "[shellscript]": {
-    "editor.defaultFormatter": "foxundermoon.shell-format",
-    "editor.tabSize": 4
+    "editor.defaultFormatter": "mkhl.shfmt",
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
   },
+  "shfmt.executablePath": "/usr/bin/shfmt",
+  "shfmt.executableArgs": [
+    "-i", "4",  // Indent with 4 spaces
+    "-ci",  // Indent switch cases
+    "-bn",  // Binary operators (&& and |) may start a line
+    "-sr",  // Space after redirect operators (>)
+    "-kp"  // Keep padding, preserves alignment spacing in comments
+  ],
+
   "[powershell]": {
     "editor.defaultFormatter": "ms-vscode.powershell"
   },
@@ -86,12 +96,6 @@
   "yaml.format.singleQuote": true,
   "yaml.format.bracketSpacing": true,
   "yaml.format.proseWrap": "preserve",
-  "[ignore]": {
-    "editor.defaultFormatter": "foxundermoon.shell-format"
-  },
-  "[properties]": {
-    "editor.defaultFormatter": "foxundermoon.shell-format"
-  },
 
   // -------- Terminal (CLI) --------
   "terminal.explorerKind": "external",
@@ -110,6 +114,11 @@
   "merge-conflict.codeLens.enabled": false,
 
   // -------- Code Language (Web) --------
+  "[javascript][typescript][javascriptreact][typescriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
   "js/ts.updateImportsOnFileMove.enabled": "always",
 
   // -------- Code Language (Python) --------
@@ -117,6 +126,12 @@
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.typeCheckingMode": "basic",
+  // Explicitly tell Pylance where module roots are for Quick Fix (Ctrl+.) auto-imports
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/python/modules",
+    "${workspaceFolder}/python/modules/boilerplates",
+    "${workspaceFolder}/docker/pc-ops/scripts"
+  ],
   // "ansible.python.interpreterPath": "/usr/local/bin/python",
   // "ansible.ansible.useFullyQualifiedCollectionNames": true,
 
@@ -133,8 +148,8 @@
 
 
   // =========================================================================
-  // GitHub Copilot (VS Code AI)
-  // Goal: Keep AI limited to manual Copilot Chat usage only.
+  // VS Code AI (GitHub Copilot, Continue+Ollama)
+  // Goal: Keep AI limited to manual chat usage with readonly access.
   // Disable agents, auto-actions, terminal execution, and intrusive editing.
   // =========================================================================
 
@@ -153,6 +168,7 @@
   },
 
   // -------- Editor AI Behavior --------
+  "continue.showInlineTip": false,
   // Disable predictive edit suggestions
   "github.copilot.nextEditSuggestions.enabled": false,
   // Disable AI quick fixes/refactors

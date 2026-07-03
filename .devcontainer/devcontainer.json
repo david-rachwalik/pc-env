@@ -47,13 +47,13 @@
         "esbenp.prettier-vscode", // formatter
         // [Shell]
         "ms-vscode.powershell", // runtime
-        "foxundermoon.shell-format",
+        "mkhl.shfmt", // formatter (requires shfmt)
         // [Python]
         "ms-python.python", // runtime
-        "charliermarsh.ruff", // format & lint
+        "charliermarsh.ruff", // linter & formatter
         "ms-python.vscode-pylance", // type-checking
         "njpwerner.autodocstring",
-        // [JavaScript|TypeScript]
+        // [JavaScript][TypeScript]
         "dbaeumer.vscode-eslint", // linter
         "christian-kohler.path-intellisense", // autocompletes filenames
         "mike-co.import-sorter", // TS

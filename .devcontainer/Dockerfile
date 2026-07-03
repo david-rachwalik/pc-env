@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/devcontainers/python:3.12
 
 # Install PowerShell (modern Debian-compatible method)
 RUN apt-get update \
-    && apt-get install -y wget ca-certificates apt-transport-https gnupg \
+    && apt-get install -y wget ca-certificates apt-transport-https gnupg shfmt \
     \
     # Determine the latest PowerShell release dynamically
     && LATEST_PWSH=$(wget -qO- https://api.github.com/repos/PowerShell/PowerShell/releases/latest | grep browser_download_url | grep linux-x64.tar.gz | cut -d '"' -f 4) \
