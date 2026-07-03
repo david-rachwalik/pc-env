@@ -12,7 +12,7 @@ services:
       - yt-dlp-bin:/usr/local/bin
     stdin_open: true
     tty: true
-    command: /bin/sh # Default to interactive shell
+    command: /bin/bash # Default to interactive shell
 
 volumes:
   yt-dlp-persist:
@@ -21,5 +21,5 @@ volumes:
 
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/yt-dlp
-# docker compose build
-# docker compose run --remove-orphans yt-dlp
+# docker compose build  # (only when Dockerfile changes)
+# docker compose run --rm yt-dlp  # ytdl (alias)

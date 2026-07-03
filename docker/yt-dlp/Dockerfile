@@ -1,12 +1,22 @@
-# Use the latest Python image
-FROM python:3.12-alpine
+# Use the latest Python slim image (Debian-based)
+FROM python:3.12-slim
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies, including ffmpeg and Deno (for YouTube throttling bypass)
-# (Deno used for secure JavaScript-based signature decryption of URLs)
-RUN apk add --no-cache ffmpeg deno
+# Install system dependencies
+# - ffmpeg: standard media tooling
+# - curl & unzip: required to install Deno
+RUN apt-get update -qq \
+    && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        curl \
+        unzip \
+    # Install Deno (for secure JavaScript-based YouTube throttling bypass)
+    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr sh \
+    # Cleanup
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy configuration settings to the container
 COPY config /root/.config/yt-dlp/config
@@ -16,30 +26,6 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
-# Update PATH to include /root/.local/bin
-# ENV PATH="/root/.local/bin:${PATH}"
-
 # Set the default command to run your Python script with arguments
 # CMD ["python", "/root/.local/bin/pc_restore", "--debug"]
 # CMD ["yt-dlp", "--version"]
-
-
-# --- Usage Example (run from project root, build image, and run container) ---
-# cd ~/Repos/pc-env/docker/yt-dlp
-# docker build -t yt-dlp-runner -f Dockerfile .
-# docker run --rm -it -v /media/root/HDD-01:/mnt/d -v ~/.mozilla/firefox:/root/.mozilla/firefox yt-dlp-runner /bin/sh
-
-# docker compose run yt-dlp
-
-
-# --- Old ---
-# cd ~/Repos/pc-env
-# docker build -t yt-dlp-runner -f docker/yt-dlp/Dockerfile .
-# docker run --rm -it -v ${PWD}:/app -v /media/root/HDD-01:/mnt/d -v ~/.mozilla/firefox:/root/.mozilla/firefox yt-dlp-runner /bin/sh
-
-# --- Test Run (specify command) ---
-# docker run --rm --name yt-dlp-runner-container yt-dlp-runner <command>
-# --- Test Run (interactive run) ---
-# docker run --rm -it --name yt-dlp-runner-container yt-dlp-runner /bin/sh
-# --- Test Run (with mounted volumes) ---
-# docker run --rm -v ${PWD}:/app -v C:/:/mnt/c -v D:/:/mnt/d yt-dlp-runner
