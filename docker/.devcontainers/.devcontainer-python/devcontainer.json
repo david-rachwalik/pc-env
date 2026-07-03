@@ -14,11 +14,9 @@
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "uname -a",
-  // "postCreateCommand": "python -m venv ~/.venv && . ~/.venv/bin/activate && pip install -r /workspaces/pc-env/python/pip-requirements.txt",
   "postCreateCommand": "pip install -r /workspaces/pc-env/python/pip-requirements.txt",
 
   "containerEnv": {
-    // "PYTHONPATH": "~/.venv/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
     "PYTHONPATH": "~/.local/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
   },
 
@@ -28,17 +26,15 @@
       // Add the IDs of extensions to install when container is created
       "extensions": [
         "ms-vscode-remote.remote-containers",
-        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers", // Docker
         "esbenp.prettier-vscode", // formatter
         // [Shell]
         "ms-vscode.powershell", // runtime
-        "foxundermoon.shell-format",
+        "mkhl.shfmt", // formatter (requires shfmt)
         // [Python]
         "ms-python.python", // runtime
-        "ms-python.pylint",
-        "ms-python.black-formatter", // formatter
-        "ms-python.vscode-pylance",
-        "ms-python.isort",
+        "charliermarsh.ruff", // linter & formatter
+        "ms-python.vscode-pylance", // type-checking
         "njpwerner.autodocstring",
         // [Other Languages]
         "DavidAnson.vscode-markdownlint",
@@ -52,8 +48,14 @@
         "bierner.markdown-preview-github-styles",
         "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
-        "lihui.vs-color-picker"
-      ]
+        "lihui.vs-color-picker",
+        "Continue.continue"
+      ],
+      // Ensure extension receives the correct interpreter path before auto-detection happens
+      // (more deterministic than `settings.json`)
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
     }
   }
 

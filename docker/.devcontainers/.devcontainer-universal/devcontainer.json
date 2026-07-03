@@ -32,19 +32,17 @@
       // Add the IDs of extensions to install when container is created
       "extensions": [
         "ms-vscode-remote.remote-containers",
-        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers", // Docker
         "esbenp.prettier-vscode", // formatter
         // [Shell]
         "ms-vscode.powershell", // runtime
-        "foxundermoon.shell-format",
+        "mkhl.shfmt", // formatter (requires shfmt)
         // [Python]
         "ms-python.python", // runtime
-        "ms-python.pylint",
-        "ms-python.black-formatter", // formatter
-        "ms-python.vscode-pylance",
-        "ms-python.isort",
+        "charliermarsh.ruff", // linter & formatter
+        "ms-python.vscode-pylance", // type-checking
         "njpwerner.autodocstring",
-        // [JavaScript|TypeScript]
+        // [JavaScript][TypeScript]
         "dbaeumer.vscode-eslint", // linter
         "christian-kohler.path-intellisense", // autocompletes filenames
         "mike-co.import-sorter", // TS
@@ -77,8 +75,14 @@
         "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
         "lihui.vs-color-picker",
-        "mongodb.mongodb-vscode"
-      ]
+        "mongodb.mongodb-vscode",
+        "Continue.continue"
+      ],
+      // Ensure extension receives the correct interpreter path before auto-detection happens
+      // (more deterministic than `settings.json`)
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
     }
   }
 

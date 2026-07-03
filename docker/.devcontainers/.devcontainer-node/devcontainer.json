@@ -4,13 +4,19 @@
 {
   "name": "Ubuntu NodeJS",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  // "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20",
-  // "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  // "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  // Chose the Ubuntu container to best match web app host
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  "containerEnv": {
+    // --- Development Environment Only ---
+    // Disable Mangling: live reloads will build faster at cost of bundle size (not minified but more readable)
+    "NG_BUILD_MANGLE": "false"
+  },
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/node:2.1.0": {
       "version": "20"
     }
   },
@@ -20,12 +26,25 @@
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "uname -a",
-  "postCreateCommand": "npm i && cd client-angular && npm i",
+  // "postCreateCommand": "npm i && cd client-angular && npm i",
 
   //   "mounts": [
   //     "source=${localWorkspaceFolder}/python/modules/active,target=/home/codespace/.local/lib/python3.12/site-packages,type=bind,consistency=cached"
   //   ],
   // "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}", // This is usually the default
+
+  // https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.continue,target=/home/vscode/.continue,type=bind,consistency=cached"
+  ],
+
+  "runArgs": [
+    // Allow services running on host (e.g. Ollama) to be accessed via `host.docker.internal`
+    // "--add-host=host.docker.internal:host-gateway"
+    // docker network create shared-dev-net
+    "--network=shared-dev-net"
+  ],
 
   // Configure tool-specific properties.
   "customizations": {
@@ -33,11 +52,9 @@
       // Add the IDs of extensions to install when container is created
       "extensions": [
         "ms-vscode-remote.remote-containers",
-        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers", // Docker
         "esbenp.prettier-vscode", // formatter
-        // [Shell]
-        "foxundermoon.shell-format",
-        // [JavaScript|TypeScript]
+        // [JavaScript][TypeScript]
         "dbaeumer.vscode-eslint", // linter
         "christian-kohler.path-intellisense", // autocompletes filenames
         "mike-co.import-sorter", // TS
@@ -68,8 +85,9 @@
         "bierner.markdown-preview-github-styles",
         "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
-        "lihui.vs-color-picker"
+        "lihui.vs-color-picker",
         // "mongodb.mongodb-vscode"
+        "Continue.continue"
       ]
     }
   }
