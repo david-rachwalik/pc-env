@@ -17,12 +17,8 @@ packages=(
     git-lfs
 
     # --- Media ---
-    # Required for ALVR
-    mesa-va-drivers:amd64
-    # mesa-va-drivers
-    # libva-drm2
-    # libva-x11-2
     vainfo
+    vulkan-tools
 
     # --- Videogames ---
     steam
