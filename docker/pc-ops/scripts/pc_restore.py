@@ -5,8 +5,9 @@ import argparse
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
-from app_backup_data import BACKUP_ROOT_DIR, app_backups
-from game_backup_data import game_backups
+from data_apps import app_backups
+from data_games import game_backups
+from models import PATHS
 
 APP_IDS: list[str] = [app.id for app in app_backups]
 GAME_IDS: list[str] = [game.id for game in game_backups]
@@ -28,8 +29,8 @@ def restore_system(tasks: list[str], run_ids: list[str]):
     """Method that restores important application and game files"""
 
     # Ensure backup drive is actually mounted/accessible
-    if not sh.path_exists(BACKUP_ROOT_DIR, "d"):
-        LOG.error(f"Backup root directory not found: {BACKUP_ROOT_DIR}")
+    if not sh.path_exists(PATHS.backups, "d"):
+        LOG.error(f"Backup root directory not found: {PATHS.backups}")
         LOG.error(
             "Please ensure your external drive or OneDrive is mounted before restoring."
         )
@@ -40,18 +41,20 @@ def restore_system(tasks: list[str], run_ids: list[str]):
         for app in app_backups:
             if app.id not in run_ids:
                 continue
-            LOG.info(f"--- Restoring app: {app.name} ---")
+            LOG.info(f"--- Restoring app: {app.id} ---")
 
             # SRC & DEST flipped from 'pc_clean'
-            src = sh.join_path(BACKUP_ROOT_DIR, "Apps", app.name)
+            src = sh.join_path(PATHS.backups, "Apps", app.name)
             dest = sh.join_path(app.root, app.name)
             LOG.info(f"SRC path: {src}")
             LOG.info(f"DEST path: {dest}")
 
-            if ARGS.test_run:
+            if ARGS.dry_run:
                 sh.sync_directory(src, dest, "diff", options=app.options)
-            else:
-                sh.sync_directory(src, dest, options=app.options)
+                continue
+
+            # Perform full restore of apps
+            sh.sync_directory(src, dest, options=app.options)
 
     # --- Restore important game files (screenshots, settings, addons) ---
     if "games" in tasks:
@@ -64,19 +67,21 @@ def restore_system(tasks: list[str], run_ids: list[str]):
                 continue  # skip id's not provided
             if not game.options:
                 continue  # skip games without backup options
-            LOG.info(f"--- Restoring game: {game.name} ---")
+            LOG.info(f"--- Restoring game: {game.id} ---")
 
-            src = sh.join_path(BACKUP_ROOT_DIR, "Games", game.name)
+            src = sh.join_path(PATHS.backups, "Games", game.name)
             dest = sh.join_path(game.root, game.name)
             LOG.info(f"SRC path: {src}")
             LOG.info(f"DEST path: {dest}")
 
-            if ARGS.test_run:
+            if ARGS.dry_run:
                 sh.sync_directory(
                     src, dest, "diff", options=game.options, ignore=ignore_opts
                 )
-            else:
-                sh.sync_directory(src, dest, options=game.options, ignore=ignore_opts)
+                continue
+
+            # Perform full restore of games
+            sh.sync_directory(src, dest, options=game.options, ignore=ignore_opts)
 
             # NEVER clear source screenshot directory for restore
 
@@ -89,7 +94,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--log-path", default="")
-    parser.add_argument("--test-run", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--only-apps", action="store_true")
     parser.add_argument("--only-games", action="store_true")
     parser.add_argument(
@@ -131,6 +136,6 @@ if __name__ == "__main__":
 
 
 # :: Usage Example ::
-# pc_restore --debug
-# pc_restore --only-apps
-# pc_restore --id-filter=elite_dangerous --id-filter=terraria
+# restore --debug
+# restore --only-apps
+# restore --id-filter=elite_dangerous --id-filter=terraria

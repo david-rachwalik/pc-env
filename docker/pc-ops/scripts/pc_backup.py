@@ -1,17 +1,18 @@
 #!/usr/bin/env python
-"""Command to backup & clean the system platform"""
+"""Command to backup important files on the system platform"""
 
 import argparse
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
-from app_backup_data import BACKUP_ROOT_DIR, app_backups
-from game_backup_data import game_backups
+from data_apps import app_backups
+from data_games import game_backups
+from models import PATHS
 
 APP_IDS: list[str] = [app.id for app in app_backups]
 GAME_IDS: list[str] = [game.id for game in game_backups]
 ALL_IDS: list[str] = [*APP_IDS, *GAME_IDS]
-ALL_TASKS: list[str] = ["apps", "games", "clean"]
+ALL_TASKS: list[str] = ["apps", "games"]
 
 
 def what_to_run() -> list[str]:
@@ -20,8 +21,6 @@ def what_to_run() -> list[str]:
         return ["apps"]
     elif ARGS.only_games:
         return ["games"]
-    elif ARGS.only_clean:
-        return ["clean"]
     else:
         return ALL_TASKS
 
@@ -34,10 +33,10 @@ def backup_system(tasks: list[str], run_ids: list[str]):
         for app in app_backups:
             if app.id not in run_ids:
                 continue
-            LOG.info(f"--- Backing up app: {app.name} ---")
+            LOG.info(f"--- Backing up app: {app.id} ---")
 
             src = sh.join_path(app.root, app.name)
-            dest = sh.join_path(BACKUP_ROOT_DIR, "Apps", app.name)
+            dest = sh.join_path(PATHS.backups, "Apps", app.name)
             LOG.info(f"SRC path: {src}")
             LOG.info(f"DEST path: {dest}")
 
@@ -70,10 +69,10 @@ def backup_system(tasks: list[str], run_ids: list[str]):
 
             if not game.options:
                 continue
-            LOG.info(f"--- Backing up game: {game.name} ---")
+            LOG.info(f"--- Backing up game: {game.id} ---")
 
             src = sh.join_path(game.root, game.name)
-            dest = sh.join_path(BACKUP_ROOT_DIR, "Games", game.name)
+            dest = sh.join_path(PATHS.backups, "Games", game.name)
             LOG.info(f"SRC path: {src}")
             LOG.info(f"DEST path: {dest}")
 
@@ -147,6 +146,3 @@ if __name__ == "__main__":
 # backup --debug
 # backup --only-apps
 # backup --id-filter=elite_dangerous --id-filter=terraria
-
-# export PYTHONPATH="$HOME/Repos/pc-env/python/modules:$HOME/Repos/pc-env/python/modules/boilerplates"
-# python3 ~/Repos/pc-env/python/commands/pc_backup.py --dry-run --debug

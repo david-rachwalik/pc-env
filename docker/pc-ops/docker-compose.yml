@@ -9,6 +9,7 @@ services:
     container_name: pc-ops-container
     environment:
       - PYTHONPATH=/app/python/modules:/app/python/modules/boilerplates
+      - HOST_USER_HOME=/home/${USER:-rhodair}
     volumes:
       # Mount source files for live testing (Dev Mode)
       - ../../:/app/dev:ro

@@ -1,43 +1,17 @@
 #!/usr/bin/env python
 """Data for important game files to backup"""
 
-from dataclasses import dataclass, field
-
 import shell_boilerplate as sh
-
-
-# https://realpython.com/python-data-classes
-@dataclass
-class GameBackup:
-    """Class model of game backup details.
-
-    Attributes:
-        id (str): Arbitrary 'game_id' given for ad hoc commands (filter_id).
-        root (str): Install directory path without game title.
-        name (str): Directory for the game title (mirrored by backup target).
-        options (dict | None): Provide additional options [only, exclude, include].
-        screenshot (str | None): Directory specifically for screenshots.
-        win_root (str | None): Windows-specific directory root override.
-        win_name (str | None): Windows-specific application directory name override.
-    """
-
-    id: str
-    root: str
-    name: str
-    win_root: str | None = field(default=None)
-    win_name: str | None = field(default=None)
-    options: dict | None = field(default=None)
-    screenshot: str | None = field(default=None)
-
+from models import PATHS, BackupProfile, filter_active_profiles
 
 active_games = [
     # 'diablo_iii',
     # 'elder_scrolls_online',
     # 'elite_dangerous',
     # "final_fantasy_xiv",
-    # "hotline_miami",
+    "halls_of_torment",
+    "hotline_miami",
     # "killing_floor_2",
-    "marvel_rivals",
     # "rocket_league",
     # 'skyrim_se',
     # "skyrim_vr",
@@ -50,35 +24,10 @@ active_games = [
 ]
 
 
-# --- Cross-Platform Roots ---
-is_windows = sh.system_platform() == "windows"
-
-if is_windows:
-    # Windows native paths
-    game_c_dir = "C:\\Program Files"
-    game_d_dir = "D:\\GameFiles"
-    user_roaming_dir = sh.environment_get("APPDATA")
-    user_local_dir = sh.environment_get("LOCALAPPDATA")
-    user_docs_dir = sh.join_path(sh.environment_get("USERPROFILE"), "Documents")
-    user_games_dir = sh.join_path(user_docs_dir, "My Games")
-else:
-    # Linux native paths
-    user_home = sh.expand_path("~")
-    game_c_dir = sh.join_path(user_home, "Games")
-    game_d_dir = sh.join_path(user_home, "Games")
-    user_roaming_dir = sh.join_path(user_home, ".config")
-    user_local_dir = sh.join_path(user_home, ".local", "share")
-    user_docs_dir = sh.join_path(user_home, "Documents")
-    user_games_dir = sh.join_path(user_docs_dir, "My Games")
-    steam_dir = sh.join_path(
-        user_home, ".steam", "debian-installation", "steamapps", "common"
-    )
-
-
-game_backups_full: list[GameBackup] = [
-    GameBackup(
+game_backups_full: list[BackupProfile] = [
+    BackupProfile(
         id="diablo_iii",
-        root=user_docs_dir,
+        root=PATHS.docs,
         name="Diablo III",
         screenshot="Screenshots",
         options={
@@ -88,9 +37,9 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="elder_scrolls_online",
-        root=user_docs_dir,
+        root=PATHS.docs,
         name=sh.join_path("Elder Scrolls Online", "live"),
         screenshot="Screenshots",
         options={
@@ -102,9 +51,9 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="elite_dangerous",
-        root=user_local_dir,
+        root=PATHS.local,
         name=sh.join_path("Frontier Developments", "Elite Dangerous"),
         screenshot="Screenshots",
         options={
@@ -117,9 +66,9 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="final_fantasy_xiv",
-        root=user_games_dir,
+        root=PATHS.games,
         name="FINAL FANTASY XIV - A Realm Reborn",
         screenshot="screenshots",
         options={
@@ -136,22 +85,27 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
-        id="hotline_miami",
-        root=steam_dir,
-        win_root=user_games_dir,
-        # user_home, ".steam", "debian-installation", "steamapps", "common"
-        # /media/root/HDD-01/GameFiles/SteamLibrary/steamapps/common/hotline_miami
-        name="HotlineMiami",
+    BackupProfile(
+        id="halls_of_torment",
+        root=PATHS.local,
+        win_root=PATHS.games,
+        name="HallsOfTorment",
         options={
-            "only": [
-                r".*\.sav$",  # settings ('.sav' extension)
-            ],
+            "only": ["settings.json"],
         },
     ),
-    GameBackup(
+    BackupProfile(
+        id="hotline_miami",
+        root=PATHS.local,
+        win_root=PATHS.games,
+        name="HotlineMiami",
+        options={
+            "only": ["SaveData.sav", "hotline.cfg"],
+        },
+    ),
+    BackupProfile(
         id="killing_floor_2",
-        root=user_games_dir,
+        root=PATHS.games,
         name="KillingFloor2",
         options={
             "only": [
@@ -159,19 +113,9 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
-        id="marvel_rivals",
-        root=steam_dir,
-        name="MarvelRivals",
-        options={
-            "only": [
-                "KFGame/Config/*",  # settings
-            ],
-        },
-    ),
-    GameBackup(
+    BackupProfile(
         id="rocket_league",
-        root=user_games_dir,
+        root=PATHS.games,
         name="Rocket League",
         options={
             "only": [
@@ -179,13 +123,13 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    # GameBackup(
+    # BackupProfile(
     #     id='sims_iii',
     #     # Sims 3 [archive screenshots/settings/addons, run memory cleanup]
     # ),
-    GameBackup(
+    BackupProfile(
         id="skyrim_se",
-        root=user_games_dir,
+        root=PATHS.games,
         name="Skyrim Special Edition",
         options={
             "only": [
@@ -194,9 +138,9 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="skyrim_vr",
-        root=user_games_dir,
+        root=PATHS.games,
         name="Skyrim VR",
         options={
             "only": [
@@ -205,17 +149,17 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="stardew_valley",
-        root=user_roaming_dir,
+        root=PATHS.roaming,
         name="StardewValley",
         options={
             "only": [r".*"],  # settings
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="wow_retail",
-        root=game_d_dir,
+        root=PATHS.game_d,
         name=sh.join_path("World of Warcraft", "_retail_"),
         screenshot="Screenshots",
         options={
@@ -233,9 +177,9 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="wow_classic",
-        root=game_d_dir,
+        root=PATHS.game_d,
         name=sh.join_path("World of Warcraft", "_classic_"),
         screenshot="Screenshots",
         options={
@@ -253,20 +197,18 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="wow_weakauras",
-        root=user_roaming_dir,
+        root=PATHS.roaming,
         name="weakauras-companion",
         options={
-            "only": [
-                "config.json",  # settings
-            ],
+            "only": ["config.json"],  # settings
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="wow_project_ascension",
-        root=sh.join_path(game_c_dir, "ascension-wow", "drive_c", "Program Files"),
-        win_root=game_c_dir,
+        root=sh.join_path(PATHS.game_c, "ascension-wow", "drive_c", "Program Files"),
+        win_root=PATHS.game_c,
         name=sh.join_path("Ascension Launcher", "resources", "client"),
         screenshot="Screenshots",
         options={
@@ -282,9 +224,9 @@ game_backups_full: list[GameBackup] = [
             ],
         },
     ),
-    GameBackup(
+    BackupProfile(
         id="yiffalicious",
-        root=user_roaming_dir,
+        root=PATHS.roaming,
         name="yiffalicious",
         screenshot="screenshots",
         options={
@@ -296,7 +238,7 @@ game_backups_full: list[GameBackup] = [
     ),
 ]
 
-# Filter backup details to only the active games
-game_backups: list[GameBackup] = [
-    game for game in game_backups_full if game.id in active_games
-]
+# Filter backup details to only the active games, evaluating OS roots
+game_backups: list[BackupProfile] = filter_active_profiles(
+    game_backups_full, active_games, PATHS.is_windows
+)

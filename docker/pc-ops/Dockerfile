@@ -16,8 +16,8 @@ WORKDIR /app
 # --- Application Setup (Snapshot) ---
 # Copy the shared python modules
 COPY python /app/python
-# Copy the pc-ops scripts
-COPY docker/pc-ops /app/docker/pc-ops
+# Copy the pc-ops scripts directly into working directory
+COPY docker/pc-ops/scripts/ /app/
 
 # Setup entrypoint
 COPY docker/pc-ops/entrypoint.sh /entrypoint.sh
