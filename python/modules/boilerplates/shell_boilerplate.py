@@ -392,6 +392,10 @@ def sync_directory(
     full_options = (default_options | options) if options else default_options
     LOG.debug(f"options used: {full_options}")
 
+    # Intercept missing target directories during dry runs to prevent dirsync crash
+    if action == "diff" and not path_exists(targetdir, "d"):
+        return True
+
     try:
         # https://github.com/tkhyn/dirsync
         dirsync.sync(sourcedir, targetdir, action, **full_options)
