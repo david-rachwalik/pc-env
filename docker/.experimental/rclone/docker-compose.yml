@@ -42,12 +42,14 @@ services:
     tty: true
     command: /bin/sh # Default to interactive shell
 
+
 # volumes:
 #   rclone-cache:
+
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/rclone
-# docker compose build
-# docker compose run --remove-orphans --rm rclone lsf gdrive:
+# docker compose build  # (only when Dockerfile changes)
+# docker compose run --rm rclone lsf gdrive:
 
 # :: Usage Example (alias) ::
 # rclone lsf gdrive:

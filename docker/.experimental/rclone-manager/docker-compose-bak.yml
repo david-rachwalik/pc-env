@@ -74,5 +74,5 @@ networks:
 
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/rclone-manager
-# docker compose build
-# docker compose run --remove-orphans rclone-manager
+# docker compose build  # (only when Dockerfile changes)
+# docker compose run --rm rclone-manager

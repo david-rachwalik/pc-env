@@ -20,7 +20,7 @@ services:
 
 # :: Usage Example ::
 # cd ~/Repos/pc-env/docker/rclone
-# docker compose build
+# docker compose build  # (only when Dockerfile changes)
 # docker compose run --rm --entrypoint rclone rclone version
 
 # List the contents of the rclone directory:

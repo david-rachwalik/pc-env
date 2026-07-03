@@ -36,7 +36,7 @@ volumes:
 
 # :: Usage Example (start server) ::
 # cd ~/Repos/pc-env/docker/marvel-heroes
-# docker compose build --no-cache
+# docker compose build  # (only when Dockerfile changes)
 # docker compose up -d
 
 # :: Usage Example (view logs) ::
@@ -50,10 +50,8 @@ volumes:
 
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/marvel-heroes
-# docker compose build --no-cache
+# docker compose build  # (only when Dockerfile changes)
 # docker compose run --rm mhserveremu
-# --- Inside the container ---
-# ls -al
 
 # -------------------------------------
 

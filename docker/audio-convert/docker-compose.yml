@@ -18,8 +18,9 @@ services:
 
 # :: Usage Example (run interactively) ::
 # cd ~/Repos/pc-env/docker/audio-convert
-# docker compose build --no-cache
+# docker compose build  # (only when Dockerfile changes)
 # docker compose run --rm audioconvert
+
 # --- Inside the container ---
 # Check tool versions:
 # ffmpeg -version
