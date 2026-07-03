@@ -200,3 +200,12 @@ main
 
 # chmod +x ~/Repos/pc-env/docker/rclone/enable-systemd.sh
 # sudo bash ~/Repos/pc-env/docker/rclone/enable-systemd.sh
+
+# --- Example of Removal ---
+# Stop and disable the timer
+sudo systemctl disable --now rclone-bisync-onedrive.timer
+# Remove the leftover systemd unit files
+sudo rm /etc/systemd/system/rclone-bisync-onedrive.timer
+sudo rm /etc/systemd/system/rclone-bisync-onedrive.service
+# Refresh systemd so it knows they are gone
+sudo systemctl daemon-reload
