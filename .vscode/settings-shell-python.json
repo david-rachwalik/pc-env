@@ -16,6 +16,8 @@
   "explorer.confirmDragAndDrop": false,
   "explorer.fileNesting.enabled": true,
   "files.associations": {
+    "Dockerfile": "dockerfile",
+    "bash_aliases": "shellscript",
     "hosts": "ini",
     "config": "ini",
     "*.json": "jsonc"
