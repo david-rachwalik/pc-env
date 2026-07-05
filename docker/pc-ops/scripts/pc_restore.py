@@ -2,6 +2,7 @@
 """Command to restore important files on the system platform"""
 
 import argparse
+from pathlib import Path
 
 import logging_boilerplate as log
 import shell_boilerplate as sh
@@ -110,6 +111,12 @@ def main():
 
     # -------- Restore the system platform --------
     restore_system(tasks, run_ids)
+
+    # Drop sentinel file that allow backups to run
+    sentinel_path: Path = Path.home() / ".config" / "pc-env" / ".system_restored"
+    sentinel_path.parent.mkdir(parents=True, exist_ok=True)
+    sentinel_path.touch(exist_ok=True)
+    print(f"Sentinel file created at '{sentinel_path}'.  Backups are now unlocked.")
 
 
 # Initialize the logger
