@@ -1,5 +1,5 @@
-#!/bin/bash
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
@@ -13,24 +13,27 @@ SAMBA_CONF="/etc/samba/smb.conf"
 USER="vruser"
 PASSWORD="yourpassword" # Change this!
 
+RESTART_NEEDED=false
+
 backup_conf() {
     cp "$SAMBA_CONF" "$SAMBA_CONF.bak.$(date +%Y%m%d%H%M%S)"
 }
 
 install_samba() {
-    if ! command -v smbd &>/dev/null; then
-        apt update
-        apt install -y samba
+    if ! command -v smbd &> /dev/null; then
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y samba
+        RESTART_NEEDED=true
     fi
 }
 
 create_user() {
     if ! pdbedit -L | /usr/bin/grep -q "^$USER:"; then
-        useradd -M -s /usr/sbin/nologin $USER || true
-        (
-            echo "$PASSWORD"
-            echo "$PASSWORD"
-        ) | smbpasswd -a $USER
+        useradd -M -s /usr/sbin/nologin "$USER" || true
+        # Use -s (silent/stdin) flag for non-interactive assignment
+        echo -e "$PASSWORD\n$PASSWORD" | smbpasswd -a -s "$USER"
+        RESTART_NEEDED=true
     fi
 }
 
@@ -45,7 +48,7 @@ add_share() {
 
     if ! /usr/bin/grep -q "^\[$NAME\]" $SAMBA_CONF; then
         echo "Adding Samba share $NAME..."
-        /usr/bin/tee -a "$SAMBA_CONF" >/dev/null <<EOF
+        /usr/bin/tee -a "$SAMBA_CONF" > /dev/null << EOF
 
 [$NAME]
    path = $PATH
@@ -56,6 +59,7 @@ add_share() {
    create mask = 0644
    directory mask = 0755
 EOF
+        RESTART_NEEDED=true
     fi
 }
 
@@ -78,8 +82,10 @@ main() {
         SHARE_NAMES+=("$NAME")
     done
 
-    echo "Restarting Samba service..."
-    /usr/bin/systemctl restart smbd
+    if [ "$RESTART_NEEDED" = true ]; then
+        echo "Restarting Samba service..."
+        /usr/bin/systemctl restart smbd
+    fi
 
     echo "✅ SMB shares are now available: ${SHARE_NAMES[@]}"
     echo "Use user: $USER, password: $PASSWORD in Skybox or DeoVR."

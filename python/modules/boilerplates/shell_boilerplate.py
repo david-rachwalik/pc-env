@@ -241,14 +241,13 @@ def list_directory(path: str) -> list[str]:
     return paths
 
 
-def create_directory(path: str, mode=0o777) -> bool:
+def create_directory(path: str, mode=0o755) -> bool:
     """Method that creates a directory"""
     if path_exists(path, "d"):
         return False
-    # No longer using 'mode' here - prefer to change permissions (os.chmod) when needed
-    # https://stackoverflow.com/questions/1627198/python-mkdir-giving-me-wrong-permissions
     # https://docs.python.org/3/library/os.html#os.makedirs
-    os.makedirs(path, mode)
+    os.makedirs(path, mode=mode, exist_ok=True)
+    # (System umask will automatically apply over designated mode)
     return True
 
 

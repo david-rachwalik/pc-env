@@ -29,11 +29,16 @@ def what_to_run() -> list[str]:
 def restore_system(tasks: list[str], run_ids: list[str]):
     """Method that restores important application and game files"""
 
-    # Ensure backup drive is actually mounted/accessible
-    if not sh.path_exists(PATHS.backups, "d"):
-        LOG.error(f"Backup root directory not found: {PATHS.backups}")
+    # --- SAFETY LOCK: The Anchor File ---
+    # Check for a specific file (.cloud_anchor) instead of the directory.
+    # If the network drive drops, Linux leaves an empty mount point folder behind.
+    # If restore runs against an empty folder, it will think the backups were deleted
+    # and might proceed to incorrectly delete the live local files to match it.
+    anchor_file = sh.join_path(PATHS.cloud, ".cloud_anchor")
+    if not sh.path_exists(anchor_file, "f"):
+        LOG.error(f"Cloud drive anchor not found: {anchor_file}")
         LOG.error(
-            "Please ensure your external drive or OneDrive is mounted before restoring."
+            "Please ensure the external drive or cloud provider is mounted correctly before restoring."
         )
         return
 
@@ -94,7 +99,13 @@ def parse_arguments():
     """Method that parses arguments provided"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--log-path", default="")
+
+    # Automatically output a persistent log file alongside the terminal output
+    log_dir = sh.join_path(PATHS.home, "logs", "pc-ops")
+    sh.create_directory(log_dir)
+    default_log = sh.join_path(log_dir, f"{BASENAME}.log")
+
+    parser.add_argument("--log-path", default=default_log)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--only-apps", action="store_true")
     parser.add_argument("--only-games", action="store_true")
@@ -113,7 +124,7 @@ def main():
     restore_system(tasks, run_ids)
 
     # Drop sentinel file that allow backups to run
-    sentinel_path: Path = Path.home() / ".config" / "pc-env" / ".system_restored"
+    sentinel_path = Path(PATHS.roaming) / "pc-env" / ".system_restored"
     sentinel_path.parent.mkdir(parents=True, exist_ok=True)
     sentinel_path.touch(exist_ok=True)
     print(f"Sentinel file created at '{sentinel_path}'.  Backups are now unlocked.")

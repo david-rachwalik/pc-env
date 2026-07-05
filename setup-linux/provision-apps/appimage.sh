@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail # Exit immediately on error
+set -euo pipefail  # Exit immediately on error
 
 # ----------------------------------------------------------------
 # --- Configuration ---
@@ -214,7 +214,7 @@ provision_app() {
     local appimage_path="$install_dir/${id}.AppImage"
     local icon_path="${install_dir}/icon.png"
 
-    # Evaluate if appimage exists before installing
+    # Evaluate if AppImage exists before installing
     if [[ ! -f "$appimage_path" ]]; then
         echo "--------------------------------------------------------"
         echo "[INFO] Installing AppImage binary for $name..."

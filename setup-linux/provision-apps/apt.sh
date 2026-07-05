@@ -1,18 +1,25 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
-# Array of packages to install
-packages=(
+# ================================================================
+# --- Configuration ---
+# ================================================================
+
+# --- Base Applications (Always Installed) ---
+BASE_PACKAGES=(
     # --- System Requirements / Core ---
-    libfuse2  # FUSE 2 to run AppImages
+    libfuse2t64  # FUSE 2 to run AppImages (t64 for Ubuntu 24.04+)
+    flatpak  # For Plex Desktop infrastructure
+    mono-complete  # For Subtitle Edit
 
     # --- Productivity ---
     # firefox
-    # opera-stable           # Opera, Opera GX is available as browser extension (GX mode)
+    # opera-stable  # Opera, Opera GX is available as browser extension (GX mode)
     hardinfo  # similar to speccy
-    bleachbit # similar to ccleaner
+    bleachbit  # similar to ccleaner
 
     # --- Development ---
-    code # Visual Studio Code
+    code  # Visual Studio Code
     gh
     git-lfs
 
@@ -23,7 +30,10 @@ packages=(
     # --- Videogames ---
     steam
     lutris
+)
 
+# --- Heavy Applications (Skipped in Minimal Mode) ---
+HEAVY_PACKAGES=(
     # --- Streaming ---
     obs-studio
 
@@ -38,131 +48,153 @@ packages=(
     blender
 )
 
-# Commands, packages, and applications for Docker dev containers
-packages_container=(
-    # --- Development ---
-    git # Source Control
-    python3
-    nodejs # NodeJS comes with Node Package Manager (npm)
-    # mongodb-org           # requires additional setup for the MongoDB repo
-    # dotnet-sdk-6.0
-    azure-cli
-    # terraform
-    # ruby
-    # Additional setups (e.g., oh-my-posh) can be done post-installation
+# Development packages (nodejs, python3, etc.) have all been
+# migrated into Docker containers & are no longer global
 
-    # --- Video Editing ---
-    handbrake
-)
+# ================================================================
+# --- Helper Functions ---
+# ================================================================
 
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-
-# -------- Run with bash (as root or sudo) --------
-
-# Check if the script is being run as root (user ID 0)
-if [ "$(id -u)" -ne 0 ]; then
-    echo "[ERROR] This script must be run as root or with sudo.  Exiting..."
-    exit 1
-fi
-
-# Update package lists and upgrade existing packages
-echo "[INFO] Updating package lists and upgrading existing packages..."
-apt-get update -qq && apt-get upgrade -y
-
-# Install required packages
-echo "[INFO] Installing required core packages..."
-for package in "${packages[@]}"; do
-    if ! dpkg -l | grep -q "^ii\s*$package"; then
-        echo "[INFO] Installing $package..."
-        apt-get install -y "$package"
-    else
-        echo "[INFO] $package is already installed."
+# Check if script is being run as root (user ID 0)
+ensure_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "[ERROR] This script must be run as root or with sudo.  Exiting..." >&2
+        exit 1
     fi
-done
+}
 
-# --- Additional package installations from Flatpak, Snap, or other sources ---
-# e.g., Spotify, GitHub Desktop can be handled separately since they are not directly available via apt
+# ================================================================
+# --- Worker Functions ---
+# ================================================================
 
-# Install Discord via Linux deb file installer
-if ! command -v discord &>/dev/null; then
-    DISCORD_INSTALLER_URL="https://discord.com/api/download?platform=linux&format=deb"
-    echo "[INFO] Discord was not found.  Installing..."
-    curl -L -o /tmp/discord.deb $DISCORD_INSTALLER_URL
-    apt-get install -y /tmp/discord.deb
-else
-    # dpkg-query is safer for scripts than 'apt list'
-    DISCORD_VERSION=$(dpkg-query --show --showformat='${Version}' discord 2>/dev/null || echo "Unknown")
-    echo "[INFO] Discord is already installed.  Version: $DISCORD_VERSION"
-fi
+install_apt_packages() {
+    local target_packages=("${BASE_PACKAGES[@]}")
+
+    if [[ "$MINIMAL_MODE" == false ]]; then
+        target_packages+=("${HEAVY_PACKAGES[@]}")
+    fi
+
+    # Safe to perform full unattended upgrades because this script is executed manually on-demand
+    echo "[INFO] Updating package lists and upgrading existing packages..."
+    apt-get update -qq && apt-get upgrade -y
+    # (Because Linux Mint's native Update Manager safely orchestrates OS updates, security patches,
+    # and Flatpak updates in the background, the OS layer is already handled daily.)
+
+    echo "[INFO] Installing required core packages via APT..."
+    local missing_packages=()
+
+    for package in "${target_packages[@]}"; do
+        if ! dpkg-query -W -f='${Status}' "$package" 2> /dev/null | grep -q "install ok installed"; then
+            missing_packages+=("$package")
+        fi
+    done
+
+    if [ ${#missing_packages[@]} -gt 0 ]; then
+        echo "[INFO] Installing missing packages: ${missing_packages[*]}..."
+        apt-get install -y "${missing_packages[@]}"
+    else
+        echo "[INFO] All specified APT packages are already installed."
+    fi
+}
+
+install_discord() {
+    if ! command -v discord &> /dev/null; then
+        echo "[INFO] Discord was not found.  Installing..."
+        readonly discord_tmp="/tmp/discord.deb"
+        local discord_url="https://discord.com/api/download?platform=linux&format=deb"
+        curl -L -o "$discord_tmp" "$discord_url"
+        apt-get install -y "$discord_tmp"
+        rm -f "$discord_tmp"
+    else
+        local discord_version
+        discord_version=$(dpkg-query --show --showformat='${Version}' discord 2> /dev/null || echo "Unknown")
+        echo "[INFO] Discord is already installed.  Version: $discord_version"
+    fi
+}
 
 # Install Docker CE via official convenience script
-if ! command -v docker &>/dev/null; then
-    echo "[INFO] Docker was not found.  Installing official Docker CE..."
-    curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-    sh /tmp/get-docker.sh
-    # Optional: Add user to docker group so sudo isn't needed for docker commands
-    # usermod -aG docker "$SUDO_USER"
-else
-    echo "[INFO] Docker is already installed.  Version: $(docker --version | tr -d '\n')"
-fi
+install_docker() {
+    if ! command -v docker &> /dev/null; then
+        echo "[INFO] Docker was not found.  Installing official Docker CE..."
+        readonly docker_tmp="/tmp/get-docker.sh"
+        curl -fsSL https://get.docker.com -o "$docker_tmp"
+        sh "$docker_tmp"
+        rm -f "$docker_tmp"
+        # Optional: Add user to docker group so sudo isn't needed for docker commands
+        # usermod -aG docker "$SUDO_USER"
+    else
+        echo "[INFO] Docker is already installed.  Version: $(docker --version | tr -d '\n')"
+    fi
+}
 
-# Install NordVPN on Linux distributions
-# https://support.nordvpn.com/hc/en-us/articles/20196094470929-Installing-NordVPN-on-Linux-distributions
-if ! command -v nordvpn &>/dev/null; then
-    echo "[INFO] NordVPN was not found.  Installing..."
-    # https://nordvpn.com/download/linux/#install-nordvpn
-    sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
-    nordvpn login
-    nordvpn connect United_States
-    nordvpn set autoconnect on United_States # automatically connect on boot
-    nordvpn set lan-discovery enabled
+install_nordvpn() {
+    if ! command -v nordvpn &> /dev/null; then
+        echo "[INFO] NordVPN was not found.  Installing..."
+        # https://support.nordvpn.com/hc/en-us/articles/20196094470929-Installing-NordVPN-on-Linux-distributions
+        # https://nordvpn.com/download/linux/#install-nordvpn
+        sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
+        nordvpn login
+        nordvpn connect United_States
+        nordvpn set autoconnect on United_States # automatically connect on boot
+        nordvpn set lan-discovery enabled
     # nordvpn status
     # nordvpn settings
-else
-    echo "[INFO] NordVPN is already installed.  Version: $(nordvpn --version | tr -d '\n')"
-fi
+    else
+        echo "[INFO] NordVPN is already installed.  Version: $(nordvpn --version | tr -d '\n')"
+    fi
+}
 
-# Install qBittorrent on Linux distributions
-# https://www.qbittorrent.org/download
-if ! command -v qbittorrent &>/dev/null; then
-    echo "[INFO] qBittorrent was not found.  Installing..."
-    add-apt-repository -y ppa:qbittorrent-team/qbittorrent-stable
-    apt-get update -qq && apt-get install -y qbittorrent
-else
-    echo "[INFO] qBittorrent is already installed.  Version: $(qbittorrent --version)"
-fi
+install_qbittorrent() {
+    if ! command -v qbittorrent &> /dev/null; then
+        echo "[INFO] qBittorrent was not found.  Installing..."
+        add-apt-repository -y ppa:qbittorrent-team/qbittorrent-stable
+        apt-get update -qq
+        apt-get install -y qbittorrent
+    else
+        echo "[INFO] qBittorrent is already installed.  Version: $(qbittorrent --version | tr -d '\n')"
+    fi
+}
 
-# Cleaning up
-echo "[INFO] Cleaning up unnecessary files..."
-apt-get autoremove -y && apt-get clean
+cleanup_system() {
+    echo "[INFO] Cleaning up unnecessary files..."
+    apt-get autoremove -y && apt-get clean
+}
 
-echo "[INFO] --- Completed provisioning of Linux via apt ---"
+# ================================================================
+# --- Main Orchestrator ---
+# ================================================================
+
+MINIMAL_MODE=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -m | --minimal)
+            MINIMAL_MODE=true
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+main() {
+    ensure_root
+    echo "[INFO] Starting APT provisioning pipeline..."
+
+    export DEBIAN_FRONTEND=noninteractive
+
+    install_apt_packages
+    install_discord
+    install_docker
+    install_nordvpn
+    install_qbittorrent
+    cleanup_system
+
+    echo "[INFO] --- Completed provisioning of Linux via apt ---"
+}
+
+main "$@"
 
 # chmod +x ~/Repos/pc-env/setup-linux/provision-apps/apt.sh
 # sudo bash ~/Repos/pc-env/setup-linux/provision-apps/apt.sh
-
-# ------------------------------------------------------------------------------------------------
-
-# Standard Removal:     apt-get remove <package>
-# - This command removes the package but leaves behind configuration files. These files are usually stored in /etc, /var, or the user's home directory,
-#   depending on the application.
-
-# Complete Removal:     apt-get purge <package>
-# Use this command to remove both the package and its configuration files. This is equivalent to a "clean uninstall" and prevents most leftovers.
-# Even after purging, some files (like logs or user-specific data) might still be left behind in non-standard directories.
-
-# Autoremove:           apt-get autoremove
-# This command helps clean up dependencies that were installed along with a package but are no longer needed once the package is removed.
-
-# Autoclean:            apt-get autoclean
-# This command helps clean up the local repository of retrieved package files no longer needed.
-# - directories: /var/cache/apt/archives, /var/cache/apt/archives/partial
-# Removes only the cached package files that are no longer available in the repositories or are outdated.
-# It’s less aggressive than apt-get clean because it keeps the most recent versions of package files in the cache.
-
-# Manual Clean-Up:
-# Occasionally, manual intervention is needed to delete user data or logs that are not managed by apt.
-
-# - For cleaner uninstalls, always use `purge` instead of `remove` when uninstalling software with apt-get.
-# - Use `autoremove` regularly to keep your system tidy by removing unnecessary dependencies.

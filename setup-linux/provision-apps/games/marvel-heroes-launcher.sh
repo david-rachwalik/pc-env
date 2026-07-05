@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # --- Configuration ---
 # Path to the docker-compose file for the server
@@ -10,6 +10,18 @@ CLIENT_LAUNCHER_SCRIPT="$HOME/.local/bin/play-marvel-heroes.sh"
 CONTAINER_NAME="mhserveremu"
 
 # --- Functions ---
+
+ensure_user_space() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        if [[ -n "${SUDO_USER:-}" ]]; then
+            echo "[INFO] Root execution detected. Dropping privileges to user: $SUDO_USER"
+            exec sudo -H -u "$SUDO_USER" bash "$(realpath "$0")" "$@"
+        else
+            echo "[ERROR] Run as root without SUDO_USER." >&2
+            exit 1
+        fi
+    fi
+}
 
 # Function to check if the server container is running
 is_server_running() {
@@ -29,19 +41,19 @@ start_server() {
         echo "✅ Server is already running."
         return 0
     fi
-    
+
     echo "Starting container..."
     # Build the image and start the container in the background
     # Use the full path to the compose file and specify the project directory
     docker compose -f "$SERVER_COMPOSE_FILE" --project-directory "$(dirname "$SERVER_COMPOSE_FILE")" build
     docker compose -f "$SERVER_COMPOSE_FILE" --project-directory "$(dirname "$SERVER_COMPOSE_FILE")" up -d
-    # Test build command (verbose for dev):    
+    # Test build command (verbose for dev):
     # docker compose -f "$SERVER_COMPOSE_FILE" --project-directory "$(dirname "$SERVER_COMPOSE_FILE")" build --no-cache --progress=plain
 
     echo "⏳ Waiting for server to initialize..."
     # A simple sleep is often enough for local startup
     sleep 10
-    
+
     if is_server_running; then
         echo "✅ Server started successfully."
     else
@@ -70,11 +82,13 @@ launch_client() {
         return 1
     fi
     # Run the client in the background so this script can exit
-    nohup "$CLIENT_LAUNCHER_SCRIPT" >/dev/null 2>&1 &
+    nohup "$CLIENT_LAUNCHER_SCRIPT" > /dev/null 2>&1 &
     echo "✅ Client launched."
 }
 
 # --- Main Script ---
+
+ensure_user_space
 
 case "${1:-}" in
     start)

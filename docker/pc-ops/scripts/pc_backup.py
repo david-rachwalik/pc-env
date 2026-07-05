@@ -28,11 +28,16 @@ def what_to_run() -> list[str]:
 def backup_system(tasks: list[str], run_ids: list[str]):
     """Method that backs up important application and game files"""
 
-    # Ensure cloud drive is actually mounted/accessible
-    if not sh.path_exists(PATHS.cloud, "d"):
-        LOG.error(f"Cloud drive root not found: {PATHS.cloud}")
+    # --- SAFETY LOCK: The Anchor File ---
+    # Checking for a specific file (.cloud_anchor) instead of the directory.
+    # If the cloud drive drops, Linux leaves an empty mount point folder behind.
+    # Checking for the folder would return True and dump backups on the local disk.
+    # Checking for this file ensures we are 100% connected to the actual remote drive.
+    anchor_file = sh.join_path(PATHS.cloud, ".cloud_anchor")
+    if not sh.path_exists(anchor_file, "f"):
+        LOG.error(f"Cloud drive anchor not found: {anchor_file}")
         LOG.error(
-            "Please ensure your external drive or cloud provider is mounted before backing up."
+            "Please ensure the external drive or cloud provider is mounted correctly before backing up."
         )
         return
 
@@ -111,7 +116,13 @@ def parse_arguments():
     """Method that parses arguments provided"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--log-path", default="")
+
+    # Automatically output a persistent log file alongside the terminal output
+    log_dir = sh.join_path(PATHS.home, "logs", "pc-ops")
+    sh.create_directory(log_dir)
+    default_log = sh.join_path(log_dir, f"{BASENAME}.log")
+
+    parser.add_argument("--log-path", default=default_log)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--only-apps", action="store_true")
     parser.add_argument("--only-games", action="store_true")
