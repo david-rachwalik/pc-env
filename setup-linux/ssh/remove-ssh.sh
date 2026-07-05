@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e # Exit immediately on error
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # Ensure a GitHub username is provided
 if [ -z "$1" ]; then
@@ -12,38 +12,62 @@ GITHUB_USER="$1"
 SSH_KEY_PATH="$HOME/.ssh/github_$GITHUB_USER"
 SSH_CONFIG_MANAGER="$(dirname "$0")/ssh-config-manager.sh"
 
-# -------- Remove SSH Key for GitHub User --------
+# ----------------------------------------------------------------
+# --- Worker Functions ---
+# ----------------------------------------------------------------
 
-# Remove local SSH key files if they exist
-if [[ -f "$SSH_KEY_PATH" ]]; then
-    echo "Removing local private SSH key file..."
-    rm -f "$SSH_KEY_PATH"
-fi
-if [[ -f "$SSH_KEY_PATH.pub" ]]; then
-    echo "Removing local public SSH key file..."
-    rm -f "$SSH_KEY_PATH.pub"
-fi
+remove_local_keys() {
+    if [[ -f "$SSH_KEY_PATH" ]]; then
+        echo "Removing local private SSH key file..."
+        rm -f "$SSH_KEY_PATH"
+    fi
+    if [[ -f "$SSH_KEY_PATH.pub" ]]; then
+        echo "Removing local public SSH key file..."
+        rm -f "$SSH_KEY_PATH.pub"
+    fi
+}
 
-# Ensure SSH key is removed from config
-GITHUB_HOST="github.com-$GITHUB_USER"
-bash "$SSH_CONFIG_MANAGER" remove "$GITHUB_HOST"
+unlink_ssh_config() {
+    local github_host="github.com-$GITHUB_USER"
+    bash "$SSH_CONFIG_MANAGER" remove "$github_host"
+}
 
-# Get the existing key ID by matching the key content
-PUB_KEY_CONTENT=$(cat "$SSH_KEY_PATH.pub")
-# GITHUB_KEY_ID=$(gh ssh-key list | grep "$PUB_KEY_CONTENT" | awk '{print $1}')
-# Using NF "number of fields" (columns) instead of fixed field positions because key contains spaces
-GITHUB_KEY_ID=$(gh ssh-key list | grep "^${GITHUB_USER}[[:space:]]" | awk '{print $(NF-1)}')
+remove_from_github() {
+    # Get the existing key ID by matching the key content
+    local pub_key_content
+    # Using NF "number of fields" (columns) instead of fixed field positions because key contains spaces
+    if [[ -f "$SSH_KEY_PATH.pub" ]]; then
+        pub_key_content=$(cat "$SSH_KEY_PATH.pub")
+    fi
 
-# Ensure SSH public key is removed from GitHub (https://github.com/settings/keys)
-if [[ -z "$GITHUB_KEY_ID" ]]; then
-    echo "Adding SSH key to GitHub..."
-    # https://cli.github.com/manual/gh_ssh-key_add
-    gh ssh-key delete "$GITHUB_KEY_ID" -y
-else
-    echo "SSH key already exists on GitHub (ID: $GITHUB_KEY_ID)"
-fi
+    local github_key_id
+    github_key_id=$(gh ssh-key list | grep "^${GITHUB_USER}[[:space:]]" | awk '{print $(NF-1)}')
 
-echo "✅ SSH key removed for $GITHUB_USER."
+    # Ensure SSH public key is removed from GitHub (https://github.com/settings/keys)
+    if [[ -n "$github_key_id" ]]; then
+        echo "Removing SSH key from GitHub (ID: $github_key_id)..."
+        # https://cli.github.com/manual/gh_ssh-key_add
+        gh ssh-key delete "$github_key_id" -y
+    else
+        echo "SSH key (ID: $github_key_id) does not exist on GitHub.  Skipping..."
+    fi
+}
+
+# ----------------------------------------------------------------
+# --- Main Orchestrator ---
+# ----------------------------------------------------------------
+
+main() {
+    echo "Starting SSH key removal for $GITHUB_USER..."
+
+    remove_local_keys
+    unlink_ssh_config
+    remove_from_github
+
+    echo "✅ SSH key removed for $GITHUB_USER."
+}
+
+main "$@"
 
 # --- Run the script once per GitHub user (do NOT use sudo) ---
 

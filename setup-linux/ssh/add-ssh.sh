@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e # Exit immediately on error
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # Ensure a GitHub username is provided
 if [[ -z "$1" ]]; then
@@ -29,49 +29,74 @@ SSH_CONFIG_MANAGER="$(dirname "$0")/ssh-config-manager.sh"
 # Add key to GitHub             Uses gh ssh-key list to check if key exists before adding
 # Configure SSH for GitHub      Adds a SSH config entry per-user only if missing
 
-# Ensure the SSH directory exists with correct permissions
-if [[ ! -d "$SSH_DIR" ]]; then
-    echo "Creating SSH directory: $SSH_DIR"
-    mkdir -p "$SSH_DIR"
-fi
-if [[ "$(stat -c '%a' "$SSH_DIR")" != "700" ]]; then
-    echo "Updating SSH directory permissions: $SSH_DIR"
-    chmod 700 "$SSH_DIR"
-fi
+# ----------------------------------------------------------------
+# --- Worker Functions ---
+# ----------------------------------------------------------------
 
-# Ensure SSH key exists with correct permissions
-if [[ ! -f "$SSH_KEY_PATH" ]]; then
-    echo "Generating SSH key for $GITHUB_USER..."
-    ssh-keygen -t ed25519 -C "$GITHUB_USER@github.com" -f "$SSH_KEY_PATH" -N ""
-else
-    echo "SSH key already exists: $SSH_KEY_PATH"
-fi
-if [[ "$(stat -c '%a' "$SSH_KEY_PATH")" != "600" ]]; then
-    echo "Fixing SSH key permissions: $SSH_KEY_PATH"
-    chmod 600 "$SSH_KEY_PATH"
-fi
+# Ensure directory exists with permissions that fulfill SSH's security requirements
+setup_ssh_directory() {
+    if [[ ! -d "$SSH_DIR" ]]; then
+        echo "Creating SSH directory: $SSH_DIR"
+        mkdir -p "$SSH_DIR"
+    fi
+    if [[ "$(stat -c '%a' "$SSH_DIR")" != "700" ]]; then
+        echo "Updating SSH directory permissions: $SSH_DIR"
+        chmod 700 "$SSH_DIR"
+    fi
+}
 
-# Ensure SSH key is referenced in config
-GITHUB_HOST="github.com-$GITHUB_USER"
-# bash "$SSH_CONFIG_MANAGER" add "$GITHUB_HOST" "github.com" "$SSH_KEY_PATH"
-bash "$SSH_CONFIG_MANAGER" add "$GITHUB_HOST" "github.com" "~/.ssh/github_$GITHUB_USER"
+generate_ssh_key() {
+    if [[ ! -f "$SSH_KEY_PATH" ]]; then
+        echo "Generating SSH key for $GITHUB_USER..."
+        ssh-keygen -t ed25519 -C "$GITHUB_USER@github.com" -f "$SSH_KEY_PATH" -N ""
+    else
+        echo "SSH key already exists: $SSH_KEY_PATH"
+    fi
+    if [[ "$(stat -c '%a' "$SSH_KEY_PATH")" != "600" ]]; then
+        echo "Fixing SSH key permissions: $SSH_KEY_PATH"
+        chmod 600 "$SSH_KEY_PATH"
+    fi
+}
 
-# Get the existing key ID by matching the key content
-PUB_KEY_CONTENT=$(cat "$SSH_KEY_PATH.pub")
-# GITHUB_KEY_ID=$(gh ssh-key list | grep "$PUB_KEY_CONTENT" | awk '{print $1}')
-# Using NF "number of fields" (columns) instead of fixed field positions because key contains spaces
-GITHUB_KEY_ID=$(gh ssh-key list | grep "^${GITHUB_USER}[[:space:]]" | awk '{print $(NF-1)}')
+link_ssh_config() {
+    local github_host="github.com-$GITHUB_USER"
+    bash "$SSH_CONFIG_MANAGER" add "$github_host" "github.com" "~/.ssh/github_$GITHUB_USER"
+}
 
-# Ensure SSH public key is added to GitHub (https://github.com/settings/keys)
-if [[ -z "$GITHUB_KEY_ID" ]]; then
-    echo "Adding SSH key to GitHub..."
-    # https://cli.github.com/manual/gh_ssh-key_add
-    gh ssh-key add "$SSH_KEY_PATH.pub" --title "[$SYSTEM_ALIAS] $GITHUB_USER"
-else
-    echo "SSH key already exists on GitHub (ID: $GITHUB_KEY_ID)"
-fi
+publish_to_github() {
+    # Get the existing key ID by matching the key content
+    local pub_key_content
+    pub_key_content=$(cat "$SSH_KEY_PATH.pub")
+    local github_key_id
+    # Using NF "number of fields" (columns) instead of fixed field positions because key contains spaces
+    github_key_id=$(gh ssh-key list | grep "^${GITHUB_USER}[[:space:]]" | awk '{print $(NF-1)}')
 
-echo "✅ SSH setup complete for $GITHUB_USER!"
+    # Ensure SSH public key is added to GitHub (https://github.com/settings/keys)
+    if [[ -z "$github_key_id" ]]; then
+        echo "Adding SSH key to GitHub..."
+        # https://cli.github.com/manual/gh_ssh-key_add
+        gh ssh-key add "$SSH_KEY_PATH.pub" --title "[$SYSTEM_ALIAS] $GITHUB_USER"
+    else
+        echo "SSH key already exists on GitHub (ID: $github_key_id)"
+    fi
+}
+
+# ----------------------------------------------------------------
+# --- Main Orchestrator ---
+# ----------------------------------------------------------------
+
+main() {
+    echo "Starting SSH setup for $GITHUB_USER..."
+
+    setup_ssh_directory
+    generate_ssh_key
+    link_ssh_config
+    publish_to_github
+
+    echo "✅ SSH setup complete for $GITHUB_USER!"
+}
+
+main "$@"
 
 # --- Verify GitHub CLI is authenticated to the correct account ---
 
