@@ -22,13 +22,6 @@ readonly USER_HOME_DIR="$(getent passwd "$SUDO_USER_NAME" | cut -d: -f6)"
 # ================================================================
 
 readonly PROJECT_DIR="${USER_HOME_DIR}/Repos/pc-env"
-readonly -a ALIASES=(
-    # "alias <alias-name>='docker compose -f <configuration-file> run --rm <service-name>'"
-    "alias ops='docker compose -f \"${PROJECT_DIR}/docker/pc-ops/docker-compose.yml\" run --rm pc-ops'"
-    "alias rclone='docker compose -f \"${PROJECT_DIR}/docker/rclone/docker-compose.yml\" run --rm rclone'"
-    "alias subs='docker compose -f \"${PROJECT_DIR}/docker/pysubs2/docker-compose.yml\" run --rm pysubs2'"
-    "alias ytdl='docker compose -f \"${PROJECT_DIR}/docker/yt-dlp/docker-compose.yml\" run --rm yt-dlp'"
-)
 
 readonly -a BASE_SCRIPTS=(
     "appimage.sh"
@@ -229,24 +222,18 @@ run_provisioning_scripts() {
 setup_aliases() {
     log "Checking shell aliases..."
     local alias_file="${USER_HOME_DIR}/.bash_aliases"
-    local added=false
+    local repo_aliases="${PROJECT_DIR}/setup-linux/bash_aliases"
+    local source_cmd="source \"$repo_aliases\""
 
-    # Safely ensure target file exists mapped to user
-    run_as_user touch "$alias_file"
-
-    # Iterate and append only missing lines
-    for alias_cmd in "${ALIASES[@]}"; do
-        if ! grep -Fxq "$alias_cmd" "$alias_file"; then
-            echo "$alias_cmd" >> "$alias_file"
-            log "Adding alias: ${alias_cmd%%=*}"
-            added=true
-        fi
-    done
-
-    if [ "$added" = true ]; then
-        log "Alias check complete.  If changes were made, run 'source ~/.bashrc' or restart your shell."
+    # Check if link already exists (2>/dev/null hides errors if file is missing)
+    if grep -Fxq "$source_cmd" "$alias_file" 2> /dev/null; then
+        log "Repository aliases are already linked."
     else
-        log "All aliases are already present."
+        # Safely append as the user (tee creates file if missing)
+        echo -e "\n# Load pc-env repository aliases\n$source_cmd" | run_as_user tee -a "$alias_file" > /dev/null
+
+        log "Linked repository aliases to ~/.bash_aliases"
+        log "Run 'source ~/.bash_aliases' or restart your shell to apply."
     fi
 }
 

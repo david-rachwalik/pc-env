@@ -1,0 +1,39 @@
+# --- pc-env Docker Apps ---
+# alias <alias-name>='docker compose -f <configuration-file> run --rm <service-name>'
+alias ops='docker compose -f "$HOME/Repos/pc-env/docker/pc-ops/docker-compose.yml" run --rm pc-ops'
+alias rclone='docker compose -f "$HOME/Repos/pc-env/docker/rclone/docker-compose.yml" run --rm rclone'
+alias subs='docker compose -f "$HOME/Repos/pc-env/docker/pysubs2/docker-compose.yml" run --rm pysubs2'
+alias ytdl='docker compose -f "$HOME/Repos/pc-env/docker/yt-dlp/docker-compose.yml" run --rm yt-dlp'
+
+# ==============================================================================
+# --- Dev Containers ---
+# ==============================================================================
+
+# Generic Helper: Connects to a matching running Dev Container
+_dev_container_exec() {
+    local name_match="$1"
+    local work_dir="$2"
+    shift 2 # Shift arguments so whatever remains becomes the command
+    local cmd=("$@")
+
+    local cid
+    cid=$(docker ps | grep -i "$name_match" | head -n 1 | awk '{print $1}')
+
+    if [ -z "$cid" ]; then
+        echo "❌ Error: The '$name_match' dev container is not currently running."
+        return 1
+    fi
+
+    docker exec -it --user vscode -w "$work_dir" "$cid" "${cmd[@]}"
+}
+
+# --- david-rachwalik.github.io ---
+ddmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io" /bin/zsh; }
+dmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io/client-angular" npm run dev; }
+
+# --- nekogoo.github.io ---
+dgoo() { _dev_container_exec "nekogoo" "/workspaces/nekogoo.github.io" /bin/zsh; }
+goo() { _dev_container_exec "nekogoo" "/workspaces/nekogoo.github.io" npm run dev; }
+
+# --- pc-env ---
+dpc() { _dev_container_exec "pc-env" "/workspaces/pc-env" /bin/zsh; }
