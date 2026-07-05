@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e # Exit immediately on error
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 APP_NAME="CurseForge"
 APPIMAGE_URL="https://curseforge.overwolf.com/downloads/curseforge-latest-linux.AppImage"
@@ -41,7 +41,7 @@ download_icon() {
 create_desktop_entry() {
     echo "[INFO] Creating desktop entry..."
     mkdir -p "$(dirname "$DESKTOP_FILE")"
-    cat > "$DESKTOP_FILE" <<EOF
+    cat > "$DESKTOP_FILE" << EOF
 [Desktop Entry]
 Name=CurseForge
 Comment=CurseForge Mod Manager

@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 REMOTE_NAME="gdrive"
 MOUNT_DIR="$HOME/GoogleDrive"

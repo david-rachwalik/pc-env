@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # ================================================================
 # Generic rclone bisync script - designed to run inside Docker
@@ -41,7 +41,7 @@ validate_arguments() {
 setup_logging() {
     # Ensure base logging directory exists
     mkdir -p "$DAILY_DIR"
-    
+
     # # Housekeeping: Delete daily logs older than 30 days
     # find "$DAILY_DIR" -type f -name "bisync-*.log" -mtime +30 -delete 2>/dev/null || true
 }
@@ -69,7 +69,7 @@ handle_locking() {
             rm -f "$LOCK_FILE"
         fi
     fi
-    
+
     # Create new lock file containing current Process ID ($$)
     # The trap ensures that when script exits (normally or via crash), the lock is deleted
     echo $$ > "$LOCK_FILE"
@@ -78,7 +78,7 @@ handle_locking() {
 
 run_bisync() {
     echo "🚀 Running bisync check... (Verbose logs: $DAILY_LOG)"
-    
+
     # Write daily log header for run clarity
     echo -e "\n=== Run Started: $(date +'%Y-%m-%d %H:%M:%S') ===" >> "$DAILY_LOG"
 
@@ -117,7 +117,7 @@ run_bisync() {
 
         # Add --resync flag and execute again
         cmd+=(--resync)
-        
+
         echo -e "\n=== RESYNC Started: $(date +'%Y-%m-%d %H:%M:%S') ===" >> "$DAILY_LOG"
 
         set +e
@@ -169,7 +169,6 @@ main "$@"
 # ~/Repos/pc-env/docker/rclone/rclone-bisync.sh onedrive OneDrive
 # ~/Repos/pc-env/docker/rclone/rclone-bisync.sh gdrive ObsidianVaults
 # ~/Repos/pc-env/docker/rclone/rclone-bisync.sh pcloud pCloud
-
 
 # View logs:
 # journalctl -u rclone-bisync-pcloud.service --since "3 days ago"

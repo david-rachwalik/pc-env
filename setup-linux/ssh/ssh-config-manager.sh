@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 SSH_CONFIG="$HOME/.ssh/config"
 
@@ -18,7 +19,7 @@ add_host() {
         echo "Host $host_alias already exists in SSH config."
     else
         echo "Adding Host $host_alias..."
-        cat <<EOF >>"$SSH_CONFIG"
+        cat << EOF >> "$SSH_CONFIG"
 
 Host $host_alias
     HostName $hostname

@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # Start the Ollama server in the background
 ollama serve &

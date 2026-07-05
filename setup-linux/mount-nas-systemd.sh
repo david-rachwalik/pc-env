@@ -1,32 +1,36 @@
 #!/usr/bin/env bash
-set -euo pipefail # Exit immediately on error
+set -euo pipefail  # Exit immediately on error
 
 # Manage mounts between PC & NAS
 
 # ========= CONFIGURATION =========
-declare -A SHARE_MOUNT_POINTS=(
-    ["Portal"]="/mnt/Portal"
-    ["NekoGooVideos"]="/mnt/NekoGooVideos"
-    ["Main"]="/mnt/Main"
-    ["PervyVR"]="/mnt/X"
-    ["Emulation"]="/mnt/Z"
-)
+declare -A SHARE_MOUNT_POINTS
+SHARE_MOUNT_POINTS["Portal"]="/mnt/Portal"
+SHARE_MOUNT_POINTS["NekoGooVideos"]="/mnt/NekoGooVideos"
+SHARE_MOUNT_POINTS["Main"]="/mnt/Main"
+SHARE_MOUNT_POINTS["PervyVR"]="/mnt/X"
+SHARE_MOUNT_POINTS["Emulation"]="/mnt/Z"
+# (shfmt struggles with multi-line associative arrays)
+
 NAS_IP="${NAS_IP:-192.168.1.194}"
 SYSTEMD_DIR="/etc/systemd/system"
 IDLE_TIMEOUT="${IDLE_TIMEOUT:-600}" # seconds (10 min)
 PROTOCOL="${PROTOCOL:-smb}" # or nfs (multi-user NFS requires Kerberos)
+
+# Prefer the invoking user when run with sudo, fallback to root or current user
+TARGET_USER="${SUDO_USER:-${USER:-root}}"
 # Ensure credentials exist when using SMB protocol
-CREDENTIALS_FILE="${1:-/home/$SUDO_USER/.config/nas_credentials}"
+CREDENTIALS_FILE="${1:-/home/${TARGET_USER}/.config/nas_credentials}"
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 
 # Expand credentials path (avoid ~ expansion issues under sudo)
 if [[ -n "$CREDENTIALS_FILE" ]]; then
-    if command -v readlink >/dev/null 2>&1; then
-        CREDENTIALS_FILE="$(readlink -f "$CREDENTIALS_FILE" 2>/dev/null || printf '%s' "$CREDENTIALS_FILE")"
-    elif command -v realpath >/dev/null 2>&1; then
-        CREDENTIALS_FILE="$(realpath -m "$CREDENTIALS_FILE" 2>/dev/null || printf '%s' "$CREDENTIALS_FILE")"
+    if command -v readlink > /dev/null 2>&1; then
+        CREDENTIALS_FILE="$(readlink -f "$CREDENTIALS_FILE" 2> /dev/null || printf '%s' "$CREDENTIALS_FILE")"
+    elif command -v realpath > /dev/null 2>&1; then
+        CREDENTIALS_FILE="$(realpath -m "$CREDENTIALS_FILE" 2> /dev/null || printf '%s' "$CREDENTIALS_FILE")"
     fi
 fi
 
@@ -132,7 +136,7 @@ write_mount_unit() {
 
     # Compose mount unit without fstab-only flags like `noauto` or `x-systemd.automount`
     # .automount unit will provide automount behavior; include idle timeout and _netdev
-    cat <<EOF >"$SYSTEMD_DIR/$unit_name.mount"
+    cat << EOF > "$SYSTEMD_DIR/$unit_name.mount"
 [Unit]
 Description=Mount for $share
 
@@ -153,7 +157,7 @@ write_automount_unit() {
     local mount_point="$1"
     local unit_name="$2"
 
-    cat <<EOF >"$SYSTEMD_DIR/$unit_name.automount"
+    cat << EOF > "$SYSTEMD_DIR/$unit_name.automount"
 [Unit]
 Description=Automount for $mount_point
 # Intentionally avoid network-online.target to prevent ordering cycles.

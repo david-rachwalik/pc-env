@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # ================================================================
 # Provision rclone bisync services using one-shot Docker containers
@@ -55,7 +55,7 @@ ensure_dir() {
 # Checks if a remote is configured for the user
 check_remote_configured() {
     local remote_name="$1"
-    if sudo -u "$SUDO_USER" rclone listremotes 2>/dev/null | grep -q "^${remote_name}:"; then
+    if sudo -u "$SUDO_USER" rclone listremotes 2> /dev/null | grep -q "^${remote_name}:"; then
         return 0
     else
         return 1
@@ -76,7 +76,7 @@ create_docker_bisync_service() {
     local sync_dir_name="$2"
     local service_name="rclone-bisync-$remote_name"
 
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 [Unit]
 Description=Rclone Bisync for $remote_name via Docker
 After=docker.service network-online.target
@@ -108,7 +108,7 @@ create_bisync_timer() {
     local schedule="$2"
     local service_name="rclone-bisync-$remote_name"
 
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.timer"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.timer"
 [Unit]
 Description=Run rclone bisync for $remote_name on a schedule
 
@@ -158,7 +158,7 @@ main() {
     # Loop through the defined jobs
     for job in "${BISYNC_JOBS[@]}"; do
         IFS=';' read -r remote_name sync_dir_name schedule <<< "$job"
-        
+
         echo ""
         echo "🔧 Processing job for: $remote_name"
 

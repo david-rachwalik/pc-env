@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # =============================================================================
 # Logging and Utility Functions
@@ -23,7 +23,7 @@ run_as_user() {
     # Use 'master' for nightly, or a specific tag like 'v1.1.0'
     MH_VERSION="${MH_VERSION:-master}"
     SOLUTION_FILE="MHServerEmu.sln"
-    
+
     # Define paths for clarity
     BIN_DIR="/app/src/MHServerEmu/bin/x64/Release/net8.0"
     EXECUTABLE_PATH="$BIN_DIR/MHServerEmu"
@@ -37,21 +37,22 @@ run_as_user() {
     if [ ! -d ".git" ]; then
         log "🚀 Repository not found.  Cloning version '${MH_VERSION}'..."
         # Clone into a temporary directory, then move contents to the current directory
-        # (grouped commands to ensure they complete before proceeding)
-        {
-            git clone --depth 1 --branch "$MH_VERSION" "$GIT_REPO_URL" /tmp/git-clone && \
-            mv /tmp/git-clone/.git . && \
-            mv /tmp/git-clone/* . && \
-            rm -rf /tmp/git-clone;
-        } || { echo "❌ Git clone or move failed." >&2; exit 1; }
+        git clone --depth 1 --branch "$MH_VERSION" "$GIT_REPO_URL" /tmp/git-clone || {
+            echo "❌ Git clone failed." >&2
+            exit 1
+        }
+        mv /tmp/git-clone/.git .
+        mv /tmp/git-clone/* .
+        rm -rf /tmp/git-clone
+
         # Force a build after cloning
         touch .force-build
     else
         log "🔄 Repository exists.  Checking for updates to '${MH_VERSION}'..."
         # Reset any potential partial changes from a previous failed run
-        git reset --hard HEAD >/dev/null
-        git fetch origin >/dev/null
-        git checkout "$MH_VERSION" >/dev/null
+        git reset --hard HEAD > /dev/null
+        git fetch origin > /dev/null
+        git checkout "$MH_VERSION" > /dev/null
 
         # Check if the local branch is behind the remote
         if ! git status -uno | grep -q "Your branch is up to date"; then
@@ -104,7 +105,7 @@ export -f run_as_user log
 log "🔐 Enforcing permissions..."
 chown -R serveruser:serveruser /app /data
 # Ignore harmless errors for read-only files inside /gamefiles
-(chown -R serveruser:serveruser /gamefiles) 2>/dev/null || true
+(chown -R serveruser:serveruser /gamefiles) 2> /dev/null || true
 
 # --- Switch to Non-Root User ---
 log "--- 🚀 Switching to user 'serveruser' for all operations ---"

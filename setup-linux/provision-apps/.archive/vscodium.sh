@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail # Exit immediately on error
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # -------- Run with bash (as root or sudo) --------
 
@@ -31,14 +31,14 @@ install_gpg_key() {
 add_repository() {
     if [[ ! -f "$REPO_FILE" ]] || ! grep -Fxq "$REPO_ENTRY" "$REPO_FILE"; then
         echo "Adding VSCodium APT repository..."
-        echo "$REPO_ENTRY" | sudo tee "$REPO_FILE" >/dev/null
+        echo "$REPO_ENTRY" | sudo tee "$REPO_FILE" > /dev/null
     else
         echo "VSCodium repository already configured."
     fi
 }
 
 install_vscodium() {
-    if ! command -v codium &>/dev/null; then
+    if ! command -v codium &> /dev/null; then
         echo "Installing VSCodium..."
         apt update
         apt install -y codium

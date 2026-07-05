@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # alias rclone='cd ~/Repos/pc-env/docker/rclone && docker compose run --remove-orphans --rm rclone'
 rclone() {

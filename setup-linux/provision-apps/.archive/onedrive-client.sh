@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # https://github.com/abraunegg/onedrive/blob/master/docs/usage.md
 
@@ -58,7 +58,7 @@ KEYRING_PATH="/usr/share/keyrings/obs-onedrive.gpg"
 
 if [ ! -f "$KEYRING_PATH" ]; then
     echo "Adding repository release key..."
-    wget -qO - "$REPO_KEY_URL" | gpg --dearmor | tee "$KEYRING_PATH" >/dev/null
+    wget -qO - "$REPO_KEY_URL" | gpg --dearmor | tee "$KEYRING_PATH" > /dev/null
     echo "Repository release key added."
 else
     echo "Repository release key already exists.  Skipping."
@@ -68,11 +68,11 @@ fi
 REPO_FILE="/etc/apt/sources.list.d/onedrive.list"
 REPO_LINE="deb [arch=$(dpkg --print-architecture) signed-by=$KEYRING_PATH] https://download.opensuse.org/repositories/home:/npreining:/debian-ubuntu-onedrive/xUbuntu_24.04/ ./"
 
-if grep -Fxq "$REPO_LINE" "$REPO_FILE" 2>/dev/null; then
+if grep -Fxq "$REPO_LINE" "$REPO_FILE" 2> /dev/null; then
     echo "Repository already exists.  Skipping."
 else
     echo "Adding repository..."
-    echo "$REPO_LINE" | tee "$REPO_FILE" >/dev/null
+    echo "$REPO_LINE" | tee "$REPO_FILE" > /dev/null
     echo "Repository added."
 fi
 
@@ -108,7 +108,7 @@ else
 fi
 
 # Step 6: Enable and start OneDrive sync as a systemd service
-if ! systemctl --user is-enabled onedrive &>/dev/null; then
+if ! systemctl --user is-enabled onedrive &> /dev/null; then
     echo "Enabling OneDrive sync service..."
     systemctl --user enable onedrive
     systemctl --user start onedrive

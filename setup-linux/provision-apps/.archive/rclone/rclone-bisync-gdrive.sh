@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 REMOTE_NAME="gdrive"
 BISYNC_DIR="$HOME/ObsidianVaults"
@@ -67,7 +67,7 @@ routine_bisync() {
 # # --log-file "$LOG_FILE" \
 
 # Check if target directory is empty
-if [ -z "$(ls -A "$BISYNC_DIR" 2>/dev/null)" ]; then
+if [ -z "$(ls -A "$BISYNC_DIR" 2> /dev/null)" ]; then
     echo "📂 Target directory is empty."
     initial_bisync
 else

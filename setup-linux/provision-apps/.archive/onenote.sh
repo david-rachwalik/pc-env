@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e # Exit immediately on error
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # -------- Run with bash (as root or sudo) --------
 
@@ -39,9 +39,9 @@ else
 fi
 
 # Create a desktop entry if needed
-if ! grep -q "Exec=$INSTALL_DIR/$APP_NAME.AppImage" "$DESKTOP_ENTRY" 2>/dev/null; then
+if ! grep -q "Exec=$INSTALL_DIR/$APP_NAME.AppImage" "$DESKTOP_ENTRY" 2> /dev/null; then
     echo "Creating desktop entry..."
-    cat <<EOF >"$DESKTOP_ENTRY"
+    cat << EOF > "$DESKTOP_ENTRY"
 [Desktop Entry]
 Name=P3X OneNote
 Exec=$INSTALL_DIR/$APP_NAME.AppImage

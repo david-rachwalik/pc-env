@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # # Provision Google Drive sync using rclone and systemd
 # https://drive.google.com
@@ -33,7 +33,7 @@ BACKUP_DIR="$CONFIG_DIR/bisync-backups"
 
 # Install rclone if not present
 install_rclone() {
-    if ! command -v rclone &>/dev/null; then
+    if ! command -v rclone &> /dev/null; then
         echo "Installing rclone..."
         apt-get update -q
         apt-get install -y --no-install-recommends --no-install-suggests rclone
@@ -81,7 +81,7 @@ configure_rclone() {
 create_filters() {
     local filters_file="$CONFIG_DIR/bisync-filters.txt"
 
-    cat <<EOF >"$filters_file"
+    cat << EOF > "$filters_file"
 - node_modules/
 - .Trash-*
 - .DS_Store
@@ -96,7 +96,7 @@ auto_mount_gdrive() {
     local service_name="rclone-mount-$REMOTE_NAME"
 
     # Create systemd service for mount
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 # This service mounts Google Drive using rclone
 [Unit]
 Description=Rclone Mount Google Drive
@@ -132,7 +132,7 @@ auto_bisync_gdrive() {
     local service_name="rclone-bisync-$REMOTE_NAME"
 
     # Create systemd service
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 [Unit]
 Description=Rclone Bisync Google Drive
 After=network-online.target
@@ -149,7 +149,7 @@ WantedBy=default.target
 EOF
 
     # Create systemd timer
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.timer"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.timer"
 [Unit]
 Description=Run Rclone Bisync Every 30 Minutes
 
@@ -172,7 +172,7 @@ auto_serve_webdav() {
     local service_name="rclone-serve-webdav"
 
     # Create systemd service for webdav
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 # This serves WebDAV files for Local Media
 [Unit]
 Description=Rclone WebDAV Service for Local Media

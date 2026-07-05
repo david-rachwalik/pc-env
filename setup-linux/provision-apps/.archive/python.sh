@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # Ensure the script is being run as root (POSIX-compliant test)
 if [ "$(id -u)" -ne 0 ]; then

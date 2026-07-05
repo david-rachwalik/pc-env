@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # ----------------------------------------------------------------
 # Generic rclone bisync script for any cloud platform
@@ -37,16 +37,16 @@ RCLONE_LOCK_FILE="$RCLONE_CACHE_DIR/${REMOTE_NAME}_${BISYNC_DIR_ESCAPED}.lck"
 acquire_script_lock() {
     if [[ -f "$SCRIPT_LOCK_FILE" ]]; then
         local lock_pid
-        lock_pid=$(cat "$SCRIPT_LOCK_FILE" 2>/dev/null || echo "")
-        
+        lock_pid=$(cat "$SCRIPT_LOCK_FILE" 2> /dev/null || echo "")
+
         # Check if process is still running
-        if [[ -n "$lock_pid" ]] && kill -0 "$lock_pid" 2>/dev/null; then
+        if [[ -n "$lock_pid" ]] && kill -0 "$lock_pid" 2> /dev/null; then
             # Check if lock is stale (older than timeout)
             local lock_age
-            lock_age=$(( $(date +%s) - $(stat -c %Y "$SCRIPT_LOCK_FILE" 2>/dev/null || echo 0) ))
+            lock_age=$(($( date +%s) - $(stat -c %Y "$SCRIPT_LOCK_FILE" 2> /dev/null || echo 0)))
             local lock_timeout_seconds=$((SCRIPT_LOCK_TIMEOUT_HOURS * 3600))
-            
-            if (( lock_age > lock_timeout_seconds )); then
+
+            if ((lock_age > lock_timeout_seconds)); then
                 echo "⚠️  Script lock file is stale (${lock_age}s old, PID: $lock_pid). Force removing."
                 rm -f "$SCRIPT_LOCK_FILE"
             else
@@ -58,7 +58,7 @@ acquire_script_lock() {
             rm -f "$SCRIPT_LOCK_FILE"
         fi
     fi
-    
+
     echo $$ > "$SCRIPT_LOCK_FILE"
 }
 
@@ -73,42 +73,42 @@ check_rclone_lock() {
     if [[ ! -f "$RCLONE_LOCK_FILE" ]]; then
         return 0  # No lock file, all good
     fi
-    
+
     echo "🔍 Found rclone lock file, checking if stale..."
-    
+
     # Extract PID from JSON lock file
     local lock_pid
-    lock_pid=$(grep -oP '"PID": "\K[0-9]+' "$RCLONE_LOCK_FILE" 2>/dev/null || echo "")
-    
+    lock_pid=$(grep -oP '"PID": "\K[0-9]+' "$RCLONE_LOCK_FILE" 2> /dev/null || echo "")
+
     if [[ -z "$lock_pid" ]]; then
         echo "⚠️  Malformed rclone lock file, removing..."
         rm -f "$RCLONE_LOCK_FILE"
         return 0
     fi
-    
+
     # Check if that process is still running
-    if ! kill -0 "$lock_pid" 2>/dev/null; then
+    if ! kill -0 "$lock_pid" 2> /dev/null; then
         echo "⚠️  Stale rclone lock (PID $lock_pid not running), removing..."
         rm -f "$RCLONE_LOCK_FILE"
         return 0
     fi
-    
+
     # Check for unreasonably far future expiration (bug in rclone)
     # Year 2100 = 4102444800 epoch seconds
     local lock_expires
-    lock_expires=$(grep -oP '"TimeExpires": "\K[^"]+' "$RCLONE_LOCK_FILE" 2>/dev/null || echo "")
-    
+    lock_expires=$(grep -oP '"TimeExpires": "\K[^"]+' "$RCLONE_LOCK_FILE" 2> /dev/null || echo "")
+
     if [[ -n "$lock_expires" ]]; then
         local expires_epoch
-        expires_epoch=$(date -d "$lock_expires" +%s 2>/dev/null || echo "0")
-        
-        if (( expires_epoch > 4102444800 )); then
+        expires_epoch=$(date -d "$lock_expires" +%s 2> /dev/null || echo "0")
+
+        if ((expires_epoch > 4102444800)); then
             echo "⚠️  Rclone lock has invalid expiration ($lock_expires), removing..."
             rm -f "$RCLONE_LOCK_FILE"
             return 0
         fi
     fi
-    
+
     echo "❌ Valid rclone lock exists (active process $lock_pid)"
     return 1
 }
@@ -119,9 +119,9 @@ check_rclone_lock() {
 
 preflight_checks() {
     echo "🔍 Running pre-flight checks for $REMOTE_NAME..."
-    
+
     # Check if remote exists
-    if ! rclone listremotes 2>/dev/null | grep -q "^${REMOTE_NAME}:$"; then
+    if ! rclone listremotes 2> /dev/null | grep -q "^${REMOTE_NAME}:$"; then
         echo "❌ Remote '$REMOTE_NAME' is not configured."
         echo "   Run: rclone config create \"$REMOTE_NAME\" <storage_type>"
         exit 1
@@ -132,7 +132,7 @@ preflight_checks() {
         echo "⚠️  Filters file not found at: $FILTERS_FILE"
         echo "   Creating default filters..."
         mkdir -p "$CONFIG_DIR"
-        cat <<'EOF' > "$FILTERS_FILE"
+        cat << 'EOF' > "$FILTERS_FILE"
 - Personal Vault/
 - Personal Vault/**
 - node_modules/
@@ -146,14 +146,14 @@ preflight_checks() {
 EOF
         echo "✅ Created default filters"
     fi
-    
+
     # Test remote connectivity
     echo "🔗 Testing connectivity to $REMOTE_NAME..."
-    if ! rclone lsf "$REMOTE_NAME:" --max-depth 1 &>/dev/null; then
+    if ! rclone lsf "$REMOTE_NAME:" --max-depth 1 &> /dev/null; then
         echo "❌ Cannot connect to $REMOTE_NAME. Check authentication/network."
         exit 1
     fi
-    
+
     echo "✅ Pre-flight checks passed"
 }
 
@@ -164,17 +164,17 @@ EOF
 check_filters_changed() {
     local filters_hash_file="$CONFIG_DIR/.${REMOTE_NAME}-filters-hash"
     local current_hash
-    current_hash=$(md5sum "$FILTERS_FILE" 2>/dev/null | cut -d' ' -f1)
-    
+    current_hash=$(md5sum "$FILTERS_FILE" 2> /dev/null | cut -d' ' -f1)
+
     if [[ -f "$filters_hash_file" ]]; then
         local stored_hash
-        stored_hash=$(cat "$filters_hash_file" 2>/dev/null || echo "")
+        stored_hash=$(cat "$filters_hash_file" 2> /dev/null || echo "")
         if [[ "$current_hash" != "$stored_hash" ]]; then
             echo "⚠️  Filters changed since last sync - will trigger resync"
             return 0  # Changed
         fi
     fi
-    
+
     # Store hash for next time
     echo "$current_hash" > "$filters_hash_file"
     return 1  # Not changed
@@ -186,19 +186,19 @@ check_filters_changed() {
 
 run_bisync() {
     local resync_needed=false
-    
+
     # Determine if we need --resync
-    if [[ -z "$(ls -A "$BISYNC_DIR" 2>/dev/null)" ]]; then
+    if [[ -z "$(ls -A "$BISYNC_DIR" 2> /dev/null)" ]]; then
         echo "📂 Target directory is empty - initial sync required"
         resync_needed=true
     elif check_filters_changed; then
         echo "🔄 Filters changed - resync required"
         resync_needed=true
     fi
-    
+
     # Prepare directory
     mkdir -p "$BISYNC_DIR"
-    
+
     # Build rclone command
     local rclone_cmd=(
         rclone bisync
@@ -208,7 +208,7 @@ run_bisync() {
         --create-empty-src-dirs
         --log-level INFO
     )
-    
+
     if [[ "$resync_needed" == true ]]; then
         echo "🔄 Running bisync with --resync..."
         rclone_cmd+=(--resync)
@@ -221,7 +221,7 @@ run_bisync() {
             --recover
         )
     fi
-    
+
     # Execute bisync
     if "${rclone_cmd[@]}"; then
         echo "✅ Bisync completed successfully!"
@@ -239,7 +239,6 @@ run_bisync() {
     fi
 }
 
-
 initial_bisync() {
     echo "🔄 Starting initial bisync for $REMOTE_NAME ($BISYNC_DIR)..."
     mkdir -p "$BISYNC_DIR"
@@ -252,19 +251,19 @@ initial_bisync() {
         echo "❌ Initial bisync failed."
         exit 1
     }
-    
+
     echo "✅ Initial bisync for $REMOTE_NAME ($BISYNC_DIR) completed!"
 }
 
 routine_bisync() {
     echo "🔄 Running routine bisync for $REMOTE_NAME ($BISYNC_DIR)..."
-    
+
     # Check if filters changed (would invalidate bisync state)
     local filters_changed=false
     local filters_hash_file="$CONFIG_DIR/.${REMOTE_NAME}-filters-hash"
     local current_hash
     current_hash=$(md5sum "$FILTERS_FILE" | cut -d' ' -f1)
-    
+
     if [[ -f "$filters_hash_file" ]]; then
         local stored_hash
         stored_hash=$(cat "$filters_hash_file")
@@ -274,18 +273,18 @@ routine_bisync() {
             echo "   This requires a --resync. Running initial bisync instead..."
         fi
     fi
-    
+
     if [[ "$filters_changed" == "true" ]]; then
         initial_bisync
         echo "$current_hash" > "$filters_hash_file"
         return
     fi
-    
+
     # Store filters hash for first run
     if [[ ! -f "$filters_hash_file" ]]; then
         echo "$current_hash" > "$filters_hash_file"
     fi
-    
+
     # Run routine bisync
     rclone bisync "$REMOTE_NAME:" "$BISYNC_DIR" \
         --track-renames \
@@ -300,10 +299,9 @@ routine_bisync() {
         echo "   rclone bisync \"$REMOTE_NAME:\" \"$BISYNC_DIR\" --resync --filters-file \"$FILTERS_FILE\""
         exit 1
     }
-    
+
     echo "✅ Bisync for $REMOTE_NAME ($BISYNC_DIR) completed!"
 }
-
 
 # ----------------------------------------------------------------
 # Main
@@ -314,7 +312,7 @@ main() {
     echo "🚀 rclone bisync: $REMOTE_NAME → $BISYNC_DIR"
     echo "   Started: $(date '+%Y-%m-%d %H:%M:%S')"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     acquire_script_lock
     preflight_checks
 
@@ -323,7 +321,7 @@ main() {
         echo "❌ Another bisync is currently running. Exiting to avoid conflicts."
         exit 1
     fi
-    
+
     # # Check if this is initial sync or routine
     # if [[ -z "$(ls -A "$BISYNC_DIR" 2>/dev/null)" ]]; then
     #     echo "📂 Target directory is empty - running initial sync"
@@ -333,7 +331,7 @@ main() {
     # fi
 
     run_bisync
-    
+
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "   Finished: $(date '+%Y-%m-%d %H:%M:%S')"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -349,7 +347,6 @@ main
 # ~/Repos/pc-env/setup-linux/provision-apps/rclone/rclone-bisync.sh onedrive OneDrive
 # ~/Repos/pc-env/setup-linux/provision-apps/rclone/rclone-bisync.sh gdrive ObsidianVaults
 # ~/Repos/pc-env/setup-linux/provision-apps/rclone/rclone-bisync.sh pcloud pCloud
-
 
 # View logs:
 # journalctl -u rclone-bisync-onedrive.service -n 50                    # Last 50 lines

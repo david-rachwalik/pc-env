@@ -62,19 +62,19 @@ add_to_fstab() {
     # Check if it's already in fstab
     if ! grep -q "$device" /etc/fstab; then
         echo "Adding $device to /etc/fstab for persistent mounting..."
-        echo "$device $mount_point ntfs-3g defaults,uid=${MOUNT_UID},gid=${MOUNT_GID},umask=0022 0 0" >>/etc/fstab
+        echo "$device $mount_point ntfs-3g defaults,uid=${MOUNT_UID},gid=${MOUNT_GID},umask=0022 0 0" >> /etc/fstab
     else
         echo "$device $mount_point is already listed in /etc/fstab."
     fi
 }
 
-main () {
+main()  {
     require_root
 
     # Mount and add drives to fstab
     for drive in "${DRIVES[@]}"; do
         # Split the drive string into device and mount point
-        IFS="|" read -r device mount_point <<<"$drive"
+        IFS="|" read -r device mount_point <<< "$drive"
         # Mount the drive
         create_mount_point "$mount_point"
         mount_drive "$device" "$mount_point"

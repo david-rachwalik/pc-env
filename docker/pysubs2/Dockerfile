@@ -1,8 +1,8 @@
-# ==============================================================================
+# ================================================================
 # BUILDER STAGE
 # Compile the Subtitle Edit CLI from source
 # (contents of this stage are DISCARDED after the build)
-# ==============================================================================
+# ================================================================
 # Use the official .NET SDK image to build C# projects
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS dotnet-builder
 
@@ -23,10 +23,10 @@ RUN dotnet publish src/se-cli/seconv.csproj -c Release -o /opt/subtitleedit-cli 
 # These tools are unmaintained and should no longer be considered
 
 
-# ==============================================================================
+# ================================================================
 # FINAL STAGE
 # Create the lean, final runtime image with Python and our compiled tools
-# ==============================================================================
+# ================================================================
 # Start from our original Python image
 FROM python:3.12-slim
 

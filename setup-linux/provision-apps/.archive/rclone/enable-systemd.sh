@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # Provision cloud storage sync using `rclone` and `systemd`
 
@@ -27,7 +27,7 @@ while [[ $# -gt 0 ]]; do
             FORCE_FILTERS=true
             shift
             ;;
-        --help|-h)
+        --help | -h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
@@ -63,7 +63,7 @@ BACKUP_DIR="$CONFIG_DIR/bisync-backups"
 
 # Install rclone if not present
 install_rclone() {
-    if ! command -v rclone &>/dev/null; then
+    if ! command -v rclone &> /dev/null; then
         echo "📦 Installing rclone..."
         curl https://rclone.org/install.sh | sudo bash
         echo "✅ rclone installed successfully"
@@ -114,15 +114,15 @@ configure_rclone_old() {
 configure_rclone() {
     local remote_name="$1"
     local storage_type="$2"
-    
+
     # Check if remote already exists
     if sudo -u "$SUDO_USER" rclone listremotes | grep -q "^${remote_name}:$"; then
         echo "${remote_name} is already configured. Skipping..."
         return 0
     fi
-    
+
     echo "Running initial rclone setup for ${remote_name}. Follow authentication steps."
-    
+
     # Configure the remote (must run as actual user to save to correct config location)
     case "$storage_type" in
         drive)
@@ -132,7 +132,7 @@ configure_rclone() {
             # https://rclone.org/drive/#making-your-own-client-id
             # https://console.cloud.google.com
             sudo -u "$SUDO_USER" rclone config create "$remote_name" "$storage_type" scope="drive"
-            
+
             # To test your connection (first use has a delay):
             # rclone lsf gdrive:
             ;;
@@ -142,7 +142,7 @@ configure_rclone() {
             # rclone automatically refreshes the access token when needed
             # You won't need to re-authenticate if rclone is used at least once every 90 days
             sudo -u "$SUDO_USER" rclone config create "$remote_name" "$storage_type"
-            
+
             # To test your connection:
             # rclone lsf onedrive: --max-depth 1
             ;;
@@ -155,14 +155,14 @@ configure_rclone() {
             return 1
             ;;
     esac
-    
+
     echo "✅ ${remote_name} setup complete."
 }
 
 # Check if a remote is configured
 check_remote_configured() {
     local remote_name="$1"
-    if sudo -u "$SUDO_USER" rclone listremotes 2>/dev/null | grep -q "^${remote_name}:$"; then
+    if sudo -u "$SUDO_USER" rclone listremotes 2> /dev/null | grep -q "^${remote_name}:$"; then
         return 0
     else
         return 1
@@ -173,7 +173,7 @@ check_remote_configured() {
 print_config_instructions() {
     local remote_name="$1"
     local storage_type="$2"
-    
+
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "⚠️  MANUAL CONFIGURATION REQUIRED FOR: ${remote_name}"
@@ -184,7 +184,7 @@ print_config_instructions() {
     echo ""
     echo "    rclone config create \"${remote_name}\" \"${storage_type}\""
     echo ""
-    
+
     case "$storage_type" in
         drive)
             echo "This will open a browser for Google authentication."
@@ -211,7 +211,7 @@ print_config_instructions() {
             echo "📚 More info: https://rclone.org/pcloud/"
             ;;
     esac
-    
+
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 }
@@ -233,7 +233,7 @@ create_filters() {
         cp "$filters_file" "${filters_file}.bak.$(date +%Y%m%d_%H%M%S)"
     fi
 
-    cat <<EOF >"$filters_file"
+    cat << EOF > "$filters_file"
 - Personal Vault/
 - Personal Vault/**
 - node_modules/
@@ -245,10 +245,10 @@ create_filters() {
 - *conflicted copy*
 - *.onedrive
 EOF
-    
+
     chown "$SUDO_USER:$SUDO_USER" "$filters_file"
     chmod 644 "$filters_file"
-    
+
     echo "✅ Created rclone exclude filters at: $filters_file"
 }
 
@@ -257,7 +257,7 @@ auto_mount_gdrive() {
     local service_name="rclone-mount-$REMOTE_NAME"
 
     # Create systemd service for mount
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 [Unit]
 Description=Rclone Mount Google Drive for $SUDO_USER
 After=network-online.target
@@ -294,7 +294,7 @@ auto_bisync_gdrive() {
     local service_name="rclone-bisync-$REMOTE_NAME"
 
     # Create systemd service for bisync
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 [Unit]
 Description=Rclone Bisync Google Drive
 After=network-online.target
@@ -315,7 +315,7 @@ WantedBy=multi-user.target
 EOF
 
     # Create systemd timer to run every 30 minutes
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.timer"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.timer"
 [Unit]
 Description=Run Rclone Bisync Every 30 Minutes
 
@@ -346,10 +346,10 @@ create_service_unit() {
     local description="$2"
     local exec_start="$3"
     local exec_stop="${4:-}"
-    
+
     local unit_file="$SYSTEMD_DIR/${service_name}.service"
-    
-    cat <<EOF >"$unit_file"
+
+    cat << EOF > "$unit_file"
 [Unit]
 Description=${description}
 After=network-online.target
@@ -369,7 +369,7 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 EOF
-    
+
     echo "✅ Created service: ${service_name}.service"
 }
 
@@ -380,10 +380,10 @@ create_timer_unit() {
     local on_calendar="$3"
     local on_boot_sec="${4:-2m}"
     local on_unit_active_sec="${5:-}"
-    
+
     local unit_file="$SYSTEMD_DIR/${service_name}.timer"
-    
-    cat <<EOF >"$unit_file"
+
+    cat << EOF > "$unit_file"
 [Unit]
 Description=${description}
 
@@ -397,7 +397,7 @@ Unit=${service_name}.service
 [Install]
 WantedBy=timers.target
 EOF
-    
+
     echo "✅ Created timer: ${service_name}.timer"
 }
 
@@ -405,17 +405,17 @@ EOF
 enable_start_unit() {
     local unit_name="$1"
     local unit_type="${2:-.service}"
-    
+
     systemctl daemon-reload
-    
-    if systemctl is-enabled "${unit_name}${unit_type}" &>/dev/null; then
+
+    if systemctl is-enabled "${unit_name}${unit_type}" &> /dev/null; then
         echo "ℹ️  ${unit_name}${unit_type} is already enabled"
     else
         systemctl enable "${unit_name}${unit_type}"
         echo "✅ Enabled ${unit_name}${unit_type}"
     fi
-    
-    if systemctl is-active "${unit_name}${unit_type}" &>/dev/null; then
+
+    if systemctl is-active "${unit_name}${unit_type}" &> /dev/null; then
         echo "ℹ️  ${unit_name}${unit_type} is already running"
         systemctl restart "${unit_name}${unit_type}"
         echo "🔄 Restarted ${unit_name}${unit_type}"
@@ -433,24 +433,24 @@ enable_start_unit() {
 setup_mount_gdrive() {
     local remote_name="gdrive"
     local service_name="rclone-mount-${remote_name}"
-    
+
     echo ""
     echo "🔧 Setting up Google Drive mount..."
-    
+
     if ! check_remote_configured "$remote_name"; then
         print_config_instructions "$remote_name" "drive"
         echo "⏭️  Skipping Google Drive mount setup (remote not configured)"
         return 1
     fi
-    
+
     create_service_unit \
         "$service_name" \
         "Rclone Mount Google Drive for $SUDO_USER" \
         "$SCRIPT_DIR/${service_name}.sh" \
         "/usr/bin/fusermount -u /home/$SUDO_USER/GoogleDrive"
-    
+
     enable_start_unit "$service_name"
-    
+
     echo "✅ Google Drive mount configured"
     echo "    Check status: systemctl status ${service_name}"
     echo "    View logs: journalctl -u ${service_name} -f"
@@ -460,30 +460,30 @@ setup_mount_gdrive() {
 setup_bisync_gdrive() {
     local remote_name="gdrive"
     local service_name="rclone-bisync-${remote_name}"
-    
+
     echo ""
     echo "🔧 Setting up Google Drive bisync..."
-    
+
     if ! check_remote_configured "$remote_name"; then
         print_config_instructions "$remote_name" "drive"
         echo "⏭️  Skipping Google Drive bisync setup (remote not configured)"
         return 1
     fi
-    
+
     create_service_unit \
         "$service_name" \
         "Rclone Bisync Google Drive" \
         "$SCRIPT_DIR/${service_name}.sh"
-    
+
     create_timer_unit \
         "$service_name" \
         "Run Rclone Bisync Every 30 Minutes" \
         "" \
         "2m" \
         "30m"
-    
+
     enable_start_unit "$service_name" ".timer"
-    
+
     echo "✅ Google Drive bisync configured"
     echo "    Check status: systemctl status ${service_name}.timer"
     echo "    View logs: journalctl -u ${service_name} -f"
@@ -493,28 +493,28 @@ setup_bisync_gdrive() {
 setup_bisync_onedrive() {
     local remote_name="onedrive"
     local service_name="rclone-bisync-${remote_name}"
-    
+
     echo ""
     echo "🔧 Setting up OneDrive bisync..."
-    
+
     if ! check_remote_configured "$remote_name"; then
         print_config_instructions "$remote_name" "onedrive"
         echo "⏭️  Skipping OneDrive bisync setup (remote not configured)"
         return 1
     fi
-    
+
     create_service_unit \
         "$service_name" \
         "Rclone Bisync OneDrive" \
         "$SCRIPT_DIR/${service_name}.sh"
-    
+
     create_timer_unit \
         "$service_name" \
         "Run Rclone OneDrive Bisync Daily at 6am CST" \
         "*-*-* 12:00:00"
-    
+
     enable_start_unit "$service_name" ".timer"
-    
+
     echo "✅ OneDrive bisync configured"
     echo "    Check status: systemctl status ${service_name}.timer"
     echo "    View logs: journalctl -u ${service_name} -f"
@@ -524,28 +524,28 @@ setup_bisync_onedrive() {
 setup_bisync_pcloud() {
     local remote_name="pcloud"
     local service_name="rclone-bisync-${remote_name}"
-    
+
     echo ""
     echo "🔧 Setting up pCloud bisync..."
-    
+
     if ! check_remote_configured "$remote_name"; then
         print_config_instructions "$remote_name" "pcloud"
         echo "⏭️  Skipping pCloud bisync setup (remote not configured)"
         return 1
     fi
-    
+
     create_service_unit \
         "$service_name" \
         "Rclone Bisync pCloud" \
         "$SCRIPT_DIR/${service_name}.sh"
-    
+
     create_timer_unit \
         "$service_name" \
         "Run Rclone pCloud Bisync Daily at 6am CST" \
         "*-*-* 12:00:00"
-    
+
     enable_start_unit "$service_name" ".timer"
-    
+
     echo "✅ pCloud bisync configured"
     echo "    Check status: systemctl status ${service_name}.timer"
     echo "    View logs: journalctl -u ${service_name} -f"
@@ -554,18 +554,18 @@ setup_bisync_pcloud() {
 # Set up WebDAV server
 setup_serve_webdav() {
     local service_name="rclone-serve-webdav"
-    
+
     echo ""
     echo "🔧 Setting up WebDAV server..."
-    
+
     create_service_unit \
         "$service_name" \
         "Rclone WebDAV Service for Local Media" \
         "$SCRIPT_DIR/${service_name}.sh" \
         "/bin/kill -SIGINT \$MAINPID"
-    
+
     enable_start_unit "$service_name"
-    
+
     echo "✅ WebDAV server configured"
     echo "    Check status: systemctl status ${service_name}"
     echo "    View logs: journalctl -u ${service_name} -f"
@@ -580,7 +580,7 @@ auto_bisync_onedrive() {
     local service_name="rclone-bisync-onedrive"
 
     # Create systemd service for bisync
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 [Unit]
 Description=Rclone Bisync OneDrive
 After=network-online.target
@@ -601,7 +601,7 @@ WantedBy=multi-user.target
 EOF
 
     # Create systemd timer for daily 6am CST (12:00 UTC when CST, 11:00 UTC when CDT)
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.timer"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.timer"
 [Unit]
 Description=Run Rclone OneDrive Bisync Daily at 6am CST
 
@@ -624,7 +624,7 @@ auto_serve_webdav() {
     local service_name="rclone-serve-webdav"
 
     # Create systemd service for webdav
-    cat <<EOF >"$SYSTEMD_DIR/$service_name.service"
+    cat << EOF > "$SYSTEMD_DIR/$service_name.service"
 [Unit]
 Description=Rclone WebDAV Service for Local Media
 After=network-online.target
@@ -664,7 +664,7 @@ main() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "🚀 Starting rclone provisioning..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     # [0] Set up environment
     install_rclone
 
@@ -685,7 +685,7 @@ main() {
     # [2] List configured remotes
     echo ""
     echo "📋 Currently configured remotes:"
-    if sudo -u "$SUDO_USER" rclone listremotes 2>/dev/null | grep -q ":"; then
+    if sudo -u "$SUDO_USER" rclone listremotes 2> /dev/null | grep -q ":"; then
         sudo -u "$SUDO_USER" rclone listremotes
     else
         echo "    (none configured yet)"
@@ -702,37 +702,35 @@ main() {
     # setup_bisync_pcloud || true  # Uncomment when ready
     # serve WebDAV local media (on reboot) from /mnt
     setup_serve_webdav || true
-    
+
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "✅ rclone provisioning complete!"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     # Print any remaining manual steps
     local needs_config=false
-    
+
     if ! check_remote_configured "gdrive"; then
         needs_config=true
         print_config_instructions "gdrive" "drive"
     fi
-    
+
     if ! check_remote_configured "onedrive"; then
         needs_config=true
         print_config_instructions "onedrive" "onedrive"
     fi
-    
+
     # if ! check_remote_configured "pcloud"; then
     #     needs_config=true
     #     print_config_instructions "pcloud" "pcloud"
     # fi
-    
+
     if [[ "$needs_config" == "true" ]]; then
         echo ""
         echo "⚠️  Some remotes still need manual configuration (see above)"
         echo "    After configuring, re-run this script to enable services"
     fi
-
-
 
     # # [1] mount Google Drive (on reboot) to ~/GoogleDrive
     # auto_mount_gdrive

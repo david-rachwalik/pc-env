@@ -1,5 +1,5 @@
-#!/bin/sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # This runs each time the container starts to set up the shell environment
 

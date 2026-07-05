@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
 
 # Update required packages
 pip install -U --root-user-action=ignore pip
