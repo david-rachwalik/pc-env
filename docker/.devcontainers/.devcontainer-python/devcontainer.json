@@ -20,35 +20,36 @@
     "PYTHONPATH": "~/.local/lib/python3.12/site-packages:/workspaces/pc-env/python/modules:/workspaces/pc-env/python/modules/boilerplates"
   },
 
-  // Configure tool-specific properties.
+  // Configure tool-specific properties
   "customizations": {
     "vscode": {
       // Add the IDs of extensions to install when container is created
       "extensions": [
+        // -------- Core / Docker / Formatting --------
         "ms-vscode-remote.remote-containers",
-        "ms-azuretools.vscode-containers", // Docker
-        "esbenp.prettier-vscode", // formatter
-        // [Shell]
-        "ms-vscode.powershell", // runtime
+        "ms-azuretools.vscode-containers",  // Docker
+        "esbenp.prettier-vscode",  // formatter
+
+        // -------- Shell --------
         "mkhl.shfmt", // formatter (requires shfmt)
-        // [Python]
-        "ms-python.python", // runtime
-        "charliermarsh.ruff", // linter & formatter
-        "ms-python.vscode-pylance", // type-checking
+
+        // -------- Python --------
+        "ms-python.python",  // runtime
+        "charliermarsh.ruff",  // linter & formatter
+        "ms-python.vscode-pylance",  // type-checking
         "njpwerner.autodocstring",
-        // [Other Languages]
+
+        // -------- Config & Markdown --------
         "DavidAnson.vscode-markdownlint",
         "redhat.vscode-yaml",
         "mikestead.dotenv",
-        "formulahendry.auto-close-tag", // HTML/XML
-        "formulahendry.auto-rename-tag", // HTML/XML
-        // [Other]
+
+        // -------- Utilities & UI --------
         "natqe.reload",
+        "vscode-icons-team.vscode-icons",
         "donjayamanne.githistory",
         "bierner.markdown-preview-github-styles",
-        "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
-        "lihui.vs-color-picker",
         "Continue.continue"
       ],
       // Ensure extension receives the correct interpreter path before auto-detection happens

@@ -34,6 +34,8 @@
   ],
 
   "runArgs": [
+    // Allow services running on Ollama host to be accessed
+    // > docker network create shared-dev-net
     "--network=shared-dev-net"
   ],
 
@@ -42,51 +44,34 @@
     "vscode": {
       // Add the IDs of extensions to install when container is created
       "extensions": [
+        // -------- Core / Docker / Formatting --------
         "ms-vscode-remote.remote-containers",
-        "ms-azuretools.vscode-containers", // Docker
-        "esbenp.prettier-vscode", // formatter
-        // [Shell]
-        "ms-vscode.powershell", // runtime
+        "ms-azuretools.vscode-containers",  // Docker
+        "esbenp.prettier-vscode",  // formatter
+
+        // -------- Shell & PowerShell --------
+        "ms-vscode.powershell",  // runtime
         "mkhl.shfmt", // formatter (requires shfmt)
-        // [Python]
-        "ms-python.python", // runtime
-        "charliermarsh.ruff", // linter & formatter
-        "ms-python.vscode-pylance", // type-checking
+
+        // -------- Python --------
+        "ms-python.python",  // runtime
+        "charliermarsh.ruff",  // linter & formatter
+        "ms-python.vscode-pylance",  // type-checking
         "njpwerner.autodocstring",
-        // [JavaScript][TypeScript]
-        "dbaeumer.vscode-eslint", // linter
-        "christian-kohler.path-intellisense", // autocompletes filenames
-        "mike-co.import-sorter", // TS
-        "steoates.autoimport", // TS
-        // [CSS]
-        "small-tech.comment-out-css",
-        "kamikillerto.vscode-colorize",
-        "pucelle.vscode-css-navigation",
-        "csstools.postcss",
-        "bradlc.vscode-tailwindcss",
-        // [Other Languages]
+
+        // -------- Config & Infrastructure --------
         "DavidAnson.vscode-markdownlint",
         "redhat.vscode-yaml",
         // "redhat.ansible",
-        // "ms-dotnettools.csharp",
-        // "bowlerhatllc.vscode-as3mxml",
         "mikestead.dotenv",
-        "formulahendry.auto-close-tag", // HTML/XML
-        "formulahendry.auto-rename-tag", // HTML/XML
-        // "christian-kohler.npm-intellisense",
-        // "theumletteam.umlet",
-        // "42Crunch.vscode-openapi",
-        // "Angular.ng-template",
-        // "Vue.volar",
         "hashicorp.terraform",
-        // [Other]
+
+        // -------- Utilities & UI --------
         "natqe.reload",
+        "vscode-icons-team.vscode-icons",
         "donjayamanne.githistory",
         "bierner.markdown-preview-github-styles",
-        "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight",
-        "lihui.vs-color-picker",
-        // "mongodb.mongodb-vscode"
         "Continue.continue"
       ],
       // Ensure extension receives the correct interpreter path before auto-detection happens
