@@ -5,6 +5,11 @@ alias rclone='docker compose -f "$HOME/Repos/pc-env/docker/rclone/docker-compose
 alias subs='docker compose -f "$HOME/Repos/pc-env/docker/pysubs2/docker-compose.yml" run --rm pysubs2'
 alias ytdl='docker compose -f "$HOME/Repos/pc-env/docker/yt-dlp/docker-compose.yml" run --rm yt-dlp'
 
+# --- Hardware Resource Crash Monitor ---
+# (run during games or other apps to log hardware health)
+alias hw-start="sudo systemctl start hw_monitor.service"
+alias hw-stop="sudo systemctl stop hw_monitor.service"
+
 # ==============================================================================
 # --- Dev Containers ---
 # ==============================================================================
