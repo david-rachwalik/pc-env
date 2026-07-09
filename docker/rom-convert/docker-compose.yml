@@ -29,6 +29,8 @@ services:
 # roms "/mnt/hdd-01/path/to/roms"
 # roms --dry-run "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
 # roms "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
+# roms "/mnt/z/roms/(2001) Xbox [xbox]"
+# roms "/mnt/z/roms/(1983) Nintendo Entertainment System [nes]"
 
 # Run the live-mounted dev script:
 # python /app/dev/convert-roms.py "/mnt/hdd-01/path/to/roms"

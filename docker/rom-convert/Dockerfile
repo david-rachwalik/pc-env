@@ -32,6 +32,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     mame-tools \
+    7zip \
+    dolphin-emu \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy pre-compiled extract-xiso binary from the builder
@@ -42,7 +44,9 @@ WORKDIR /app
 # Verify installations
 RUN extract-xiso -v || true
 RUN chdman -version || true
+RUN DolphinTool --version || true
 
+COPY rom_configs.py /app/rom_configs.py
 COPY convert-roms.py /app/convert-roms.py
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /app/convert-roms.py /entrypoint.sh
