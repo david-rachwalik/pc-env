@@ -2,6 +2,7 @@
 # alias <alias-name>='docker compose -f <configuration-file> run --rm <service-name>'
 alias ops='docker compose -f "$HOME/Repos/pc-env/docker/pc-ops/docker-compose.yml" run --rm pc-ops'
 alias rclone='docker compose -f "$HOME/Repos/pc-env/docker/rclone/docker-compose.yml" run --rm rclone'
+alias roms='docker compose -f "$HOME/Repos/pc-env/docker/rom-convert/docker-compose.yml" run --rm rom-convert'
 alias subs='docker compose -f "$HOME/Repos/pc-env/docker/pysubs2/docker-compose.yml" run --rm pysubs2'
 alias ytdl='docker compose -f "$HOME/Repos/pc-env/docker/yt-dlp/docker-compose.yml" run --rm yt-dlp'
 
@@ -9,6 +10,17 @@ alias ytdl='docker compose -f "$HOME/Repos/pc-env/docker/yt-dlp/docker-compose.y
 # (run during games or other apps to log hardware health)
 alias hw-start="sudo systemctl start hw_monitor.service"
 alias hw-stop="sudo systemctl stop hw_monitor.service"
+
+hw-watch() {
+    (   
+        echo "Starting hw_monitor.service..."
+        sudo systemctl start hw_monitor.service
+        # Ensure the service is stopped when hitting Ctrl+C (INT) or exiting
+        trap 'echo -e "\nStopping hw_monitor.service..."; sudo systemctl stop hw_monitor.service' EXIT INT TERM
+        # Watch the hardware resource log in real-time
+        tail -f ~/logs/hw_metrics_log.csv
+    )
+}
 
 # ==============================================================================
 # --- Dev Containers ---
@@ -33,12 +45,12 @@ _dev_container_exec() {
 }
 
 # --- david-rachwalik.github.io ---
-ddmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io" /bin/zsh; }
+ddmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io/client-angular" /bin/zsh; }
 dmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io/client-angular" npm run dev; }
 
 # --- nekogoo.github.io ---
-dgoo() { _dev_container_exec "nekogoo" "/workspaces/nekogoo.github.io" /bin/zsh; }
-goo() { _dev_container_exec "nekogoo" "/workspaces/nekogoo.github.io" npm run dev; }
+dgoo() { _dev_container_exec "nekogoo" "/workspaces/nekogoo.github.io/client" /bin/zsh; }
+goo() { _dev_container_exec "nekogoo" "/workspaces/nekogoo.github.io/client" npm run dev; }
 
 # --- pc-env ---
 dpc() { _dev_container_exec "pc-env" "/workspaces/pc-env" /bin/zsh; }

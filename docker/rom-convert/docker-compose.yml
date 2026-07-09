@@ -1,0 +1,36 @@
+services:
+  rom-convert:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rom-convert-runner
+    container_name: rom-convert-runner-container
+    volumes:
+      # Mount media drives (adjust based on your actual system mounts)
+      - /media/root/HDD-01:/mnt/hdd-01
+      - /media/root/HDD-02:/mnt/hdd-02
+      - /mnt/Z:/mnt/z
+      # Mount source directory for easy live-testing/updates
+      - ./:/app/dev
+    stdin_open: true
+    tty: true
+    # The entrypoint will execute this command
+    command: /bin/bash -l
+#
+
+# :: Usage Example (run interactively) ::
+# cd ~/Repos/pc-env/docker/rom-convert
+# docker compose build  # (only when Dockerfile changes)
+# docker compose run --rm rom-convert
+
+# --- Inside the container ---
+
+# Run the script from the image:
+# roms "/mnt/hdd-01/path/to/roms"
+# roms --dry-run "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
+# roms "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
+
+# Run the live-mounted dev script:
+# python /app/dev/convert-roms.py "/mnt/hdd-01/path/to/roms"
+# python /app/dev/convert-roms.py --dry-run "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
+# python /app/dev/convert-roms.py "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
