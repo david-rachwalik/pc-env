@@ -6,10 +6,11 @@ services:
     image: rom-convert-runner
     container_name: rom-convert-runner-container
     volumes:
-      # Mount media drives (adjust based on your actual system mounts)
+      # Mount media drives (1:1 mapping ensures symlinks don't break outside container)
+      - /home/rhodair/ROMs:/home/rhodair/ROMs
+      - /mnt/Z:/mnt/Z
       - /media/root/HDD-01:/mnt/hdd-01
       - /media/root/HDD-02:/mnt/hdd-02
-      - /mnt/Z:/mnt/z
       # Mount source directory for easy live-testing/updates
       - ./:/app/dev
     stdin_open: true
@@ -36,3 +37,6 @@ services:
 # python /app/dev/convert-roms.py "/mnt/hdd-01/path/to/roms"
 # python /app/dev/convert-roms.py --dry-run "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
 # python /app/dev/convert-roms.py "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
+
+# Link the ES-DE ROM folder to source ROM directory:
+# link-roms

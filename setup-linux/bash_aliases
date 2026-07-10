@@ -6,6 +6,10 @@ alias roms='docker compose -f "$HOME/Repos/pc-env/docker/rom-convert/docker-comp
 alias subs='docker compose -f "$HOME/Repos/pc-env/docker/pysubs2/docker-compose.yml" run --rm pysubs2'
 alias ytdl='docker compose -f "$HOME/Repos/pc-env/docker/yt-dlp/docker-compose.yml" run --rm yt-dlp'
 
+# --- Custom Workflows ---
+# Automate mapping the host ES-DE directory via the rom-convert container
+alias link-roms='docker compose -f "$HOME/Repos/pc-env/docker/rom-convert/docker-compose.yml" run --rm rom-convert python /app/dev/link-esde-roms.py "/mnt/Z/roms" "/home/rhodair/ROMs"'
+
 # --- Hardware Resource Crash Monitor ---
 # (run during games or other apps to log hardware health)
 alias hw-start="sudo systemctl start hw_monitor.service"
