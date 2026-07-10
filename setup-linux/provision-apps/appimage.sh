@@ -10,6 +10,11 @@ declare -a APPIMAGES=(
     "obsidian|Obsidian|Office;|obsidian|false"
     "kdenlive|Kdenlive|Video;AudioVideo;Multimedia;|kdenlive|true"
     "es-de|EmulationStation DE|Game;Emulator;|applications-games|false"
+    # "retroarch|RetroArch|Game;Emulator;|applications-games|false"  # using apt instead
+    "xemu|Xemu|Game;Emulator;|applications-games|false"
+    "duckstation|DuckStation|Game;Emulator;|applications-games|false"
+    "pcsx2|PCSX2|Game;Emulator;|applications-games|false"
+    "rpcs3|RPCS3|Game;Emulator;|applications-games|false"
 )
 
 # Dynamically resolve latest download URLs (only called if installation is needed)
@@ -18,7 +23,7 @@ get_download_url() {
     case "$id" in
         obsidian)
             # Filter out arm64 releases and guarantee a single string return
-            curl -sL https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | grep -iv 'arm64' | head -n 1
+            curl -sL https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | grep -iv 'arm64' | head -n 1 || true
             ;;
         kdenlive)
             local kden_dir kden_file
@@ -28,6 +33,24 @@ get_download_url() {
             ;;
         es-de)
             echo "https://gitlab.com/es-de/emulationstation-de/-/package_files/210210324/download"
+            ;;
+        # retroarch)
+        #     # RetroArch does not attach AppImages to their GitHub release tags
+        #     # We fetch continuous build directly from the LibRetro buildbot
+        #     echo "https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch-Linux-x86_64.AppImage"
+        #     ;;
+        xemu)
+            curl -sL https://api.github.com/repos/xemu-project/xemu/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
+            ;;
+        duckstation)
+            curl -sL https://api.github.com/repos/stenzek/duckstation/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
+            ;;
+        pcsx2)
+            curl -sL https://api.github.com/repos/PCSX2/pcsx2/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
+            ;;
+        rpcs3)
+            # Fetch the raw releases array from their x86_64 repo and grab the newest AppImage
+            curl -sL https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases | jq -r '.[0].assets[]? | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
             ;;
         *)
             echo ""
@@ -241,17 +264,48 @@ provision_app() {
     echo "✅ Successfully provisioned $name"
 }
 
+deprovision_app() {
+    local target_id="$1"
+    local found=false
+
+    for config_string in "${APPIMAGES[@]}"; do
+        IFS='|' read -r id name categories fallback_icon skip_on_minimal <<< "$config_string"
+        if [[ "$id" == "$target_id" || "$target_id" == "all" ]]; then
+            found=true
+            echo "--------------------------------------------------------"
+            echo "[INFO] Removing $name..."
+
+            local install_dir="$HOME/.local/share/$id"
+            local wrapper_path="$HOME/.local/bin/$id"
+            local desktop_path="$HOME/.local/share/applications/${id}.desktop"
+
+            # Remove all traces
+            rm -rf "$install_dir" "$wrapper_path" "$desktop_path"
+            echo "✅ Successfully removed $name"
+        fi
+    done
+
+    if [[ "$found" == false ]]; then
+        echo "[ERROR] Unknown AppImage ID: $target_id"
+    fi
+}
+
 # ----------------------------------------------------------------
 # --- Main Orchestrator ---
 # ----------------------------------------------------------------
 
 MINIMAL_MODE=false
+REMOVE_ID=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -m | --minimal)
             MINIMAL_MODE=true
             shift
+            ;;
+        -r | --remove)
+            REMOVE_ID="$2"
+            shift 2
             ;;
         *)
             shift
@@ -261,6 +315,18 @@ done
 
 main() {
     ensure_user_space
+
+    # Handle Removal Mode
+    if [[ -n "$REMOVE_ID" ]]; then
+        echo "[INFO] Starting AppImage removal process for user: $USER"
+        deprovision_app "$REMOVE_ID"
+        update_databases
+        echo "--------------------------------------------------------"
+        echo "[INFO] Removal completed!"
+        exit 0
+    fi
+
+    # Handle Provisioning Mode
     echo "[INFO] Starting AppImages provisioning for user: $USER"
 
     for app in "${APPIMAGES[@]}"; do
@@ -277,3 +343,6 @@ main "$@"
 
 # chmod +x ~/Repos/pc-env/setup-linux/provision-apps/appimage.sh
 # sudo bash ~/Repos/pc-env/setup-linux/provision-apps/appimage.sh
+
+# To completely uninstall an app:
+# sudo bash ~/Repos/pc-env/setup-linux/provision-apps/appimage.sh --remove <id>

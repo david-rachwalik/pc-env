@@ -30,6 +30,7 @@ BASE_PACKAGES=(
     # --- Videogames ---
     steam
     lutris
+    retroarch
 )
 
 # --- Heavy Applications (Skipped in Minimal Mode) ---

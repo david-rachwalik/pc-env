@@ -13,6 +13,12 @@ active_apps = [
     "voicemeeter",
     # "vscode",
     # "yt_dlp",
+    # --- Emulators ---
+    # "es_de",
+    # "retroarch",
+    # "xemu",
+    # "pcsx2",
+    # "rpcs3",
 ]
 
 
@@ -82,6 +88,67 @@ app_backups_full: list[BackupProfile] = [
         name="yt-dlp",
         options={
             "only": ["config"],
+        },
+    ),
+    # ----------------------------------------------------------------
+    # --- Emulators ---
+    # ----------------------------------------------------------------
+    BackupProfile(
+        id="es_de",
+        root=PATHS.home,
+        name=".es-de",
+        options={
+            "only": ["settings/*", "custom_systems/*"],
+        },
+    ),
+    BackupProfile(
+        id="retroarch",
+        root=PATHS.roaming,  # ~/.config/retroarch
+        name="retroarch",
+        options={
+            "only": [
+                "system/*",  # BIOS / Drivers (e.g. scph5501.bin)
+                "saves/*",
+                "states/*",
+                "config/*",
+            ],
+        },
+    ),
+    BackupProfile(
+        id="xemu",
+        root=sh.join_path(PATHS.local, "xemu"),  # ~/.local/share/xemu/xemu
+        name="xemu",
+        options={
+            "only": [
+                "xemu.toml",
+                "eeprom/*",  # Xbox config data
+                "flash/*",  # Xbox BIOS / Drivers
+            ],
+        },
+    ),
+    BackupProfile(
+        id="pcsx2",
+        root=PATHS.roaming,  # ~/.config/PCSX2
+        name="PCSX2",
+        options={
+            "only": [
+                "bios/*",  # BIOS / PS2 Drivers
+                "memcards/*",  # Save states
+                "sstates/*",
+                "inis/*",  # Settings
+            ],
+        },
+    ),
+    BackupProfile(
+        id="rpcs3",
+        root=PATHS.roaming,  # ~/.config/rpcs3
+        name="rpcs3",
+        options={
+            "only": [
+                "config/*",
+                "dev_hdd0/home/*",  # User profiles
+                "dev_hdd0/savedata/*",  # Save data
+            ],
         },
     ),
 ]
