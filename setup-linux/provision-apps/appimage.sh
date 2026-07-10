@@ -9,6 +9,7 @@ set -euo pipefail  # Exit immediately on error
 declare -a APPIMAGES=(
     "obsidian|Obsidian|Office;|obsidian|false"
     "kdenlive|Kdenlive|Video;AudioVideo;Multimedia;|kdenlive|true"
+    "protonup-qt|ProtonUp-Qt|Utility;|system-software-update|false"
     "es-de|EmulationStation DE|Game;Emulator;|applications-games|false"
     # "retroarch|RetroArch|Game;Emulator;|applications-games|false"  # using apt instead
     "xemu|Xemu|Game;Emulator;|applications-games|false"
@@ -30,6 +31,9 @@ get_download_url() {
             kden_dir=$(curl -s https://download.kde.org/stable/kdenlive/ | grep -oP '(?<=href=")[0-9]+\.[0-9]+(?=/")' | sort -V | tail -1)
             kden_file=$(curl -s "https://download.kde.org/stable/kdenlive/$kden_dir/linux/" | grep -oP 'kdenlive-\d+\.\d+\.\d+-x86_64\.AppImage' | sort -V | tail -1)
             echo "https://download.kde.org/stable/kdenlive/$kden_dir/linux/$kden_file"
+            ;;
+        protonup-qt)
+            curl -sL https://api.github.com/repos/DavidoTek/ProtonUp-Qt/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
             ;;
         es-de)
             echo "https://gitlab.com/es-de/emulationstation-de/-/package_files/210210324/download"
