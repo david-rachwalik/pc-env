@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+set -euo pipefail  # Exit immediately on error
+
+# ES-DE Environment Setup
+# (scaffolds emulator configurations, syncs RetroArch cores, & maps ROM directories)
+
+# --- CONFIG ---
+LIBRETRO_NIGHTLY_BASE="https://buildbot.libretro.com/nightly/linux/x86_64/latest"
+declare -a RETROARCH_CORES=(
+    "mesen_libretro.so.zip"
+    "snes9x_libretro.so.zip"
+    "genesis_plus_gx_libretro.so.zip"
+    "mednafen_saturn_libretro.so.zip"
+    "mupen64plus_next_libretro.so.zip"
+    "flycast_libretro.so.zip"
+    "melonds_libretro.so.zip"
+    "mame_libretro.so.zip"
+    "fbneo_libretro.so.zip"
+)
+
+# ----------------------------------------------------------------
+# --- Helper Functions ---
+# ----------------------------------------------------------------
+
+ensure_user_space() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        if [[ -n "${SUDO_USER:-}" ]]; then
+            echo "[INFO] Root execution detected.  Dropping privileges to user: $SUDO_USER"
+            exec sudo -H -u "$SUDO_USER" bash "$(realpath "$0")" "$@"
+        else
+            echo "[ERROR] Run as root without SUDO_USER." >&2
+            exit 1
+        fi
+    fi
+}
+
+download_file() {
+    local url="$1"
+    local output="$2"
+    if command -v wget > /dev/null 2>&1; then
+        wget -q --show-progress "$url" -O "$output"
+    elif command -v curl > /dev/null 2>&1; then
+        curl -# -L "$url" -o "$output"
+    else
+        echo "[ERROR] Neither wget nor curl is installed." >&2
+        return 1
+    fi
+}
+
+# ----------------------------------------------------------------
+# --- Worker Functions ---
+# ----------------------------------------------------------------
+
+scaffold_directories() {
+    echo -e "\n=== Scaffolding Emulator Directories ==="
+    local dirs=(
+        "$HOME/.config/retroarch/system"
+        "$HOME/.config/retroarch/cores"
+        "$HOME/.local/share/duckstation/bios"
+        "$HOME/.config/PCSX2/bios"
+        "$HOME/.local/share/xemu/xemu/flash"
+    )
+
+    for d in "${dirs[@]}"; do
+        if [[ ! -d "$d" ]]; then
+            mkdir -p "$d"
+            echo "  [Created] $d"
+        fi
+    done
+    echo "✅ Scaffolding complete."
+}
+
+sync_retroarch_cores() {
+    echo -e "\n=== Synchronizing RetroArch Cores ==="
+    local core_dir="$HOME/.config/retroarch/cores"
+
+    # Ensure unzip is available natively
+    if ! command -v unzip > /dev/null 2>&1; then
+        echo "[ERROR] 'unzip' is not installed.  Skipping core sync." >&2
+        return 1
+    fi
+
+    for core_zip in "${RETROARCH_CORES[@]}"; do
+        local core_so="${core_zip%.zip}" # Strip .zip extension
+        local target_path="$core_dir/$core_so"
+
+        if [[ ! -f "$target_path" ]]; then
+            echo "  -> Downloading ${core_so}..."
+            local tmp_zip="/tmp/${core_zip}"
+
+            if download_file "$LIBRETRO_NIGHTLY_BASE/$core_zip" "$tmp_zip"; then
+                unzip -qo "$tmp_zip" -d "$core_dir"
+                rm -f "$tmp_zip"
+            else
+                echo "  [ERROR] Failed to fetch $core_zip"
+                rm -f "$tmp_zip"
+            fi
+        else
+            echo "  [OK] $core_so already exists."
+        fi
+    done
+    echo "✅ Core synchronization complete."
+}
+
+map_symlinks() {
+    echo -e "\n=== Automated ES-DE ROM Symlink Mapping ==="
+
+    local compose_file="$HOME/Repos/pc-env/docker/rom-convert/docker-compose.yml"
+
+    # Link external source ROMs to the ES-DE ROMs path
+    if command -v docker > /dev/null 2>&1 && [[ -f "$compose_file" ]]; then
+        docker compose -f "$compose_file" run --rm rom-convert python /app/dev/link-esde-roms.py "/mnt/Z/roms" "$HOME/ROMs"
+    else
+        echo "[WARN] Docker or compose file not found.  Skipping link mapping."
+    fi
+}
+
+# ----------------------------------------------------------------
+# --- Main Orchestrator ---
+# ----------------------------------------------------------------
+
+main() {
+    if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+        echo "Usage: $0"
+        echo "Scaffolds native emulation directories, downloads libretro cores, and maps ES-DE symlinks."
+        exit 0
+    fi
+
+    ensure_user_space
+
+    echo "[INFO] Starting ES-DE Environment Setup for $USER..."
+
+    scaffold_directories
+    sync_retroarch_cores
+    map_symlinks
+
+    echo -e "\n[INFO] ES-DE Environment Setup Complete!"
+}
+
+main "$@"
+
+# sudo chmod +x ~/Repos/pc-env/setup-linux/provision-apps/games/esde-setup.sh
+# sudo bash ~/Repos/pc-env/setup-linux/provision-apps/games/esde-setup.sh

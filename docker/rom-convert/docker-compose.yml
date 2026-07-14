@@ -28,15 +28,15 @@ services:
 
 # Run the script from the image:
 # roms "/mnt/hdd-01/path/to/roms"
-# roms --dry-run "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
-# roms "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
-# roms "/mnt/z/roms/(2001) Xbox [xbox]"
-# roms "/mnt/z/roms/(1983) Nintendo Entertainment System [nes]"
+# roms --dry-run "/mnt/Z/roms/(2005) Xbox 360 [xbox360]"
+# roms "/mnt/Z/roms/(2005) Xbox 360 [xbox360]"
+# roms "/mnt/Z/roms/(2001) Xbox [xbox]"
+# roms "/mnt/Z/roms/(1983) Nintendo Entertainment System [nes]"
 
 # Run the live-mounted dev script:
 # python /app/dev/convert-roms.py "/mnt/hdd-01/path/to/roms"
-# python /app/dev/convert-roms.py --dry-run "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
-# python /app/dev/convert-roms.py "/mnt/z/roms/(2005) Xbox 360 [xbox360]"
+# python /app/dev/convert-roms.py --dry-run "/mnt/Z/roms/(2005) Xbox 360 [xbox360]"
+# python /app/dev/convert-roms.py "/mnt/Z/roms/(2005) Xbox 360 [xbox360]"
 
 # Link the ES-DE ROM folder to source ROM directory:
 # link-roms

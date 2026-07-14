@@ -31,6 +31,22 @@ sudo apt-get install -y retroarch
 
 ### RetroArch Core Setup
 
+#### Automated Configuration & Core Synchronization
+
+To avoid manually configuring system directories or clicking through the RetroArch GUI to download cores, run the dedicated emulation setup script:
+
+```bash
+bash ~/Repos/pc-env/setup-linux/provision-apps/games/setup.sh
+```
+
+**What this script automates:**
+
+1. **Scaffolding:** Builds all `bios/`, `system/`, and `flash/` directories ahead of time (for RetroArch, PCSX2, DuckStation, and Xemu).
+2. **Core Retrieval:** Silently fetches and extracts `.so` libretro cores directly from the buildbot (`Mesen`, `Snes9x`, `Flycast`, `MAME`, etc.).
+3. **ROM Integration:** Triggers the Docker `link-esde-roms` pipeline to dynamically map your source ROM drive to your local ES-DE path based on standard bracket notation.
+
+#### Manual Steps (What the Automated process handles)
+
 Since RetroArch is a fresh binary, you need to manually download the emulation "cores" (the actual console emulators running inside it).
 
 1. Open the **RetroArch** app from your desktop menu.
@@ -49,17 +65,6 @@ _(Tip: Launch each emulator from the desktop menu at least once to auto-generate
 - **DuckStation:** `~/.local/share/duckstation/bios/`
 - **PCSX2:** `~/.config/PCSX2/bios/`
 - **Xemu:** `~/.local/share/xemu/xemu/flash/`
-
-**Consolidating Old Data:**
-If you have BIOS files from an old Windows or EmuDeck installation on an external drive, you should salvage them into your new native Linux paths. For example, to migrate RetroArch BIOS files:
-
-```bash
-# Ensure the directory exists
-mkdir -p ~/.config/retroarch/system
-
-# Securely copy your BIOS files over from the old drive
-cp -r "/media/root/HDD-01/GameFiles/RetroArch/system/"* ~/.config/retroarch/system/
-```
 
 ---
 
@@ -81,7 +86,7 @@ roms "/mnt/Z/roms/(1995) PlayStation [psx]"
 2. **Lazy-Loading:** Evaluates the required tool directly inside the Docker container (`chdman`, `extract-xiso`, `DolphinTool`, or `7zip`). Tools are only loaded if the system actually requires them.
 3. **Processing:** Compresses files into the hidden `_converted_roms` folder.
 4. **Validation:** Verifies the cryptographic integrity of the output.
-5. **Idempotency:** Drops a hidden `.processed` tracker file. Successive runs will safely skip existing files.
+5. **Idempotency:** Drops a `converted_log` tracker file. Successive runs will safely skip existing files.
 
 ---
 
