@@ -7,6 +7,21 @@ alias subs='docker compose -f "$HOME/Repos/pc-env/docker/pysubs2/docker-compose.
 alias ytdl='docker compose -f "$HOME/Repos/pc-env/docker/yt-dlp/docker-compose.yml" run --rm yt-dlp'
 
 # --- Custom Workflows ---
+# Gracefully restart Steam to load newly installed Proton GE versions
+steam-rl() {
+    echo "Shutting down Steam..."
+    steam -shutdown > /dev/null 2>&1
+
+    # Wait continuously for the Steam process to fully drop out of memory
+    while pgrep -u "$USER" -x steam > /dev/null; do
+        sleep 1
+    done
+
+    echo "Starting Steam in the background..."
+    steam < /dev/null > /dev/null 2>&1 &
+    disown
+}
+
 # Automate mapping the host ES-DE directory via the rom-convert container
 alias link-roms='docker compose -f "$HOME/Repos/pc-env/docker/rom-convert/docker-compose.yml" run --rm rom-convert python /app/dev/link-esde-roms.py "/mnt/Z/roms" "/home/rhodair/ROMs"'
 
