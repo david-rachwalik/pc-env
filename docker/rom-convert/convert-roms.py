@@ -26,6 +26,7 @@ Behavior & Pipeline:
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -230,15 +231,23 @@ def detect_system(path: Path) -> str | None:
     search_str = str(path).lower()
     search_folder = path.name.lower()
 
+    # Exact bracket match anywhere in path (e.g., "[snes]")
+    bracket_pattern = re.compile(r"\[([^\]]+)\]")
+    for found_bracket in bracket_pattern.findall(search_str):
+        for sys_id, config in SYSTEM_CONFIGS.items():
+            if found_bracket == sys_id or found_bracket in config.get("aliases", []):
+                return sys_id
+
+    # Fallback: directory boundaries or bounded word match
     for sys_id, config in SYSTEM_CONFIGS.items():
         identifiers = [sys_id] + config.get("aliases", [])
         for ident in identifiers:
-            if (
-                f"[{ident}]" in search_str
-                or f"/{ident}/" in search_str
-                or ident in search_folder
-            ):
+            if f"/{ident}/" in search_str:
                 return sys_id
+            # Match discrete word to prevent 'nes' triggering on 'snes' or 'genesis'
+            if re.search(rf"\b{re.escape(ident)}\b", search_folder):
+                return sys_id
+
     return None
 
 
