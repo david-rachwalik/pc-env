@@ -8,40 +8,28 @@ SYSTEM_CONFIGS = {
     # --- Cartridge Based (LZMA2 Archive Compression) ---
     # ================================================================
     "nes": {
-        "exts": {".nes", ".fds", ".unf", ".unif", ".zip", ".rar", ".7z"},
+        "exts": {".nes", ".fds", ".unf", ".unif"},
         "output_ext": ".7z",
         "format": "archive",
         "description": "Nintendo Entertainment System (1983)",
         "aliases": ["famicom"],
     },
     "megadrive": {
-        "exts": {
-            ".md",
-            ".gen",
-            ".smd",
-            ".bin",
-            ".32x",
-            ".sms",
-            ".gg",
-            ".sg",
-            ".zip",
-            ".rar",
-            ".7z",
-        },
+        "exts": {".md", ".gen", ".smd", ".bin", ".32x", ".sms", ".gg", ".sg"},
         "output_ext": ".7z",
         "format": "archive",
         "description": "Sega Genesis / Mega Drive / 32X (1988)",
         "aliases": ["genesis", "sega32x"],
     },
     "snes": {
-        "exts": {".sfc", ".smc", ".bs", ".st", ".fig", ".swc", ".zip", ".rar", ".7z"},
+        "exts": {".sfc", ".smc", ".bs", ".st", ".fig", ".swc"},
         "output_ext": ".7z",
         "format": "archive",
         "description": "Super Nintendo (1992)",
         "aliases": ["sfc"],
     },
     "n64": {
-        "exts": {".n64", ".z64", ".v64", ".ndd", ".zip", ".rar", ".7z"},
+        "exts": {".n64", ".z64", ".v64", ".ndd"},
         "output_ext": ".7z",
         "format": "archive",
         "description": "Nintendo 64 (1996)",
@@ -50,8 +38,9 @@ SYSTEM_CONFIGS = {
     # ================================================================
     # --- CD/DVD Based Systems (Universal CHD Compression) ---
     # NOTE: Raw payload files (.bin, .raw, .img) are intentionally omitted.
-    # By targeting only the descriptor files (.cue, .gdi, .ccd, .m3u), it guarantees
+    # By targeting only the descriptor files (.cue, .gdi, .ccd), it guarantees
     # multi-track games aren't accidentally split into separated, corrupted conversions.
+    # (ignores .m3u playlists)
     # ================================================================
     "segacd": {
         "exts": {".cue", ".iso", ".chd"},
@@ -61,14 +50,14 @@ SYSTEM_CONFIGS = {
         "aliases": ["megacd"],
     },
     "saturn": {
-        "exts": {".cue", ".iso", ".chd", ".m3u"},
+        "exts": {".cue", ".iso", ".chd"},
         "output_ext": ".chd",
         "format": "chd",
         "description": "Sega Saturn (1995)",
         "aliases": [],
     },
     "psx": {
-        "exts": {".cue", ".iso", ".ccd", ".m3u", ".chd"},
+        "exts": {".cue", ".iso", ".ccd", ".chd"},
         "output_ext": ".chd",
         "format": "chd",
         "description": "Sony PlayStation (1995)",
@@ -82,7 +71,7 @@ SYSTEM_CONFIGS = {
         "aliases": ["dc"],
     },
     "ps2": {
-        "exts": {".cue", ".iso", ".m3u", ".chd"},
+        "exts": {".cue", ".iso", ".chd"},
         "output_ext": ".chd",
         "format": "chd",
         "description": "Sony PlayStation 2 (2000)",

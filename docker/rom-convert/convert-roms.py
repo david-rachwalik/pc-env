@@ -38,6 +38,7 @@ from rom_configs import SYSTEM_CONFIGS
 OVERWRITE = False
 DRY_RUN = False
 VERIFY_ALL = False
+ARCHIVE_EXTS = {".zip", ".rar", ".7z"}
 
 
 # ------------------------ Basic Utilities ------------------------
@@ -63,22 +64,25 @@ def require_tool(tool_path: str | None, tool_name: str) -> str:
     return tool_path
 
 
-def run_command(cmd: list[str]) -> subprocess.CompletedProcess:
-    """Executes a system subprocess using safe payload arrays."""
+def run_command(cmd: list[str], quiet: bool = False) -> subprocess.CompletedProcess:
+    """Executes a system subprocess. Allows long-running progress bars to render to console."""
     try:
         return subprocess.run(
             cmd,
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            # Let standard streams inherit terminal directly unless request silence
+            stdout=subprocess.PIPE if quiet else None,
+            stderr=subprocess.PIPE if quiet else None,
             text=True,
             encoding="utf-8",
             errors="replace",
         )
     except subprocess.CalledProcessError as e:
         warn(f"Command failed: {' '.join(cmd)}")
-        warn(f"  stdout: {e.stdout.strip()}")
-        warn(f"  stderr: {e.stderr.strip()}")
+        if getattr(e, "stdout", None):
+            warn(f"  stdout: {e.stdout.strip()}")
+        if getattr(e, "stderr", None):
+            warn(f"  stderr: {e.stderr.strip()}")
         raise
 
 
@@ -91,15 +95,21 @@ def validate(path: Path, format_type: str) -> bool:
     info(f"    Validating integrity ({format_type}): {path.name}")
     try:
         if format_type == "rebuilt_iso":
-            run_command([require_tool(EXTRACT_XISO, "extract-xiso"), "-l", str(path)])
+            run_command(
+                [require_tool(EXTRACT_XISO, "extract-xiso"), "-l", str(path)],
+                quiet=True,
+            )
         elif format_type == "chd":
-            run_command([require_tool(CHDMAN, "chdman"), "verify", "-i", str(path)])
+            run_command(
+                [require_tool(CHDMAN, "chdman"), "verify", "-i", str(path)], quiet=True
+            )
         elif format_type == "rvz":
             run_command(
-                [require_tool(DOLPHIN_TOOL, "DolphinTool"), "verify", "-i", str(path)]
+                [require_tool(DOLPHIN_TOOL, "DolphinTool"), "verify", "-i", str(path)],
+                quiet=True,
             )
         elif format_type == "archive":
-            run_command([require_tool(SEVEN_ZIP, "7zip"), "t", str(path)])
+            run_command([require_tool(SEVEN_ZIP, "7zip"), "t", str(path)], quiet=True)
         else:
             warn(f"Unknown format type for validation: {format_type}")
             return False
@@ -109,9 +119,153 @@ def validate(path: Path, format_type: str) -> bool:
         return False
 
 
+# ------------------------ Optical File Sanitization ------------------------
+def sanitize_cue(cue_path: Path):
+    """Auto-fixes Windows paths and case-sensitivity issues in .cue files for Linux compatibility."""
+    # Strict limit to .cue files (other descriptors like .ccd/.gdi use different schemas)
+    if cue_path.suffix.lower() != ".cue":
+        return
+
+    try:
+        content = cue_path.read_text(encoding="utf-8", errors="ignore")
+        lines = content.splitlines()
+        modified = False
+
+        # Build a case-insensitive map of the physical files sitting next to the .cue
+        dir_files_lower = {
+            f.name.lower(): f.name for f in cue_path.parent.iterdir() if f.is_file()
+        }
+
+        new_lines = []
+        # Matches typical CUE track definitions: FILE "Track01.bin" BINARY
+        file_pattern = re.compile(r'^(FILE\s+")([^"]+)("\s+.*)$', re.IGNORECASE)
+
+        for line in lines:
+            match = file_pattern.search(line)
+            if match:
+                prefix, raw_filename, suffix = match.groups()
+                # Strip absolute Windows or POSIX paths, keeping just the filename
+                base_name = Path(raw_filename.replace("\\", "/")).name
+
+                # Cross-reference directory map to get the exact physical case-sensitive name
+                actual_name = dir_files_lower.get(base_name.lower(), base_name)
+
+                if raw_filename != actual_name:
+                    line = f"{prefix}{actual_name}{suffix}"
+                    modified = True
+            new_lines.append(line)
+
+        if modified:
+            cue_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+            info(
+                f"    Sanitized CUE file casing/paths for Linux compatibility: {cue_path.name}"
+            )
+
+    except Exception as e:
+        warn(
+            f"    Warning: Could not automatically sanitize descriptor {cue_path.name}: {e}"
+        )
+
+
+def generate_fallback_cue(tracks: list[Path], system_id: str) -> Path:
+    """Autogenerates a .cue file for bare .bin/.img files so CHDMAN doesn't crash."""
+    if not tracks:
+        raise FileNotFoundError("No valid ROM or optical data found in archive.")
+
+    # Sort alphabetical to ensure Track 01, Track 02 logic applies sequentially
+    tracks.sort(key=lambda p: p.name)
+
+    cue_path = (
+        tracks[0].parent
+        / f"{tracks[0].stem.split(' (Track')[0].split(' (Disc')[0]}.cue"
+    )
+    lines = []
+
+    for i, track in enumerate(tracks, 1):
+        if i == 1:
+            # Sega CD typically uses MODE1; PSX/Saturn use MODE2
+            mode = "MODE1/2352" if system_id == "segacd" else "MODE2/2352"
+        else:
+            mode = "AUDIO"
+
+        lines.append(f'FILE "{track.name}" BINARY')
+        lines.append(f"  TRACK {i:02d} {mode}")
+        lines.append("    INDEX 01 00:00:00")
+
+    cue_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    info(f"    Auto-generated missing .cue descriptor for {len(tracks)} raw track(s).")
+    return cue_path
+
+
+def handle_archive_phase(
+    input_path: Path,
+    output_path: Path,
+    format_type: str,
+    temp_dir: Path,
+    system_id: str,
+) -> Path | None:
+    """Extracts archives to either repack them optimally or locate their internal optical targets.
+    Returns the resolved Target Path, or None if the lifecycle completely finished here."""
+
+    tool = require_tool(SEVEN_ZIP, "7zip")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    info(f"    Extracting archive {input_path.name}...")
+    run_command([tool, "x", str(input_path), f"-o{temp_dir}", "-y"], quiet=True)
+
+    # If the ultimate format IS an archive, repack it cleaner into LZMA2 and exit early
+    if format_type == "archive":
+        info(f"    Re-archiving to optimized 7z -> {output_path.name}...")
+        run_command(
+            [tool, "a", str(output_path), "-m0=lzma2", "-mx=9", f"{temp_dir}/*"],
+            quiet=True,
+        )
+        if not validate(output_path, format_type):
+            raise RuntimeError("Post-build validation failed.")
+        return None  # None indicates full completion of processing
+
+    # Otherwise, find the inner actionable optical file
+    known_descriptors = [".cue", ".ccd", ".gdi", ".iso", ".chd", ".rvz"]
+    found_targets = [
+        p
+        for p in temp_dir.rglob("*")
+        if p.is_file() and p.suffix.lower() in known_descriptors
+    ]
+
+    if found_targets:
+        # Prefer .cue/.iso over other obscure formats if multiple lie scattered
+        target_path = sorted(
+            found_targets, key=lambda x: (x.suffix.lower() != ".cue", x.name)
+        )[0]
+
+        if len(found_targets) > 1:
+            warn(
+                f"    Warning: Multiple optical descriptors found in archive. Processing primary: {target_path.name}"
+            )
+    else:
+        # Fallback generator for archives acting as raw unmanaged payload dumps
+        raw_tracks = [
+            p
+            for p in temp_dir.rglob("*")
+            if p.is_file() and p.suffix.lower() in [".bin", ".img"]
+        ]
+        if raw_tracks:
+            target_path = generate_fallback_cue(raw_tracks, system_id)
+        else:
+            raise RuntimeError(
+                "Archive did not contain recognized optical descriptors or raw tracks."
+            )
+
+    info(f"    Target acquired from archive: {target_path.name}")
+    return target_path
+
+
 # ------------------------ Processing Engines ------------------------
-def process_rom(input_path: Path, output_path: Path, format_type: str) -> bool:
+def process_rom(input_path: Path, output_path: Path, config: dict) -> bool:
     """Core logic to transform a source file into its targeted optimal format."""
+    format_type = config["format"]
+    system_id = config.get("system_id", "")
+
     if DRY_RUN:
         info(
             f"  DRY RUN: Transforming {input_path.name} -> {output_path.name} via '{format_type}'."
@@ -122,39 +276,72 @@ def process_rom(input_path: Path, output_path: Path, format_type: str) -> bool:
     if output_path.exists():
         output_path.unlink()
 
-    temp_dir = None
+    # Unified session-level temporary workspace
+    session_temp_dir = output_path.parent / f"_temp_{input_path.stem}"
+    if session_temp_dir.exists():
+        shutil.rmtree(session_temp_dir, ignore_errors=True)
+
     try:
+        target_path = input_path
+
+        # --- Universal Archive Phase (Extract target from within) ---
+        if input_path.suffix.lower() in ARCHIVE_EXTS:
+            archive_temp = session_temp_dir / "archive"
+            target_path = handle_archive_phase(
+                input_path, output_path, format_type, archive_temp, system_id
+            )
+            if target_path is None:
+                return True  # Processing fully completed within archive phase
+
         # --- Standard Optical (MAME CHDMAN) ---
         if format_type == "chd":
             tool = require_tool(CHDMAN, "chdman")
-            info(f"    Compressing to CHD (chdman) -> {output_path.name}...")
-            run_command(
-                [tool, "createcd", "-i", str(input_path), "-o", str(output_path)]
-            )
+
+            # Fix broken .cue files before chdman chokes on them
+            sanitize_cue(target_path)
+
+            # If already a CHD, 'copy' will recompress and update it to newest schema / best compression
+            if target_path.suffix.lower() == ".chd":
+                info(
+                    f"    Re-compressing/Upgrading CHD (chdman copy) -> {output_path.name}..."
+                )
+                run_command(
+                    [tool, "copy", "-i", str(target_path), "-o", str(output_path)]
+                )
+            else:
+                info(
+                    f"    Compressing to CHD (chdman createcd) -> {output_path.name}..."
+                )
+                run_command(
+                    [tool, "createcd", "-i", str(target_path), "-o", str(output_path)]
+                )
 
         # --- Microsoft Optical (Strip Zero Padding) ---
         elif format_type == "rebuilt_iso":
             tool = require_tool(EXTRACT_XISO, "extract-xiso")
             info(f"    Rebuilding ISO (extract-xiso) -> {output_path.name}...")
 
-            temp_dir = output_path.parent / f"_temp_{input_path.stem}"
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir)
-            temp_dir.mkdir(parents=True, exist_ok=True)
+            # Use isolated xiso rebuild subfolder to prevent collision if using an archive
+            iso_temp = session_temp_dir / "xiso"
+            iso_temp.mkdir(parents=True, exist_ok=True)
 
-            run_command([tool, "-x", str(input_path), "-d", str(temp_dir)])
-            run_command([tool, "-c", str(temp_dir), str(output_path)])
+            run_command([tool, "-x", str(target_path), "-d", str(iso_temp)])
+            run_command([tool, "-c", str(iso_temp), str(output_path)])
 
         # --- Nintendo Optical (Dolphin RVZ) ---
         elif format_type == "rvz":
             tool = require_tool(DOLPHIN_TOOL, "DolphinTool")
-            info(f"    Compressing to RVZ (DolphinTool) -> {output_path.name}...")
+            if target_path.suffix.lower() == ".rvz":
+                info(f"    Re-compressing RVZ (DolphinTool) -> {output_path.name}...")
+            else:
+                info(f"    Compressing to RVZ (DolphinTool) -> {output_path.name}...")
+
             run_command(
                 [
                     tool,
                     "convert",
                     "-i",
-                    str(input_path),
+                    str(target_path),
                     "-o",
                     str(output_path),
                     "-f",
@@ -166,29 +353,13 @@ def process_rom(input_path: Path, output_path: Path, format_type: str) -> bool:
                 ]
             )
 
-        # --- Standard Cartridges (7Zip LZMA2) ---
+        # --- Standard Cartridges (7Zip LZMA2 natively) ---
         elif format_type == "archive":
             tool = require_tool(SEVEN_ZIP, "7zip")
-            base_cmd = [tool, "a", str(output_path), "-m0=lzma2", "-mx=9"]
-
-            # Fully extract source archives before repacking to prevent nested compression frames
-            if input_path.suffix.lower() in [".zip", ".rar", ".7z"]:
-                info(
-                    f"    Extracting and re-archiving {input_path.name} to 7z (LZMA2) -> {output_path.name}..."
-                )
-
-                temp_dir = output_path.parent / f"_temp_{input_path.stem}"
-                if temp_dir.exists():
-                    shutil.rmtree(temp_dir)
-                temp_dir.mkdir(parents=True, exist_ok=True)
-
-                run_command([tool, "x", str(input_path), f"-o{temp_dir}"])
-                run_command(base_cmd + [f"{temp_dir}/*"])
-
-            # Standard single ROM file compression (.n64, .nes, etc)
-            else:
-                info(f"    Archiving to 7z (7zip LZMA2) -> {output_path.name}...")
-                run_command(base_cmd + [str(input_path)])
+            info(f"    Archiving to 7z (7zip LZMA2) -> {output_path.name}...")
+            run_command(
+                [tool, "a", str(output_path), "-m0=lzma2", "-mx=9", str(target_path)]
+            )
 
         else:
             warn(f"Unknown processor type: {format_type}")
@@ -198,6 +369,12 @@ def process_rom(input_path: Path, output_path: Path, format_type: str) -> bool:
             raise RuntimeError("Post-build validation failed.")
         return True
 
+    except KeyboardInterrupt:
+        warn(f"\nConversion interrupted by user while processing {input_path.name}.")
+        if output_path.exists():
+            output_path.unlink()  # Nuke partially built corrupted files
+        raise  # Re-raise so master pipeline also halts
+
     except Exception as e:
         warn(f"Failed converting {input_path.name}: {e}")
         if output_path.exists():
@@ -206,8 +383,8 @@ def process_rom(input_path: Path, output_path: Path, format_type: str) -> bool:
 
     finally:
         # Guarantee volatile workspace cleanup to prevent ghost folders filling up the disk
-        if temp_dir and temp_dir.exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        if session_temp_dir.exists():
+            shutil.rmtree(session_temp_dir, ignore_errors=True)
 
 
 # ------------------------ Tracker IO ------------------------
@@ -320,7 +497,7 @@ def evaluate_target(
     if not DRY_RUN:
         out_dir.mkdir(exist_ok=True)
 
-    if process_rom(f, out_file, format_type):
+    if process_rom(f, out_file, config):
         info(f"  Success: {out_file.name}")
         if not DRY_RUN:
             append_tracker(tracker_file, f.stem)
@@ -328,6 +505,56 @@ def evaluate_target(
         return "success"
 
     return "failed"
+
+
+def generate_m3u_playlists(out_dir: Path, out_ext: str):
+    """Auto-generates ES-DE friendly .m3u playlists for multi-disc games."""
+    if not out_dir.exists():
+        return
+
+    import collections
+
+    # Group files into a shared base name by stripping the (Disc X) and EVERYTHING after it
+    # This prevents extra trailing tags on specific discs from splitting the grouping
+    disc_pattern = re.compile(r"\s*\((?:Disc|Disk|CD)\b[^)]*\).*$", re.IGNORECASE)
+    games_dict = collections.defaultdict(list)
+
+    for f in out_dir.glob(f"*{out_ext}"):
+        # Check if the filename implies it's a multi-disc set
+        if disc_pattern.search(f.name):
+            base_name = disc_pattern.sub("", f.stem).strip()
+            games_dict[base_name].append(f.name)
+
+    if not games_dict:
+        return
+
+    info(f"\n--- Generating M3U Playlists ({out_dir.name}) ---")
+    for base_name, discs in games_dict.items():
+        if len(discs) > 1:  # Only generate lists when there are actually multiple discs
+            discs.sort()  # Ensures sequential order (Disc 1, Disc 2...)
+            m3u_path = out_dir / f"{base_name}.m3u"
+            expected_content = "\n".join(discs) + "\n"
+
+            # Check if up-to-date
+            if m3u_path.exists():
+                try:
+                    existing_content = m3u_path.read_text(encoding="utf-8")
+                    if existing_content == expected_content:
+                        info(f"  Playlist up-to-date: '{m3u_path.name}'")
+                        continue
+                except Exception:
+                    pass  # If we fail to read it, just proceed to overwrite
+
+            # Atomic write: Write to a temp file first, then atomically swap it
+            temp_path = m3u_path.with_suffix(".tmp")
+            try:
+                temp_path.write_text(expected_content, encoding="utf-8")
+                temp_path.replace(m3u_path)  # Atomic operation on POSIX
+                info(f"  Wrote Playlist: '{m3u_path.name}' ({len(discs)} discs)")
+            except Exception as e:
+                warn(f"  Failed to write playlist {m3u_path.name}: {e}")
+                if temp_path.exists():
+                    temp_path.unlink()
 
 
 # ------------------------ Main Orchestrator ------------------------
@@ -346,6 +573,9 @@ def batch_convert(target_dir: Path, requested_system: str | None):
         return
 
     config = SYSTEM_CONFIGS[system_key]
+    config["system_id"] = (
+        system_key  # Inject exact ID for downstream contextual decisions
+    )
     format_type = config["format"]
     out_ext = config["output_ext"]
 
@@ -365,19 +595,27 @@ def batch_convert(target_dir: Path, requested_system: str | None):
         out_dir, format_type, out_ext, processed_set, tracker_file
     )
 
+    # # Collect pending targets matching the assigned file extensions
+    # # (Avoid infinite recursion by strictly ignoring the inner output directory)
+    # source_files = [
+    #     f
+    #     for f in base_path.rglob("*")
+    #     if f.is_file()
+    #     and f.suffix.lower() in config["exts"]
+    #     and "_converted_roms" not in f.parts
+    # ]
+
     # Collect pending targets matching the assigned file extensions
-    # (Avoid infinite recursion by strictly ignoring the inner output directory)
+    # (Strictly limited to the immediate target folder; no recursive searching)
+    valid_exts = config["exts"] | ARCHIVE_EXTS
+
     source_files = [
-        f
-        for f in base_path.rglob("*")
-        if f.is_file()
-        and f.suffix.lower() in config["exts"]
-        and "_converted_roms" not in f.parts
+        f for f in base_path.iterdir() if f.is_file() and f.suffix.lower() in valid_exts
     ]
 
     if not source_files:
         info("\n--- Pipeline Completed ---")
-        info("Done. Found 0 raw sources requiring action.")
+        info("Done.  Found 0 raw sources requiring action.")
         return
 
     # Execution Loop
@@ -394,6 +632,13 @@ def batch_convert(target_dir: Path, requested_system: str | None):
             failed += 1
         else:
             skipped += 1
+
+    # Only generate M3U playlists for optical media capable formats
+    if not DRY_RUN and format_type in ["chd", "rvz", "rebuilt_iso"]:
+        # For games moved back into the permanent root
+        generate_m3u_playlists(base_path, out_ext)
+        # For games currently in the staging area
+        generate_m3u_playlists(out_dir, out_ext)
 
     info("\n--- Pipeline Completed ---")
     info(f"Done. Succeeded: {success}, Skipped: {skipped}, Failed: {failed}.")
@@ -443,7 +688,11 @@ def main():
     if VERIFY_ALL:
         info("--- BRUTE FORCE CRYPTOGRAPHIC VERIFICATION ENABLED ---")
 
-    batch_convert(args.path, args.system)
+    try:
+        batch_convert(args.path, args.system)
+    except KeyboardInterrupt:
+        warn("\nPipeline aborted by user.  Exiting cleanly.")
+        sys.exit(130)
 
 
 if __name__ == "__main__":
