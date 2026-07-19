@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail  # Exit immediately on error
 
+# Exit immediately if the user executes the script from inside a deleted directory
+if ! pwd > /dev/null 2>&1; then
+    echo "[ERROR] Execution from a deleted or invalid directory detected." >&2
+    echo "[ERROR] Please run 'cd ~' (or open a new terminal) and try again." >&2
+    exit 1
+fi
+
 # ----------------------------------------------------------------
 # --- Configuration ---
 # ----------------------------------------------------------------
@@ -16,44 +23,53 @@ declare -a APPIMAGES=(
     "duckstation|DuckStation|Game;Emulator;|applications-games|false"
     "pcsx2|PCSX2|Game;Emulator;|applications-games|false"
     "rpcs3|RPCS3|Game;Emulator;|applications-games|false"
+    "xenia|Xenia|Game;Emulator;|applications-games|false"
 )
+
+fetch_github_latest() {
+    local repo="$1"
+    # Default to an x64 / x86_64 regex filter, unless passed a custom one
+    local filter="${2:-x64|x86_64}"
+    local appimage_query='.assets[]? | select(.name | endswith(".AppImage")) | .browser_download_url'
+
+    # If the filter starts with "!" (e.g., "!arm64"), invert the grep search
+    if [[ "$filter" == !* ]]; then
+        curl -sL "https://api.github.com/repos/$repo/releases/latest" \
+            | jq -r "$appimage_query" \
+            | grep -iv "${filter:1}" | head -n 1 || true
+    else
+        curl -sL "https://api.github.com/repos/$repo/releases/latest" \
+            | jq -r "$appimage_query" \
+            | grep -iP "$filter" | head -n 1 || true
+    fi
+}
 
 # Dynamically resolve latest download URLs (only called if installation is needed)
 get_download_url() {
     local id="$1"
     case "$id" in
-        obsidian)
-            # Filter out arm64 releases and guarantee a single string return
-            curl -sL https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | grep -iv 'arm64' | head -n 1 || true
-            ;;
+        obsidian)     fetch_github_latest "obsidianmd/obsidian-releases" "!arm64" ;;
+        protonup-qt)  fetch_github_latest "DavidoTek/ProtonUp-Qt" ;;
+        xemu)         fetch_github_latest "xemu-project/xemu" ;;
+        # https://github.com/stenzek/duckstation#downloading-and-running
+        # Force strict match for the modern x64 version, ignoring SSE2/Legacy variants
+        duckstation)  fetch_github_latest "stenzek/duckstation" "x64\.AppImage$" ;;
+        pcsx2)        fetch_github_latest "PCSX2/pcsx2" ;;
+        # Override the default x64 filter since Xenia uses "_linux" in their filename
+        xenia)        fetch_github_latest "xenia-canary/xenia-canary" "linux" ;;
+
+        # ---------------- Non-Standard Endpoints ----------------
         kdenlive)
             local kden_dir kden_file
             kden_dir=$(curl -s https://download.kde.org/stable/kdenlive/ | grep -oP '(?<=href=")[0-9]+\.[0-9]+(?=/")' | sort -V | tail -1)
             kden_file=$(curl -s "https://download.kde.org/stable/kdenlive/$kden_dir/linux/" | grep -oP 'kdenlive-\d+\.\d+\.\d+-x86_64\.AppImage' | sort -V | tail -1)
             echo "https://download.kde.org/stable/kdenlive/$kden_dir/linux/$kden_file"
             ;;
-        protonup-qt)
-            curl -sL https://api.github.com/repos/DavidoTek/ProtonUp-Qt/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
-            ;;
         es-de)
             echo "https://gitlab.com/es-de/emulationstation-de/-/package_files/210210324/download"
             ;;
-        # retroarch)
-        #     # RetroArch does not attach AppImages to their GitHub release tags
-        #     # We fetch continuous build directly from the LibRetro buildbot
-        #     echo "https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch-Linux-x86_64.AppImage"
-        #     ;;
-        xemu)
-            curl -sL https://api.github.com/repos/xemu-project/xemu/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
-            ;;
-        duckstation)
-            curl -sL https://api.github.com/repos/stenzek/duckstation/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
-            ;;
-        pcsx2)
-            curl -sL https://api.github.com/repos/PCSX2/pcsx2/releases/latest | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
-            ;;
         rpcs3)
-            # Fetch the raw releases array from their x86_64 repo and grab the newest AppImage
+            # RPCS3 does not use GitHub's standard "latest" release tag (continuous rolling releases instead)
             curl -sL https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases | jq -r '.[0].assets[]? | select(.name | endswith(".AppImage")) | .browser_download_url' | head -n 1 || true
             ;;
         *)
@@ -298,6 +314,9 @@ deprovision_app() {
 # --- Main Orchestrator ---
 # ----------------------------------------------------------------
 
+# Drop root privileges before argument shifting occurs
+ensure_user_space "$@"
+
 MINIMAL_MODE=false
 REMOVE_ID=""
 
@@ -318,8 +337,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 main() {
-    ensure_user_space
-
     # Handle Removal Mode
     if [[ -n "$REMOVE_ID" ]]; then
         echo "[INFO] Starting AppImage removal process for user: $USER"

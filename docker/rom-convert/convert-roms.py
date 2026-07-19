@@ -39,6 +39,7 @@ OVERWRITE = False
 DRY_RUN = False
 VERIFY_ALL = False
 ARCHIVE_EXTS = {".zip", ".rar", ".7z"}
+MULTIDISC_DIR_NAME = ".multi-disc"
 
 
 # ------------------------ Basic Utilities ------------------------
@@ -120,9 +121,38 @@ def validate(path: Path, format_type: str) -> bool:
 
 
 # ------------------------ Optical File Sanitization ------------------------
+def _resolve_cue_payload(req_name: str, available_files: list[Path]) -> str:
+    """Finds the best physical match for a requested cue payload (Exact, Fuzzy, or Desperation)."""
+    req_lower = req_name.lower()
+    dir_files_lower = {f.name.lower(): f.name for f in available_files if f.is_file()}
+
+    # Exact case-insensitive match
+    if req_lower in dir_files_lower:
+        return dir_files_lower[req_lower]
+
+    # Fuzzy match (ignore inner tags like [SLUS] or (USA))
+    def strip_tags(s: str) -> str:
+        return re.sub(r"\[.*?\]|\(.*?\)", "", s).strip()
+
+    req_stripped = strip_tags(req_lower)
+    for avail_lower, avail_actual in dir_files_lower.items():
+        if strip_tags(avail_lower) == req_stripped:
+            return avail_actual
+
+    # Desperation fallback: If exactly ONE payload exists, force it
+    payloads = [
+        f.name
+        for f in available_files
+        if f.suffix.lower() in (".bin", ".img", ".iso", ".raw")
+    ]
+    if len(payloads) == 1:
+        return payloads[0]
+
+    return req_name
+
+
 def sanitize_cue(cue_path: Path):
     """Auto-fixes Windows paths and case-sensitivity issues in .cue files for Linux compatibility."""
-    # Strict limit to .cue files (other descriptors like .ccd/.gdi use different schemas)
     if cue_path.suffix.lower() != ".cue":
         return
 
@@ -131,14 +161,9 @@ def sanitize_cue(cue_path: Path):
         lines = content.splitlines()
         modified = False
 
-        # Build a case-insensitive map of the physical files sitting next to the .cue
-        dir_files_lower = {
-            f.name.lower(): f.name for f in cue_path.parent.iterdir() if f.is_file()
-        }
-
-        new_lines = []
-        # Matches typical CUE track definitions: FILE "Track01.bin" BINARY
+        available_files = list(cue_path.parent.iterdir())
         file_pattern = re.compile(r'^(FILE\s+")([^"]+)("\s+.*)$', re.IGNORECASE)
+        new_lines = []
 
         for line in lines:
             match = file_pattern.search(line)
@@ -147,8 +172,7 @@ def sanitize_cue(cue_path: Path):
                 # Strip absolute Windows or POSIX paths, keeping just the filename
                 base_name = Path(raw_filename.replace("\\", "/")).name
 
-                # Cross-reference directory map to get the exact physical case-sensitive name
-                actual_name = dir_files_lower.get(base_name.lower(), base_name)
+                actual_name = _resolve_cue_payload(base_name, available_files)
 
                 if raw_filename != actual_name:
                     line = f"{prefix}{actual_name}{suffix}"
@@ -508,38 +532,53 @@ def evaluate_target(
 
 
 def generate_m3u_playlists(out_dir: Path, out_ext: str):
-    """Auto-generates ES-DE friendly .m3u playlists for multi-disc games."""
+    """Auto-generates ES-DE friendly .m3u playlists and hides multi-disc components."""
     if not out_dir.exists():
         return
 
     import collections
 
-    # Group files into a shared base name by stripping the (Disc X) and EVERYTHING after it
-    # This prevents extra trailing tags on specific discs from splitting the grouping
     disc_pattern = re.compile(r"\s*\((?:Disc|Disk|CD)\b[^)]*\).*$", re.IGNORECASE)
     games_dict = collections.defaultdict(list)
+    multi_dir = out_dir / MULTIDISC_DIR_NAME
 
-    for f in out_dir.glob(f"*{out_ext}"):
-        # Check if the filename implies it's a multi-disc set
-        if disc_pattern.search(f.name):
-            base_name = disc_pattern.sub("", f.stem).strip()
-            games_dict[base_name].append(f.name)
+    # Search for discs in the target directory AND the hidden multidisc directory
+    for search_dir in [out_dir, multi_dir]:
+        if search_dir.exists():
+            for f in search_dir.glob(f"*{out_ext}"):
+                if disc_pattern.search(f.name):
+                    base_name = disc_pattern.sub("", f.stem).strip()
+                    games_dict[base_name].append(f)
 
     if not games_dict:
         return
 
     info(f"\n--- Generating M3U Playlists ({out_dir.name}) ---")
-    for base_name, discs in games_dict.items():
-        if len(discs) > 1:  # Only generate lists when there are actually multiple discs
-            discs.sort()  # Ensures sequential order (Disc 1, Disc 2...)
+    for base_name, disc_paths in games_dict.items():
+        if (
+            len(disc_paths) > 1
+        ):  # Only generate lists when there are actually multiple discs
+            multi_dir.mkdir(exist_ok=True)
+            disc_paths.sort(
+                key=lambda p: p.name
+            )  # Ensures sequential order (Disc 1, Disc 2...)
+
+            m3u_lines = []
+            for disc in disc_paths:
+                # Relocate disc into the hidden multidisc folder
+                target_path = multi_dir / disc.name
+                if disc.parent != multi_dir:
+                    shutil.move(str(disc), str(target_path))
+                    info(f"  Moved -> {MULTIDISC_DIR_NAME}/{disc.name}")
+                m3u_lines.append(f"{MULTIDISC_DIR_NAME}/{disc.name}")
+
             m3u_path = out_dir / f"{base_name}.m3u"
-            expected_content = "\n".join(discs) + "\n"
+            expected_content = "\n".join(m3u_lines) + "\n"
 
             # Check if up-to-date
             if m3u_path.exists():
                 try:
-                    existing_content = m3u_path.read_text(encoding="utf-8")
-                    if existing_content == expected_content:
+                    if m3u_path.read_text(encoding="utf-8") == expected_content:
                         info(f"  Playlist up-to-date: '{m3u_path.name}'")
                         continue
                 except Exception:
@@ -550,7 +589,9 @@ def generate_m3u_playlists(out_dir: Path, out_ext: str):
             try:
                 temp_path.write_text(expected_content, encoding="utf-8")
                 temp_path.replace(m3u_path)  # Atomic operation on POSIX
-                info(f"  Wrote Playlist: '{m3u_path.name}' ({len(discs)} discs)")
+                info(
+                    f"  Wrote Playlist: '{m3u_path.name}' ({len(disc_paths)} discs, hidden in {MULTIDISC_DIR_NAME}/)"
+                )
             except Exception as e:
                 warn(f"  Failed to write playlist {m3u_path.name}: {e}")
                 if temp_path.exists():

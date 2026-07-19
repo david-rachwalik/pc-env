@@ -21,6 +21,7 @@ sudo bash ~/Repos/pc-env/setup-linux/provision-apps/appimage.sh
 - **DuckStation** (PS1, 1995)
 - **PCSX2** (PS2, 2000)
 - **Xemu** (Xbox, 2001)
+- **Xenia** (Xbox 360, 2005)
 - **RPCS3** (PS3, 2006)
 
 Because RetroArch no longer publishes official AppImages, it is installed globally via APT to ensure unrestricted filesystem access:
@@ -43,7 +44,7 @@ bash ~/Repos/pc-env/setup-linux/provision-apps/games/setup.sh
 
 1. **Scaffolding:** Builds all `bios/`, `system/`, and `flash/` directories ahead of time (for RetroArch, PCSX2, DuckStation, and Xemu).
 2. **Core Retrieval:** Silently fetches and extracts `.so` libretro cores directly from the buildbot (`Mesen`, `Snes9x`, `Flycast`, `MAME`, etc.).
-3. **ROM Integration:** Triggers the Docker `link-esde-roms` pipeline to dynamically map your source ROM drive to your local ES-DE path based on standard bracket notation.
+3. **ROM Integration:** Dynamically maps source ROM drive to local ES-DE path based on standard bracket notation.
 
 #### Manual Steps (What the Automated process handles)
 
@@ -77,7 +78,7 @@ The [`rom-convert`](docker-compose.yml) container automatically compresses raw R
 Run the custom alias against any standardized folder on the source drive:
 
 ```bash
-roms "/mnt/Z/roms/(1995) PlayStation [psx]"
+roms "/mnt/Z/ROMs/(1995) PlayStation [psx]"
 ```
 
 ### Conversion Pipeline
@@ -103,7 +104,7 @@ link-roms
 
 ### Mapping Architecture
 
-1. Scans the storage drive (`/mnt/Z/roms`) for folders ending with system brackets (e.g. `[snes]`).
+1. Scans the storage drive (`/mnt/Z/ROMs`) for folders ending with system brackets (e.g. `[snes]`).
 2. Maps an absolute symlink to the target ES-DE directory (`/home/rhodair/ROMs`).
 3. Automatically detects existing physical folders and renames them to `-bak` to prevent destructive overwriting.
 4. To point ES-DE to this linked hierarchy, update the path in ES-DE's Main Menu > **Utilities** > **ROM Directory**.

@@ -22,9 +22,6 @@ steam-rl() {
     disown
 }
 
-# Automate mapping the host ES-DE directory via the rom-convert container
-alias link-roms='docker compose -f "$HOME/Repos/pc-env/docker/rom-convert/docker-compose.yml" run --rm rom-convert python /app/dev/link-esde-roms.py "/mnt/Z/roms" "/home/rhodair/ROMs"'
-
 # --- Hardware Resource Crash Monitor ---
 # (run during games or other apps to log hardware health)
 alias hw-start="sudo systemctl start hw_monitor.service"
@@ -65,7 +62,7 @@ _dev_container_exec() {
 
 # --- david-rachwalik.github.io ---
 ddmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io/client-angular" /bin/zsh; }
-dmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io/client-angular" npm run dev; }
+dmr() { _dev_container_exec "david-rachwalik" "/workspaces/david-rachwalik.github.io/client-angular" npm start; }
 
 # --- nekogoo.github.io ---
 dgoo() { _dev_container_exec "nekogoo" "/workspaces/nekogoo.github.io/client" /bin/zsh; }
